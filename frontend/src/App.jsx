@@ -276,34 +276,65 @@ const SETTINGS_FIELDS = {
 };
 
 
+function maskSensitive(value, key = '') {
+  if (/token|secret|password|authorization|api[_-]?key|cookie|session/i.test(key)) return '[REDACTED]';
+  if (Array.isArray(value)) return value.map((item) => maskSensitive(item));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [childKey, maskSensitive(childValue, childKey)]));
+  return value;
+}
+
+function countRecords(payload) {
+  if (Array.isArray(payload)) return payload.length;
+  if (!payload || typeof payload !== 'object') return payload == null ? 0 : 1;
+  for (const key of ['data', 'records', 'rows', 'items', 'intraday', 'result']) if (Array.isArray(payload[key])) return payload[key].length;
+  return 1;
+}
+
 function CacheViewer() {
   const [snapshot, setSnapshot] = useState(null);
+  const [marketEntries, setMarketEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState({});
   const load = useCallback(async () => {
     setLoading(true); setError('');
-    try { setSnapshot(await api('/autotrender/cache/content')); }
-    catch (e) { setError(e.message || 'Unable to read cache contents.'); }
-    finally { setLoading(false); }
+    const fetchedAt = new Date().toISOString();
+    const indexSources = DEFAULT_INDICES.flatMap((symbol) => [
+      { key: 'autotrend:' + symbol.toLowerCase() + ':intraday', index: symbol, kind: 'Intraday', path: '/autotrender/indices/' + symbol + '/intraday?mins=5' },
+      { key: 'autotrend:' + symbol.toLowerCase() + ':oi-graph', index: symbol, kind: 'Open-interest graph', path: '/autotrender/indices/' + symbol + '/oi-graph' },
+    ]);
+    const results = await Promise.allSettled([api('/autotrender/cache/content'), ...indexSources.map((source) => api(source.path))]);
+    if (results[0].status === 'fulfilled') { setSnapshot(results[0].value); setError(''); }
+    else setError(results[0].reason?.message || 'Unable to read backend cache contents.');
+    setMarketEntries(indexSources.map((source, i) => {
+      const result = results[i + 1];
+      const data = result.status === 'fulfilled' ? maskSensitive(result.value) : null;
+      return { key: source.key, source: 'AutoTrender API response · ' + source.kind, index: source.index, fetched_at: result.status === 'fulfilled' ? fetchedAt : null, record_count: result.status === 'fulfilled' ? countRecords(data) : 0, data, error: result.status === 'rejected' ? (result.reason?.message || 'Request failed') : '' };
+    }));
+    setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
-  const entries = snapshot?.entries || [];
+  const entries = [...((snapshot?.entries || []).map((entry) => ({ ...entry, data: maskSensitive(entry.data), group: 'Backend memory cache' }))), ...marketEntries];
+  const rowsFor = (data) => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.records)) return data.records;
+    if (Array.isArray(data?.rows)) return data.rows;
+    if (data && typeof data === 'object') return Object.entries(data).map(([key, value]) => ({ key, value }));
+    return [];
+  };
   return <div className="cache-viewer">
-    <div className="cache-viewer-toolbar"><div><h2>Cache Viewer</h2><p className="settings-intro">Read-only process-memory cache inspection. Sensitive fields are masked.</p></div><button className="button secondary" type="button" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh cache'}</button></div>
-    {error && <div className="error-banner"><strong>Cache unavailable</strong><span>{error}</span></div>}
-    <div className="settings-grid"><div className="panel"><span>Cache entries</span><h3>{entries.length}</h3></div><div className="panel"><span>Cached records</span><h3>{entries.reduce((sum, entry) => sum + (entry.record_count || 0), 0)}</h3></div><div className="panel"><span>State</span><h3>{snapshot?.cached ? 'Populated' : 'Empty'}</h3></div></div>
-    {!loading && entries.length === 0 && !error && <p className="settings-intro">No cached data is currently held in this backend process. Visit AutoTrender or refresh market data to populate it.</p>}
+    <div className="cache-viewer-toolbar"><div><h2>Cache Viewer</h2><p className="settings-intro">Read-only backend cache plus live AutoTrender API snapshots for all four indices. API snapshots are inspected here but are not represented as persistent cache entries. Sensitive fields are masked.</p></div><button className="button secondary" type="button" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh cache & snapshots'}</button></div>
+    {error && <div className="error-banner"><strong>Backend cache unavailable</strong><span>{error}</span></div>}
+    <div className="settings-grid"><div className="panel"><span>Entries shown</span><h3>{entries.length}</h3></div><div className="panel"><span>Records reported</span><h3>{entries.reduce((sum, entry) => sum + (entry.record_count || 0), 0).toLocaleString('en-IN')}</h3></div><div className="panel"><span>Backend cache</span><h3>{snapshot?.cached ? 'Populated' : 'Empty / unavailable'}</h3></div></div>
     {entries.map((entry) => <details className="cache-entry" key={entry.key} open={Boolean(expanded[entry.key])} onToggle={(event) => { const isOpen = event.currentTarget.open; setExpanded((current) => ({ ...current, [entry.key]: isOpen })); }}>
-      <summary><strong>{entry.key}</strong><span>{entry.record_count} records · {entry.age_seconds ?? '—'}s old · TTL {entry.ttl_seconds}s</span></summary>
-      <p className="settings-intro">Source: {entry.source} · Fetched: {entry.fetched_at || 'Never'}</p>
-      <div className="cache-json-wrap"><pre>{JSON.stringify(entry.data, null, 2)}</pre></div>
-      {entry.data?.data && typeof entry.data.data === 'object' && <div className="table-scroll"><table className="kite-data-table"><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>{Object.entries(entry.data.data).map(([key, value]) => <tr key={key}><td>{key}</td><td>{typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—')}</td></tr>)}</tbody></table></div>}
+      <summary><strong>{entry.key}</strong><span>{entry.error ? 'Unavailable' : String(entry.record_count ?? 0) + ' records · fetched ' + (entry.fetched_at || 'timestamp unavailable') + (entry.age_seconds != null ? ' · ' + entry.age_seconds + 's old' : '') + (entry.ttl_seconds != null ? ' · TTL ' + entry.ttl_seconds + 's' : '')}</span></summary>
+      <p className="settings-intro">Source: {entry.source || entry.group} · Index: {entry.index || '—'} · Fetched: {entry.fetched_at || 'Never / not reported'}</p>
+      {entry.error ? <div className="error-banner"><strong>Source unavailable</strong><span>{entry.error}</span></div> : <><div className="cache-json-wrap"><pre>{JSON.stringify(maskSensitive(entry.data), null, 2)}</pre></div>{rowsFor(entry.data).length > 0 && (() => { const rows = rowsFor(entry.data); const columns = [...new Set(rows.flatMap((row) => row && typeof row === 'object' ? Object.keys(row) : ['value']))].slice(0, 30); return <div className="table-scroll"><table className="kite-data-table"><thead><tr>{columns.map((key) => <th key={key}>{key}</th>)}</tr></thead><tbody>{rows.slice(0, 500).map((row, rowIndex) => { const object = row && typeof row === 'object' ? row : { value: row }; return <tr key={rowIndex}>{columns.map((key) => { const value = maskSensitive(object[key], key); return <td key={key}>{value && typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—')}</td>; })}</tr>; })}</tbody></table>{rows.length > 500 && <p className="settings-intro">Table limited to first 500 records; JSON view contains the full response.</p>}</div>; })()}</>}
     </details>)}
-    {snapshot?.last_refresh_error && <div className="error-banner"><strong>Last refresh error</strong><span>{snapshot.last_refresh_error}</span></div>}
+    {snapshot?.last_refresh_error && <div className="error-banner"><strong>Last cache refresh error</strong><span>{snapshot.last_refresh_error}</span></div>}
   </div>;
 }
-
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
   const [settings, setSettings] = useState({});
