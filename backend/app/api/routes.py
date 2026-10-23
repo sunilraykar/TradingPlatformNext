@@ -326,6 +326,38 @@ def subscribe_portfolio_market_data() -> dict:
     }
 
 
+@router.get("/kite/orders", tags=["kite"])
+def kite_orders() -> dict:
+    try:
+        return {"orders": get_kite_provider().orders()}
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/kite/positions", tags=["kite"])
+def kite_positions() -> dict:
+    try:
+        return get_kite_provider().positions()
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/kite/holdings", tags=["kite"])
+def kite_holdings() -> dict:
+    try:
+        return {"holdings": get_kite_provider().holdings()}
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/kite/funds", tags=["kite"])
+def kite_funds() -> dict:
+    try:
+        return get_kite_provider().margins()
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @router.get("/instruments", tags=["instruments"])
 def list_instruments(
     search: str | None = Query(default=None, min_length=1, max_length=100),
