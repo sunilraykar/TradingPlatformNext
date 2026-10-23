@@ -3,6 +3,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from cryptography.fernet import Fernet, InvalidToken
+
+from app.core.config import get_settings
 from sqlalchemy import text
 
 from app.db.session import get_engine
