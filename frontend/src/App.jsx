@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX', 'BANKEX'];
+const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX', 'BANKEX'];
 const INDEX_LABELS = {
   nifty: 'NIFTY',
   banknifty: 'BANKNIFTY',
@@ -147,7 +147,7 @@ export default function App() {
       const payload = results[4].value;
       setIndexPrices(payload);
       const keys = Object.keys(payload?.data || {});
-      const available = keys.map((key) => INDEX_LABELS[key.toLowerCase()]).filter(Boolean);
+      const available = DEFAULT_INDICES.filter((label) => keys.some((key) => INDEX_LABELS[key.toLowerCase()] === label));
       if (available.length) {
         setIndices(available);
         if (!available.includes(index)) setIndex(available[0]);
