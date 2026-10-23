@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'];
