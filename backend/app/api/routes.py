@@ -10,6 +10,7 @@ from app.providers.kite.client import KiteProvider, KiteProviderError
 from app.providers.kite.registry import configure_active_kite_session, get_kite_provider
 from app.services.kite_sessions import KiteSessionStoreError, save_session
 from app.services.live_quotes import live_quotes
+from app.services import live_market_data
 
 router = APIRouter()
 
@@ -23,6 +24,15 @@ class QuoteResponse(BaseModel):
     last_price: float
     last_trade_time: str | None = None
     received_at: str
+
+
+class SubscriptionRequest(BaseModel):
+    instrument_tokens: list[int] = Field(min_length=1, max_length=500)
+    mode: str = "quote"
+
+
+class UnsubscribeRequest(BaseModel):
+    instrument_tokens: list[int] = Field(min_length=1, max_length=500)
 
 
 def _exchange_and_save(request_token: str) -> str:
@@ -41,6 +51,11 @@ def _exchange_and_save(request_token: str) -> str:
     except KiteSessionStoreError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     configure_active_kite_session(session.access_token)
+    try:
+        live_market_data.start()
+    except Exception:
+        # Authentication remains valid even if the WebSocket cannot connect yet.
+        pass
     return session.user_id
 
 
@@ -88,6 +103,34 @@ def kite_session_status() -> dict[str, str | bool]:
         "status": "authenticated",
         "user_id": str(profile.get("user_id", "")),
     }
+
+
+@router.get("/kite/market-data/status", tags=["kite"])
+def market_data_status() -> dict:
+    return live_market_data.status()
+
+
+@router.post("/kite/market-data/start", tags=["kite"])
+def start_market_data() -> dict:
+    try:
+        return live_market_data.start()
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Could not start Kite WebSocket") from exc
+
+
+@router.post("/kite/market-data/subscribe", tags=["kite"])
+def subscribe_market_data(payload: SubscriptionRequest) -> dict:
+    try:
+        return live_market_data.subscribe(payload.instrument_tokens, payload.mode)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail="Could not subscribe to Kite instruments") from exc
+
+
+@router.post("/kite/market-data/unsubscribe", tags=["kite"])
+def unsubscribe_market_data(payload: UnsubscribeRequest) -> dict:
+    return live_market_data.unsubscribe(payload.instrument_tokens)
 
 
 @router.get("/kite/quote/{instrument_token}", tags=["kite"])
