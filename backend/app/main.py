@@ -6,6 +6,8 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI
 
 from app.api.account import router as account_router
+from app.api.autotrender_auth import router as autotrender_auth_router
+from app.api.autotrender_market_data import router as autotrender_market_data_router
 from app.api.routes import router
 from app.api.subscription_test import router as subscription_test_router
 from app.core.config import get_settings
@@ -92,6 +94,8 @@ settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 app.include_router(router, prefix="/api/v1")
 app.include_router(account_router, prefix="/api/v1")
+app.include_router(autotrender_auth_router, prefix="/api/v1")
+app.include_router(autotrender_market_data_router, prefix="/api/v1")
 app.include_router(subscription_test_router, prefix="/api/v1")
 
 
