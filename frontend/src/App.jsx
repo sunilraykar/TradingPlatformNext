@@ -132,42 +132,54 @@ function linePoints(series, width = 720, height = 220) {
 }
 
 function PriceVwapChart({ rows }) {
-  const usable = rows.map((row) => ({ time: row.time, price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer }))
-    .filter((row) => row.price !== null || row.vwap !== null);
+  const parseMinutes = (value) => {
+    const raw = String(value || '').trim();
+    const match = raw.match(/(?:^|\\s)(\\d{1,2}):(\\d{2})(?:\\s|$)/) || raw.match(/^(\\d{1,2}):(\\d{2})$/);
+    if (!match) return null;
+    return Number(match[1]) * 60 + Number(match[2]);
+  };
+  const sessionStart = 9 * 60 + 30;
+  const sessionEnd = 15 * 60 + 30;
+  // Plot chronologically from 09:30 to 15:30 regardless of API response order.
+  const usable = rows
+    .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer }))
+    .filter((row) => row.minutes !== null && row.minutes >= sessionStart && row.minutes <= sessionEnd && (row.price !== null || row.vwap !== null))
+    .sort((a, b) => a.minutes - b.minutes);
   const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
   if (usable.length < 2 || !values.length) {
-    return <div className="chart-empty">Price/VWAP history is unavailable in the current intraday API response.</div>;
+    return <div className="chart-empty">Price/VWAP history for 09:30–15:30 is unavailable in the current intraday API response.</div>;
   }
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
-  const x = (index) => 12 + (index / Math.max(usable.length - 1, 1)) * 696;
+  const x = (minutes) => 12 + ((minutes - sessionStart) / (sessionEnd - sessionStart)) * 696;
   const y = (value) => 202 - ((value - min) / span) * 168;
-  const pathFor = (key) => usable.map((row, i) => row[key] === null ? null : `${x(i)},${y(row[key])}`).filter(Boolean).join(' ');
+  const pathFor = (key) => usable.map((row) => row[key] === null ? null : `${x(row.minutes)},${y(row[key])}`).filter(Boolean).join(' ');
   const latest = usable[usable.length - 1];
   const gap = latest.price !== null && latest.vwap !== null ? latest.price - latest.vwap : null;
   const buffer = latest.buffer ?? (latest.price !== null && latest.vwap !== null && latest.vwap !== 0 ? ((latest.price - latest.vwap) / latest.vwap) * 100 : null);
+  const ticks = Array.from({ length: 13 }, (_, i) => sessionStart + i * 30);
   return <>
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span></div>
     <div className="chart-wrap price-vwap-wrap">
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
-      <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart" preserveAspectRatio="none">
+      <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart from 09:30 to 15:30" preserveAspectRatio="none">
         <line x1="12" x2="708" y1="34" y2="34" className="zero-line" />
         <line x1="12" x2="708" y1="118" y2="118" className="zero-line" />
         <line x1="12" x2="708" y1="202" y2="202" className="zero-line" />
         <polyline points={pathFor('price')} className="price-line" />
         <polyline points={pathFor('vwap')} className="vwap-line" />
         {usable.map((row, i) => {
-          const tooltip = `${row.time || 'Time'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`;
-          const hitY = Math.min(row.price === null ? 202 : y(row.price), row.vwap === null ? 202 : y(row.vwap));
+          const tooltip = `${row.time || 'Time'}\\nPCR: ${number(row.pcr, 2)}\\nPrice: ${number(row.price)}\\nVWAP: ${number(row.vwap)}\\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`;
           return <g key={`${row.time}-${i}`} className="price-vwap-point">
-            <rect x={x(i) - 9} y="20" width="18" height="185" className="chart-hover-target"><title>{tooltip}</title></rect>
-            {row.price !== null && <circle cx={x(i)} cy={y(row.price)} r="4" className="price-hover-dot"><title>{tooltip}</title></circle>}
-            {row.vwap !== null && <circle cx={x(i)} cy={y(row.vwap)} r="4" className="vwap-hover-dot"><title>{tooltip}</title></circle>}
+            <rect x={x(row.minutes) - 4} y="20" width="8" height="185" className="chart-hover-target"><title>{tooltip}</title></rect>
+            {row.price !== null && <circle cx={x(row.minutes)} cy={y(row.price)} r="4" className="price-hover-dot"><title>{tooltip}</title></circle>}
+            {row.vwap !== null && <circle cx={x(row.minutes)} cy={y(row.vwap)} r="4" className="vwap-hover-dot"><title>{tooltip}</title></circle>}
           </g>;
         })}
+        {ticks.map((minutes) => <line key={minutes} x1={x(minutes)} x2={x(minutes)} y1="202" y2="207" className="time-tick" />)}
       </svg>
-      <div className="chart-times"><span>{usable[0].time || '—'}</span><span>{usable[Math.floor(usable.length / 2)].time || '—'}</span><span>{latest.time || '—'}</span></div>
+      <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
     <div className="series-summary price-vwap-summary">
       <div><span>Latest price</span><strong>{number(latest.price)}</strong></div>
