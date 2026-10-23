@@ -49,6 +49,15 @@ class KiteProvider:
         except Exception as exc:
             raise KiteProviderError("Kite session validation failed") from exc
 
+    def instruments(self, exchange: str | None = None) -> list[dict[str, Any]]:
+        if not self._client.access_token:
+            raise KiteProviderError("Kite session is not configured")
+        try:
+            records = self._client.instruments(exchange) if exchange else self._client.instruments()
+        except Exception as exc:
+            raise KiteProviderError("Kite instrument master download failed") from exc
+        return records
+
     def quote(self, instrument_token: int) -> dict[str, Any]:
         return self.quotes([instrument_token]).get(str(instrument_token), {})
 
