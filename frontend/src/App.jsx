@@ -402,7 +402,7 @@ function SettingsPanel() {
     setSaving(true); setMessage(''); setError('');
     try {
       const result = await api('/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings }) });
-      setMessage('Saved ' + result.count + ' settings to MySQL.');
+      // Save silently; do not display a success banner.
     } catch (e) { setError(e.message || 'Unable to save settings.'); }
     finally { setSaving(false); }
   };
