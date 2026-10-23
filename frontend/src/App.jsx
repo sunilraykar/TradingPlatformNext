@@ -132,6 +132,7 @@ function linePoints(series, width = 720, height = 220) {
 }
 
 function PriceVwapChart({ rows }) {
+  const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
     const match = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?:\s|$)/) || raw.match(/^(\d{1,2}):(\d{2})$/);
@@ -159,9 +160,12 @@ function PriceVwapChart({ rows }) {
   const gap = latest.price !== null && latest.vwap !== null ? latest.price - latest.vwap : null;
   const buffer = latest.buffer ?? (latest.price !== null && latest.vwap !== null && latest.vwap !== 0 ? ((latest.price - latest.vwap) / latest.vwap) * 100 : null);
   const ticks = Array.from({ length: 13 }, (_, i) => sessionStart + i * 30);
+  const formatHoverNumber = (value, digits = 2) => value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: digits });
+  const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
+  const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span></div>
-    <div className="chart-wrap price-vwap-wrap">
+    <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
       <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart from 09:30 to 15:30" preserveAspectRatio="none">
         <line x1="12" x2="708" y1="34" y2="34" className="zero-line" />
@@ -169,16 +173,21 @@ function PriceVwapChart({ rows }) {
         <line x1="12" x2="708" y1="202" y2="202" className="zero-line" />
         <polyline points={pathFor('price')} className="price-line" />
         <polyline points={pathFor('vwap')} className="vwap-line" />
-        {usable.map((row, i) => {
-          const tooltip = `${row.time || 'Time'}\\nPCR: ${number(row.pcr, 2)}\\nPrice: ${number(row.price)}\\nVWAP: ${number(row.vwap)}\\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`;
-          return <g key={`${row.time}-${i}`} className="price-vwap-point">
-            <rect x={x(row.minutes) - 4} y="20" width="8" height="185" className="chart-hover-target"><title>{tooltip}</title></rect>
-            {row.price !== null && <circle cx={x(row.minutes)} cy={y(row.price)} r="4" className="price-hover-dot"><title>{tooltip}</title></circle>}
-            {row.vwap !== null && <circle cx={x(row.minutes)} cy={y(row.vwap)} r="4" className="vwap-hover-dot"><title>{tooltip}</title></circle>}
-          </g>;
-        })}
+        {usable.map((row, i) => <g key={`${row.time}-${i}`} className="price-vwap-point" onMouseEnter={() => setHoveredRow(row)} onFocus={() => setHoveredRow(row)} tabIndex="0">
+          <rect x={x(row.minutes) - 7} y="20" width="14" height="185" className="chart-hover-target" aria-label={`Show values for ${row.time}`} />
+          {row.price !== null && <circle cx={x(row.minutes)} cy={y(row.price)} r="3.5" className="price-hover-dot" />}
+          {row.vwap !== null && <circle cx={x(row.minutes)} cy={y(row.vwap)} r="3.5" className="vwap-hover-dot" />}
+        </g>)}
         {ticks.map((minutes) => <line key={minutes} x1={x(minutes)} x2={x(minutes)} y1="202" y2="207" className="time-tick" />)}
       </svg>
+      {hoveredRow && <div className="price-vwap-tooltip" style={{ left: `${Math.max(16, Math.min(84, ((x(hoveredRow.minutes) - 12) / 696) * 100))}%` }}>
+        <div className="price-vwap-tooltip-heading">{hoveredRow.time || 'Intraday values'}</div>
+        <div><span>Price</span><strong>{formatHoverNumber(hoveredRow.price, 2)}</strong></div>
+        <div><span>VWAP</span><strong>{formatHoverNumber(hoveredRow.vwap, 2)}</strong></div>
+        <div><span>PCR</span><strong>{formatHoverNumber(hoveredRow.pcr, 2)}</strong></div>
+        <div><span>Price − VWAP</span><strong className={hoveredGap === null ? '' : hoveredGap >= 0 ? 'positive' : 'negative'}>{formatHoverNumber(hoveredGap, 2)}</strong></div>
+        <div><span>Buffer</span><strong className={hoveredBuffer === null ? '' : hoveredBuffer >= 0 ? 'positive' : 'negative'}>{hoveredBuffer === null ? '—' : `${formatHoverNumber(hoveredBuffer, 3)}%`}</strong></div>
+      </div>}
       <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
     <div className="series-summary price-vwap-summary">
