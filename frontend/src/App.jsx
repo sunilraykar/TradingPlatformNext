@@ -235,6 +235,7 @@ const SETTINGS_TABS = [
   ['websocket', 'WebSocket'],
   ['active-trades', 'Active Trades'],
   ['market-session', 'Market Session'],
+  ['cache-viewer', 'Cache Viewer'],
 ];
 
 const SETTINGS_FIELDS = {
@@ -273,6 +274,35 @@ const SETTINGS_FIELDS = {
     ['marketEndTime', 'Market End Time (IST)', 'time', '15:30', 'End of the market session.'],
   ],
 };
+
+
+function CacheViewer() {
+  const [snapshot, setSnapshot] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState({});
+  const load = useCallback(async () => {
+    setLoading(true); setError('');
+    try { setSnapshot(await api('/autotrender/cache/content')); }
+    catch (e) { setError(e.message || 'Unable to read cache contents.'); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  const entries = snapshot?.entries || [];
+  return <div className="cache-viewer">
+    <div className="cache-viewer-toolbar"><div><h2>Cache Viewer</h2><p className="settings-intro">Read-only process-memory cache inspection. Sensitive fields are masked.</p></div><button className="button secondary" type="button" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh cache'}</button></div>
+    {error && <div className="error-banner"><strong>Cache unavailable</strong><span>{error}</span></div>}
+    <div className="settings-grid"><div className="panel"><span>Cache entries</span><h3>{entries.length}</h3></div><div className="panel"><span>Cached records</span><h3>{entries.reduce((sum, entry) => sum + (entry.record_count || 0), 0)}</h3></div><div className="panel"><span>State</span><h3>{snapshot?.cached ? 'Populated' : 'Empty'}</h3></div></div>
+    {!loading && entries.length === 0 && !error && <p className="settings-intro">No cached data is currently held in this backend process. Visit AutoTrender or refresh market data to populate it.</p>}
+    {entries.map((entry) => <details className="cache-entry" key={entry.key} open={Boolean(expanded[entry.key])} onToggle={(event) => setExpanded((current) => ({ ...current, [entry.key]: event.currentTarget.open }))}>
+      <summary><strong>{entry.key}</strong><span>{entry.record_count} records · {entry.age_seconds ?? '—'}s old · TTL {entry.ttl_seconds}s</span></summary>
+      <p className="settings-intro">Source: {entry.source} · Fetched: {entry.fetched_at || 'Never'}</p>
+      <div className="cache-json-wrap"><pre>{JSON.stringify(entry.data, null, 2)}</pre></div>
+      {entry.data?.data && typeof entry.data.data === 'object' && <div className="table-scroll"><table className="kite-data-table"><thead><tr><th>Key</th><th>Value</th></tr></thead><tbody>{Object.entries(entry.data.data).map(([key, value]) => <tr key={key}><td>{key}</td><td>{typeof value === 'object' ? JSON.stringify(value) : String(value ?? '—')}</td></tr>)}</tbody></table></div>}
+    </details>)}
+    {snapshot?.last_refresh_error && <div className="error-banner"><strong>Last refresh error</strong><span>{snapshot.last_refresh_error}</span></div>}
+  </div>;
+}
 
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
@@ -383,6 +413,7 @@ function SettingsPanel() {
       {tab === 'websocket' && <><h2>WebSocket</h2><p className="settings-intro">Connection status is runtime information. Subscription configuration is shown separately from secret credentials.</p><div className="settings-grid">{fieldControl(['kiteWebsocketEnabled','Enable Kite WebSocket startup','boolean',true,'Start the live quote feed when a valid Kite session is restored.'])}{fieldControl(['websocketReconnectSeconds','Reconnect Backoff (seconds)','number','5','Configured reconnect delay.','1'])}{fieldControl(['websocketMode','Subscription Mode','select','quote','','ltp|LTP;quote|Quote;full|Full'])}</div><div className="settings-ui-only-note">Live status is displayed in the top header. API keys, API secrets and access tokens must remain in backend environment configuration and encrypted session storage.</div></>}
       {tab === 'active-trades' && <><h2>Active Trades</h2><div className="settings-grid">{SETTINGS_FIELDS['active-trades'].map(fieldControl)}</div><div className="settings-ui-only-note">Global defaults apply to new trades. Existing trades should retain their entry-time strategy snapshot.</div></>}
       {tab === 'market-session' && <><h2>Market Session</h2><div className="settings-grid">{SETTINGS_FIELDS['market-session'].map(fieldControl)}{fieldControl(['kiteAutoLoginEnabled','Automatic Kite Login','boolean',true,'Open the broker login flow when no valid session is available.'])}{fieldControl(['kiteSessionResetEnabled','Daily Kite Session Reset','boolean',true,'Expire the stored session at the configured time.'])}{fieldControl(['kiteSessionResetTime','Session Reset Time','time','23:00','Time uses the configured timezone.'])}{fieldControl(['kiteSessionResetTimezone','Session Reset Timezone','select','Asia/Kolkata','','Asia/Kolkata|Asia/Kolkata;UTC|UTC'])}</div></>}
+      {tab === 'cache-viewer' && <CacheViewer />}
       <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>
     </section>}
   </section>;
