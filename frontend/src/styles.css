@@ -93,3 +93,11 @@
 .kite-placeholder h1{margin:0;font-size:28px}
 .kite-placeholder p{max-width:620px;color:var(--muted);line-height:1.65;margin:0}
 @media(max-width:760px){.topbar{height:auto;min-height:78px;flex-wrap:wrap;padding:12px 0}.application-tabs{margin-left:auto}.topbar-right{margin-left:auto}}@media(max-width:500px){.application-tabs{order:3;width:100%;margin:8px 0 0}.application-tabs button{flex:1;min-width:0;padding:10px 12px}.topbar-right{width:100%;margin:0;justify-content:space-between}}
+
+
+/* Secondary navigation for Kite trading workspace. */
+.kite-tabs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 18px;padding:6px;border:1px solid var(--line);border-radius:11px;background:#0b1421;width:max-content;max-width:100%}
+.kite-tabs button{border:1px solid transparent;border-radius:7px;padding:10px 15px;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:700;white-space:nowrap;transition:background .15s ease,color .15s ease,border-color .15s ease}
+.kite-tabs button:hover{color:#fff;background:#172438}
+.kite-tabs button.active{color:var(--cyan);background:#18303b;border-color:#315b66;box-shadow:inset 0 0 0 1px #234653}
+@media(max-width:500px){.kite-tabs{width:100%;gap:4px}.kite-tabs button{flex:1;padding:9px 10px}}
