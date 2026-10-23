@@ -6,8 +6,15 @@ from app.services.autotrender_cache import AutoTrenderCache
 
 router = APIRouter(prefix="/autotrender", tags=["AutoTrender Market Data"])
 
-# Use AutoTrender's exact category values. Do not infer prices from another index.
-_INDEX_CATEGORIES = {"FINNIFTY": "FinNifty", "SENSEX": "Sensex"}
+# Use AutoTrender's exact category values; these map to its derivative endpoints.
+_INDEX_CATEGORIES = {
+    "NIFTY": "Nifty",
+    "BANKNIFTY": "BankNifty",
+    "FINNIFTY": "FinNifty",
+    "MIDCPNIFTY": "MidcpNifty",
+    "SENSEX": "Sensex",
+    "BANKEX": "Bankex",
+}
 
 
 def _auth(request: Request) -> AutoTrenderAuth:
@@ -59,10 +66,10 @@ def index_intraday(
     request: Request,
     mins: int = Query(default=5, ge=1, le=60),
 ) -> dict:
-    """Return AutoTrender intraday option-strength data for FINNIFTY or SENSEX."""
+    """Return AutoTrender intraday option-strength data for a supported index."""
     category = _INDEX_CATEGORIES.get(index.upper())
     if category is None:
-        raise HTTPException(status_code=404, detail="Supported indices are FINNIFTY and SENSEX")
+        raise HTTPException(status_code=404, detail="Supported indices are NIFTY, BANKNIFTY, FINNIFTY, MIDCPNIFTY, SENSEX, and BANKEX")
     return _get_json(
         _auth(request),
         "/api/derivatives/intra-day",
@@ -73,7 +80,7 @@ def index_intraday(
 
 @router.get("/indices/{index}/oi-graph")
 def index_oi_graph(index: str, request: Request) -> dict:
-    """Return AutoTrender change-in-open-interest graph data for FINNIFTY or SENSEX."""
+    """Return AutoTrender change-in-open-interest graph data for a supported index."""
     category = _INDEX_CATEGORIES.get(index.upper())
     if category is None:
         raise HTTPException(status_code=404, detail="Supported indices are FINNIFTY and SENSEX")
