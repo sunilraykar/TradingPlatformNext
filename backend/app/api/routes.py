@@ -241,6 +241,90 @@ def import_kite_instruments() -> dict:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.post("/kite/market-data/subscribe-portfolio", tags=["kite"])
+def subscribe_portfolio_market_data() -> dict:
+    """Subscribe all current holdings and non-flat net positions to live WebSocket ticks."""
+    provider = get_kite_provider()
+    try:
+        holdings = provider.holdings()
+        positions = provider.positions()
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    portfolio: dict[tuple[str, str], dict[str, Any]] = {}
+    for row in holdings:
+        symbol = str(row.get("tradingsymbol") or "").strip()
+        exchange = str(row.get("exchange") or "NSE").strip().upper()
+        if symbol and int(row.get("quantity") or 0) != 0:
+            portfolio[(exchange, symbol)] = {
+                "exchange": exchange, "tradingsymbol": symbol, "source": "Holding",
+                "quantity": int(row.get("quantity") or 0),
+            }
+
+    net_positions = positions.get("net", []) if isinstance(positions, dict) else []
+    for row in net_positions:
+        symbol = str(row.get("tradingsymbol") or "").strip()
+        exchange = str(row.get("exchange") or "").strip().upper()
+        quantity = int(row.get("quantity") or 0)
+        if symbol and exchange and quantity != 0:
+            key = (exchange, symbol)
+            if key in portfolio:
+                portfolio[key]["source"] = "Holding + Position"
+            else:
+                portfolio[key] = {
+                    "exchange": exchange, "tradingsymbol": symbol,
+                    "source": "Open Position", "quantity": quantity,
+                }
+
+    if not portfolio:
+        return {"subscribed": [], "missing_instrument_master": [], "subscription": live_market_data.status()}
+
+    clauses = []
+    params: dict[str, Any] = {}
+    for index, (exchange, symbol) in enumerate(portfolio):
+        clauses.append(f"(exchange = :exchange_{index} AND tradingsymbol = :symbol_{index})")
+        params[f"exchange_{index}"] = exchange
+        params[f"symbol_{index}"] = symbol
+    try:
+        with get_engine().connect() as connection:
+            rows = connection.execute(
+                text(
+                    "SELECT instrument_token, exchange, tradingsymbol, name, instrument_type "
+                    "FROM instruments WHERE is_active = TRUE AND (" + " OR ".join(clauses) + ")"
+                ),
+                params,
+            ).mappings().all()
+    except SQLAlchemyError:
+        raise HTTPException(status_code=503, detail="Instrument database unavailable") from None
+
+    found = {(str(row["exchange"]).upper(), str(row["tradingsymbol"]).upper()): row for row in rows}
+    subscribed = []
+    missing = []
+    tokens = []
+    for key, item in portfolio.items():
+        row = found.get((key[0].upper(), key[1].upper()))
+        if row is None:
+            missing.append(item)
+            continue
+        tokens.append(int(row["instrument_token"]))
+        subscribed.append({
+            **item,
+            "instrument_token": int(row["instrument_token"]),
+            "name": row["name"],
+            "instrument_type": row["instrument_type"],
+        })
+
+    try:
+        subscription = live_market_data.subscribe(tokens, mode="quote") if tokens else live_market_data.status()
+    except (ValueError, RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=502, detail="Could not subscribe portfolio instruments") from exc
+    return {
+        "subscribed": subscribed,
+        "missing_instrument_master": missing,
+        "subscription": subscription,
+    }
+
+
 @router.get("/instruments", tags=["instruments"])
 def list_instruments(
     search: str | None = Query(default=None, min_length=1, max_length=100),
