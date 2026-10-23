@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from threading import RLock
 from typing import Any
 
@@ -13,7 +13,7 @@ class LiveQuoteCache:
     def update(self, instrument_token: int, payload: dict[str, Any]) -> None:
         record = dict(payload)
         record["instrument_token"] = instrument_token
-        record["received_at"] = datetime.now(timezone.utc).isoformat()
+        record["received_at"] = datetime.now(UTC).isoformat()
         with self._lock:
             self._quotes[instrument_token] = record
 
