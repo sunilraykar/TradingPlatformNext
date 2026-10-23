@@ -230,6 +230,7 @@ function Metric({ label, value, tone }) {
 
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
+  const [kiteTab, setKiteTab] = useState('Dashboard');
   const [index, setIndex] = useState('FINNIFTY');
   const [indexPrices, setIndexPrices] = useState(null);
   const [mins, setMins] = useState(5);
@@ -413,11 +414,23 @@ export default function App() {
         <span>{hasMarketData ? 'Data received from AutoTrender API' : 'Waiting for AutoTrender market data'}</span>
         <span>Cache {cache?.cached ? `${number(cache.cache_age_seconds, 1)}s old` : 'not populated'} · API proxy: local backend</span>
       </footer>
-      </> : <section className="kite-placeholder panel">
-        <div className="eyebrow">KITE TRADING</div>
-        <h1>Kite</h1>
-        <p>The Kite application tab is ready. Kite-specific screens and API integration are not currently present in this repository's frontend, so they have not been replaced with mock trading data.</p>
-      </section>}
+      </> : <>
+        <section className="page-heading">
+          <div><div className="eyebrow">ZERODHA KITE</div><h1>Kite Trading</h1><p>Trading workspace navigation for Kite-connected features.</p></div>
+        </section>
+        <nav className="kite-tabs" aria-label="Kite sections">
+          {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings', 'Funds'].map((tab) =>
+            <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => setKiteTab(tab)}>{tab}</button>
+          )}
+        </nav>
+        <section className="kite-placeholder panel">
+          <div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div>
+          <h1>{kiteTab}</h1>
+          <p>{kiteTab === 'Dashboard'
+            ? 'Kite workspace overview. Connect the Kite API and implement the relevant widgets here.'
+            : `${kiteTab} workspace selected. The dedicated Kite screen and live API integration are not yet implemented in this frontend; live trading data is not being simulated.`}</p>
+        </section>
+      </>}
     </main>
   );
 }
