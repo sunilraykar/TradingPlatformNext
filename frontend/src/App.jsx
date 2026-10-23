@@ -228,6 +228,150 @@ function Metric({ label, value, tone }) {
   return <div className="metric"><span>{label}</span><strong className={tone || ''}>{displayValue(value)}</strong></div>;
 }
 
+
+const SETTINGS_TABS = [
+  ['trading-mode', 'Trading Mode'],
+  ['accounts', 'Trading Accounts'],
+  ['market-intelligence', 'Market Intelligence'],
+  ['option-chain', 'Option Chain'],
+  ['symbol-whitelist', 'Symbol Whitelist'],
+  ['autotrend', 'AutoTrender'],
+  ['websocket', 'WebSocket'],
+  ['active-trades', 'Active Trades'],
+  ['market-session', 'Market Session'],
+];
+
+const SETTINGS_FIELDS = {
+  'market-intelligence': [
+    ['targetFallbackPercent', 'Target Fallback %', 'number', '1.00', 'Used when an option-chain target is unavailable.', '0.01'],
+    ['swingRefreshSeconds', 'Swing Refresh Interval (seconds)', 'number', '5', 'Refresh interval for Swing Trades.', '1'],
+  ],
+  'option-chain': [
+    ['indicesRefreshSeconds', 'Indices Refresh Interval (seconds)', 'number', '3', 'Refresh interval for indices.', '1'],
+    ['optionChainWorkers', 'Option Chain Workers', 'number', '2', 'Number of concurrent option-chain workers.', '1'],
+    ['optionChainPostBatchWaitSeconds', 'Option Chain Post-Batch Wait (seconds)', 'number', '10', 'Pause between batches of option-chain requests.', '0'],
+    ['optionChainSymbols', 'Option Chain Symbols (comma-separated)', 'text', '', 'Symbols to include in the option-chain universe.', ''],
+  ],
+  autotrend: [
+    ['autoTrenderRefreshSeconds', 'AutoTrender Refresh Interval (seconds)', 'number', '5', 'Refresh interval for AutoTrender data.', '1'],
+    ['vwapPriceDifferenceBuffer', 'VWAP-Price Difference Buffer (%)', 'number', '0.3', 'Maximum absolute VWAP/price buffer used by the entry filter.', '0'],
+    ['putPcr', 'Put PCR Threshold', 'number', '1', 'Put PCR threshold used by the signal filter.', '0'],
+    ['callPcr', 'Call PCR Threshold', 'number', '1', 'Call PCR threshold used by the signal filter.', '0'],
+    ['callPutStrengthDiff', 'Call-Put Strength Difference', 'number', '10', 'Minimum call/put strength difference for a signal.', '0'],
+  ],
+  'active-trades': [
+    ['autoExitProfitableTrades', 'Auto Exit Profitable Trades at Market Close', 'boolean', false, 'Enable AutoExitProfitableTradesWorker. When disabled, the worker must not auto-exit profitable trades.'],
+    ['targetStopLossStrategy', 'Target & Stop Loss Strategy', 'select', 'M-TTTS', '', ['L-FT-FSL|Fixed Target + Fixed SL', 'M-FT-TSL|Fixed Target + Trailing SL', 'M-TTTS|Target-Triggered Trailing Stop', 'H-PT-TSL|Progressive Target + Trailing SL']],
+    ['defaultTargetPercent', 'Default Target', 'number', '10', 'Default target for new manual option trades.', '0.01'],
+    ['defaultTargetType', 'Default Target Unit', 'select', 'PERCENTAGE', '', ['POINTS|Points', 'PERCENTAGE|Percentage (%)']],
+    ['trailingDistance', 'Trailing SL Distance', 'number', '5', 'Trailing stop-loss distance.', '0.01'],
+    ['trailingDistanceType', 'Trailing SL Unit', 'select', 'POINTS', '', ['POINTS|Points', 'PERCENTAGE|Percentage (%)']],
+    ['trailingTarget', 'Trailing Target Distance', 'number', '10', 'Distance used to advance the target.', '0.01'],
+    ['trailingTargetType', 'Trailing Target Unit', 'select', 'POINTS', '', ['POINTS|Points', 'PERCENTAGE|Percentage (%)']],
+    ['intelligenceExitEnabled', 'Intelligence-Based Exit', 'boolean', false, 'Allow market intelligence to trigger an exit.'],
+    ['manualExitEnabled', 'Manual Exit', 'boolean', true, 'Allow a user to manually exit an active trade.'],
+  ],
+  'market-session': [
+    ['marketStartTime', 'Market Start Time (IST)', 'time', '09:15', 'Start of the market session.'],
+    ['marketEndTime', 'Market End Time (IST)', 'time', '15:30', 'End of the market session.'],
+  ],
+};
+
+function SettingsPanel() {
+  const [tab, setTab] = useState('market-intelligence');
+  const [settings, setSettings] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const defaults = useMemo(() => {
+    const values = {};
+    for (const fields of Object.values(SETTINGS_FIELDS)) {
+      for (const field of fields) values[field[0]] = field[3];
+    }
+    Object.assign(values, {
+      executionMode: 'PAPER',
+      autoTrenderDashboardIndices: { Nifty: true, BankNifty: true, Sensex: true, FinNifty: true },
+      optionChainSymbolWhitelist: [],
+      optionChainSymbolBlacklist: [],
+      showTradeDetailsByDefault: false,
+      kiteUnderlying: 'NIFTY',
+      kiteStrikeCount: 10,
+      kiteAutoLoginEnabled: true,
+      kiteSessionResetEnabled: true,
+      kiteSessionResetTime: '23:00',
+      kiteSessionResetTimezone: 'Asia/Kolkata',
+      tradingAccounts: [],
+      portfolios: [],
+    });
+    return values;
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    api('/settings').then((result) => {
+      if (active) setSettings({ ...defaults, ...(result.settings || {}) });
+    }).catch((e) => {
+      if (active) { setSettings(defaults); setError('Could not load saved settings from MySQL: ' + e.message); }
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [defaults]);
+
+  const value = (key) => settings[key] === undefined ? defaults[key] : settings[key];
+  const change = (key, next) => setSettings((current) => ({ ...current, [key]: next }));
+  const save = async () => {
+    setSaving(true); setMessage(''); setError('');
+    try {
+      const result = await api('/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings }) });
+      setMessage('Saved ' + result.count + ' settings to MySQL.');
+    } catch (e) { setError(e.message || 'Unable to save settings.'); }
+    finally { setSaving(false); }
+  };
+
+  const fieldControl = (field) => {
+    const [key, label, type, fallback, help, extra] = field;
+    const current = value(key);
+    if (type === 'boolean') return <label className="settings-toggle" key={key}><input type="checkbox" checked={Boolean(current)} onChange={(e) => change(key, e.target.checked)} /><span><strong>{label}</strong><small>{help}</small></span></label>;
+    if (type === 'select') return <label className="settings-control" key={key}><span>{label}</span><select value={current} onChange={(e) => change(key, e.target.value)}>{extra.map((item) => { const [v, name] = item.split('|'); return <option key={v} value={v}>{name}</option>; })}</select>{help && <small>{help}</small>}</label>;
+    return <label className="settings-control" key={key}><span>{label}</span><input type={type} min={type === 'number' ? extra : undefined} step={type === 'number' ? 'any' : undefined} value={current ?? fallback} onChange={(e) => change(key, type === 'number' ? e.target.value : e.target.value)} />{help && <small>{help}</small>}</label>;
+  };
+
+  return <section className="settings-page">
+    <div className="page-heading"><div><div className="eyebrow">APPLICATION CONFIGURATION</div><h1>Settings</h1><p>Configure trading accounts, provider access, refresh intervals, market rules and trade management.</p></div><button className="button primary" onClick={save} disabled={saving || loading}>{saving ? 'Saving…' : 'Save settings'}</button></div>
+    <nav className="settings-tabs" aria-label="Settings sections">{SETTINGS_TABS.map(([id, label]) => <button type="button" key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
+    {error && <div className="error-banner"><strong>Settings issue</strong><span>{error}</span></div>}
+    {message && <div className="settings-success">{message}</div>}
+    {loading ? <section className="panel settings-section">Loading saved settings…</section> : <section className="panel settings-section">
+      {tab === 'trading-mode' && <><h2>Trading Mode</h2><label className="settings-control"><span>Execution Mode</span><select value={value('executionMode')} onChange={(e) => change('executionMode', e.target.value)}><option value="PAPER">PAPER</option><option value="REAL">REAL</option></select><small>PAPER mode is the safe default. This setting does not itself enable live order placement.</small></label><label className="settings-toggle"><input type="checkbox" checked={Boolean(value('showTradeDetailsByDefault'))} onChange={(e) => change('showTradeDetailsByDefault', e.target.checked)} /><span><strong>Show Trade Details by default</strong><small>Controls the default visibility of trade notes and conditions.</small></span></label></>}
+      {tab === 'accounts' && <><h2>Trading Accounts</h2><p className="settings-intro">Each account represents one broker account. Configure one broker and enable at least one intelligence provider. Credentials and runtime tokens are not stored in this business record.</p><div className="settings-grid">
+        {fieldControl(['accountName','Account Name','text','','Required display name.'])}
+        {fieldControl(['broker','Broker','select','KITE','Exactly one broker per account.',['KITE|Kite']])}
+        {fieldControl(['brokerAccountId','Broker Account ID','text','','Broker-side account/login identifier.'])}
+        {fieldControl(['accountStatus','Account Status','select','ACTIVE','','ACTIVE|ACTIVE;INACTIVE|INACTIVE'])}
+        {fieldControl(['enableApiPlatform','Enable APIPLATFORM','boolean',true,'Enable Market Intelligence provider access.'])}
+        {fieldControl(['enableAutoTrender','Enable AutoTrender','boolean',true,'Enable AutoTrender provider access.'])}
+      </div><p className="settings-intro">The account form is configuration-only in this first UI pass; persistent account CRUD and account listing require the dedicated Trading Account API/model phase.</p><h3>Portfolios</h3><div className="settings-grid">
+        {fieldControl(['portfolioName','Portfolio Name','text','Swing Trading','Logical trading mandate within the selected account.'])}
+        {fieldControl(['portfolioStatus','Portfolio Status','select','ACTIVE','','ACTIVE|ACTIVE;INACTIVE|INACTIVE'])}
+        {fieldControl(['portfolioBaseCurrency','Base Currency','select','INR','','INR|INR'])}
+        {fieldControl(['portfolioDescription','Portfolio Description','text','','Optional description.'])}
+      </div></>}
+      {tab === 'market-intelligence' && <><h2>Market Intelligence</h2><div className="settings-grid">{SETTINGS_FIELDS['market-intelligence'].map(fieldControl)}</div></>}
+      {tab === 'option-chain' && <><h2>Option Chain</h2><div className="settings-grid">{SETTINGS_FIELDS['option-chain'].map(fieldControl)}</div><div className="settings-grid">
+        {fieldControl(['kiteUnderlying','Default Option Chain Underlying','select','NIFTY','','NIFTY|NIFTY;BANKNIFTY|BANKNIFTY;FINNIFTY|FINNIFTY;SENSEX|SENSEX'])}
+        {fieldControl(['kiteStrikeCount','Strikes Each Side','select',10,'Number of strikes on either side.',['5|5','10|10','15|15','20|20','30|30']])}
+      </div></>}
+      {tab === 'symbol-whitelist' && <><h2>Option Chain Symbol Whitelist / Blacklist</h2><p className="settings-intro">Maintain symbols explicitly allowed or excluded from the option-chain universe. Separate symbols with commas.</p>{fieldControl(['optionChainSymbolWhitelistText','Whitelist Symbols','text',(value('optionChainSymbolWhitelist') || []).join(', '),'Comma-separated allow-list.'])}{fieldControl(['optionChainSymbolBlacklistText','Blacklist Symbols','text',(value('optionChainSymbolBlacklist') || []).join(', '),'Comma-separated block-list.'])}<div className="settings-grid">{fieldControl(['optionChainSymbolLetter','Filter by Initial Letter','select','ALL','','ALL|All letters;A|A;B|B;C|C;D|D;E|E;F|F;G|G;H|H;I|I;J|J;K|K;L|L;M|M;N|N;O|O;P|P;Q|Q;R|R;S|S;T|T;U|U;V|V;W|W;X|X;Y|Y;Z|Z'])}{fieldControl(['optionChainSymbolStatus','Symbol Status Filter','select','ALL','','ALL|All;ACTIVE|Active;INACTIVE|Inactive'])}</div></>}
+      {tab === 'autotrend' && <><h2>AutoTrender</h2><div className="settings-grid">{SETTINGS_FIELDS.autotrend.map(fieldControl)}</div><div className="settings-check-grid">{Object.entries(value('autoTrenderDashboardIndices') || {}).map(([name, enabled]) => <label className="settings-toggle" key={name}><input type="checkbox" checked={Boolean(enabled)} onChange={(e) => change('autoTrenderDashboardIndices', { ...(value('autoTrenderDashboardIndices') || {}), [name]: e.target.checked })} /><span><strong>{name}</strong><small>Show on AutoTrender dashboard</small></span></label>)}</div></>}
+      {tab === 'websocket' && <><h2>WebSocket</h2><p className="settings-intro">Connection status is runtime information. Subscription configuration is shown separately from secret credentials.</p><div className="settings-grid">{fieldControl(['kiteWebsocketEnabled','Enable Kite WebSocket startup','boolean',true,'Start the live quote feed when a valid Kite session is restored.'])}{fieldControl(['websocketReconnectSeconds','Reconnect Backoff (seconds)','number','5','Configured reconnect delay.','1'])}{fieldControl(['websocketMode','Subscription Mode','select','quote','','ltp|LTP;quote|Quote;full|Full'])}</div><div className="settings-ui-only-note">Live status is displayed in the top header. API keys, API secrets and access tokens must remain in backend environment configuration and encrypted session storage.</div></>}
+      {tab === 'active-trades' && <><h2>Active Trades</h2><div className="settings-grid">{SETTINGS_FIELDS['active-trades'].map(fieldControl)}</div><div className="settings-ui-only-note">Global defaults apply to new trades. Existing trades should retain their entry-time strategy snapshot.</div></>}
+      {tab === 'market-session' && <><h2>Market Session</h2><div className="settings-grid">{SETTINGS_FIELDS['market-session'].map(fieldControl)}{fieldControl(['kiteAutoLoginEnabled','Automatic Kite Login','boolean',true,'Open the broker login flow when no valid session is available.'])}{fieldControl(['kiteSessionResetEnabled','Daily Kite Session Reset','boolean',true,'Expire the stored session at the configured time.'])}{fieldControl(['kiteSessionResetTime','Session Reset Time','time','23:00','Time uses the configured timezone.'])}{fieldControl(['kiteSessionResetTimezone','Session Reset Timezone','select','Asia/Kolkata','','Asia/Kolkata|Asia/Kolkata;UTC|UTC'])}</div></>}
+      <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>
+    </section>}
+  </section>;
+}
+
 function KiteDataTable({ rows, emptyText = 'No records returned.' }) {
   if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
   const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))].slice(0, 18);
@@ -356,6 +500,7 @@ export default function App() {
       <nav className="application-tabs" aria-label="Application section">
         <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
+        <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
       </nav>
         <div className="topbar-right">
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
@@ -364,7 +509,7 @@ export default function App() {
         </div>
       </header>
 
-      {applicationTab === 'autotrender' ? <>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'autotrender' ? <>
       <section className="page-heading">
         <div><div className="eyebrow">READ-ONLY MARKET DATA</div><h1>AutoTrender Monitor</h1><p>Intraday option strength and change-in-open-interest for NIFTY, BANKNIFTY, FINNIFTY and SENSEX.</p></div>
         <div className="heading-meta"><span className={stale ? 'stale' : 'fresh'}>{stale ? 'Check data freshness' : 'Source status'}</span><small>Updated {lastUpdated ? lastUpdated.toLocaleTimeString('en-IN') : '—'}</small></div>
