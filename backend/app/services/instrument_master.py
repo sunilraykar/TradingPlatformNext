@@ -3,11 +3,10 @@
 from datetime import UTC, date, datetime
 from typing import Any
 
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
-
 from app.db.session import get_engine
 from app.providers.kite.registry import get_kite_provider
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 
 UPSERT_INSTRUMENT = text(
