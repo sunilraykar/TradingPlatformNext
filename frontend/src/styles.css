@@ -55,7 +55,7 @@
 
 
 /* Split chart and latest-record card 60:40 on desktop. */
-.price-vwap-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(280px,2fr);gap:0;align-items:stretch}
+.price-vwap-layout{display:grid;grid-template-columns:minmax(0,7fr) minmax(260px,3fr);gap:0;align-items:stretch}
 .price-vwap-graph-column{min-width:0;border-right:1px solid var(--line);padding-bottom:10px}
 .latest-candle-card{min-width:0;padding:22px 20px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(145deg,#111d2c,#0d1522)}
 .latest-candle-card h2{font-size:20px;margin:0;font-family:'DM Mono',monospace;letter-spacing:-.5px}
