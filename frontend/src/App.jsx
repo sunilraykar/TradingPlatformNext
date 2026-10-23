@@ -265,6 +265,19 @@ export default function App() {
   const trend = useMemo(() => extractTrend(oi), [oi]);
   const intradayRows = Array.isArray(intraday?.data) ? intraday.data : [];
   const calculatedRows = useMemo(() => buildIntradayRows(intradayRows), [intradayRows]);
+  const calculatedRowsDescending = useMemo(() => [...calculatedRows].sort((a, b) => {
+    const sortTime = (value) => {
+      const raw = String(value || '').trim();
+      const clock = raw.match(/^(\d{1,2}):(\d{2})/);
+      if (clock) return Number(clock[1]) * 60 + Number(clock[2]);
+      const parsed = Date.parse(raw);
+      return Number.isFinite(parsed) ? parsed : raw;
+    };
+    const left = sortTime(a.time);
+    const right = sortTime(b.time);
+    if (typeof left === 'number' && typeof right === 'number') return right - left;
+    return String(right).localeCompare(String(left), undefined, { numeric: true });
+  }), [calculatedRows]);
   const latest = intradayRows[intradayRows.length - 1] || {};
   const indexPriceKey = Object.keys(indexPrices?.data || {}).find((key) => INDEX_LABELS[key.toLowerCase()] === index);
   const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
@@ -329,7 +342,7 @@ export default function App() {
         <article className="panel intraday-panel calculated-table-panel">
           <div className="panel-header"><div><div className="eyebrow">INTRADAY SIGNALS</div><h2>Calculated intraday table</h2></div><span className="data-count">{calculatedRows.length} points</span></div>
           <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>Call</th><th>Put</th><th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th><th>VWAP Signal</th><th>Option Signal</th><th>Call Strength (%)</th><th>Put Strength (%)</th><th>Call-Put Strength Diff</th><th>VWAP-Price Buffer (%)</th><th>Enter</th></tr></thead>
-            <tbody>{calculatedRows.slice(-100).reverse().map((row) => <tr key={row.key} title={`Time: ${row.time || '—'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`}>
+            <tbody>{calculatedRowsDescending.slice(0, 100).map((row) => <tr key={row.key} title={`Time: ${row.time || '—'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`}>
               <td>{row.time || '—'}</td><td>{number(row.call)}</td><td>{number(row.put)}</td><td>{number(row.diff)}</td><td>{number(row.pcr, 2)}</td><td>{number(row.price)}</td><td>{number(row.vwap)}</td>
               <td><span className="signal-tag">{row.vwapSignal || '—'}</span></td><td><span className="signal-tag">{row.optionSignal || '—'}</span></td>
               <td>{row.callStrength === null ? '—' : number(row.callStrength) + '%'}</td><td>{row.putStrength === null ? '—' : number(row.putStrength) + '%'}</td>
