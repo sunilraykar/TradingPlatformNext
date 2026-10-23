@@ -8,9 +8,9 @@ from app.core.config import get_settings
 from app.db.session import get_engine
 from app.providers.kite.client import KiteProvider, KiteProviderError
 from app.providers.kite.registry import configure_active_kite_session, get_kite_provider
+from app.services import live_market_data
 from app.services.kite_sessions import KiteSessionStoreError, save_session
 from app.services.live_quotes import live_quotes
-from app.services import live_market_data
 
 router = APIRouter()
 
@@ -53,9 +53,11 @@ def _exchange_and_save(request_token: str) -> str:
     configure_active_kite_session(session.access_token)
     try:
         live_market_data.start()
-    except Exception:
+    except (RuntimeError, ValueError, OSError):
         # Authentication remains valid even if the WebSocket cannot connect yet.
-        pass
+        import logging
+
+        logging.getLogger(__name__).exception("Kite session saved but WebSocket startup failed")
     return session.user_id
 
 
