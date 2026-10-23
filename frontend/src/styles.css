@@ -101,3 +101,17 @@
 .kite-tabs button:hover{color:#fff;background:#172438}
 .kite-tabs button.active{color:var(--cyan);background:#18303b;border-color:#315b66;box-shadow:inset 0 0 0 1px #234653}
 @media(max-width:500px){.kite-tabs{width:100%;gap:4px}.kite-tabs button{flex:1;padding:9px 10px}}
+
+
+/* Kite workspace data tables and always-visible WebSocket health. */
+.kite-data-panel{min-height:300px}
+.kite-data-subtitle{margin-top:7px;color:var(--muted);font-size:11px}
+.kite-data-scroll{max-height:calc(100vh - 300px);min-height:180px}
+.kite-data-table{min-width:900px}
+.kite-data-table th{text-transform:capitalize}
+.kite-data-table td{max-width:320px;overflow-wrap:anywhere;white-space:normal}
+.kite-data-empty{padding:44px 20px;text-align:center;color:var(--muted);font-size:12px}
+.kite-error{display:flex;flex-direction:column;gap:6px;padding:14px 16px;margin:0 16px 14px;background:#3a2025;border:1px solid #754049;border-radius:9px;color:#e8c9ce;font-size:12px}
+.kite-error strong{color:#ffb1b1}
+.kite-error small{color:#c5a5ab}
+@media(max-width:650px){.kite-data-panel .panel-header{align-items:flex-start;gap:12px;flex-direction:column}.kite-data-scroll{max-height:65vh}}
