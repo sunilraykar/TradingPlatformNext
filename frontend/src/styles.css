@@ -152,3 +152,16 @@
 .settings-record-list>div{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}
 .settings-record-list>div>span{display:flex;flex-direction:column;gap:4px;min-width:0}
 .settings-record-list .button{flex-shrink:0}
+
+/* Holdings filters operate only on the live Kite portfolio rows. */
+.holdings-filters{display:flex;flex-direction:column;gap:12px;min-width:0}
+.holdings-filter-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text);font-size:12px}
+.holdings-filter-heading span{color:var(--muted);font-size:11px}
+.holdings-alphabet{display:flex;flex-wrap:wrap;gap:5px;padding:9px;background:#0b1421;border:1px solid var(--line);border-radius:9px}
+.holdings-alphabet button,.holdings-profit-filters button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:29px;padding:7px 9px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--muted);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.holdings-alphabet button:hover,.holdings-profit-filters button:hover{background:#1a293d;color:var(--text)}
+.holdings-alphabet button.active,.holdings-profit-filters button.active{background:#183b46;border-color:#286170;color:#8ce4e5}
+.holdings-profit-filters{display:flex;flex-wrap:wrap;gap:6px}
+.holdings-profit-filters button{border:1px solid var(--line);background:#111c2b}
+.holdings-profit-filters button span{padding:2px 5px;border-radius:5px;background:#243247;color:#dbe6f7;font-size:10px}
+.holdings-filters .kite-data-empty{padding:28px;text-align:center}
