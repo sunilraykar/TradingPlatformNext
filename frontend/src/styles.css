@@ -115,3 +115,31 @@
 .kite-error strong{color:#ffb1b1}
 .kite-error small{color:#c5a5ab}
 @media(max-width:650px){.kite-data-panel .panel-header{align-items:flex-start;gap:12px;flex-direction:column}.kite-data-scroll{max-height:65vh}}
+
+
+/* Full Settings workspace ported from the previous TradingPlatform feature set. */
+.settings-page{width:100%;padding-bottom:24px}
+.settings-page>.page-heading{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.settings-tabs{display:flex;gap:5px;flex-wrap:wrap;padding:6px;margin:0 0 16px;border:1px solid var(--line);border-radius:11px;background:#0b1421}
+.settings-tabs button{border:1px solid transparent;border-radius:7px;padding:10px 13px;background:transparent;color:var(--muted);font:inherit;font-size:11px;font-weight:700;cursor:pointer}
+.settings-tabs button:hover{background:#172438;color:#fff}
+.settings-tabs button.active{background:#20324a;border-color:#395572;color:#f5f8ff}
+.settings-section{padding:22px;display:flex;flex-direction:column;gap:18px}
+.settings-section h2{margin:0;font-size:19px}
+.settings-section h3{margin:8px 0 0;font-size:15px;color:var(--cyan)}
+.settings-intro,.settings-ui-only-note{font-size:12px;line-height:1.6;color:var(--muted);margin:0}
+.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.settings-control{display:flex;flex-direction:column;gap:8px;min-width:0;color:#dce5f4;font-size:12px;font-weight:650}
+.settings-control>span{color:#dce5f4}
+.settings-control input,.settings-control select{width:100%;min-width:0;padding:11px 12px;background:#0b1421;color:var(--text);border:1px solid #2c3b51;border-radius:8px;font:inherit;font-weight:500}
+.settings-control small,.settings-toggle small{display:block;color:var(--muted);font-size:10px;font-weight:400;line-height:1.5}
+.settings-toggle{display:flex;align-items:flex-start;gap:12px;padding:13px 14px;background:#121e2d;border:1px solid #29384c;border-radius:9px;cursor:pointer}
+.settings-toggle input{margin-top:3px;accent-color:var(--cyan);width:15px;height:15px;flex-shrink:0}
+.settings-toggle span{display:flex;flex-direction:column;gap:5px}
+.settings-toggle strong{font-size:12px}
+.settings-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.settings-actions{display:flex;align-items:center;gap:14px;padding-top:16px;border-top:1px solid var(--line)}
+.settings-success{padding:12px 15px;border:1px solid #285b4a;background:#102a25;color:#9ee2c7;border-radius:8px;font-size:12px}
+.settings-page .error-banner{margin:0 0 14px}
+.settings-page .page-heading p{max-width:700px}
+@media(max-width:760px){.settings-grid,.settings-check-grid{grid-template-columns:minmax(0,1fr)}.settings-section{padding:15px}.settings-page>.page-heading{align-items:flex-start;flex-direction:column}.settings-tabs{overflow-x:auto;flex-wrap:nowrap}.settings-tabs button{white-space:nowrap}}
