@@ -294,7 +294,7 @@ function CacheViewer() {
     {error && <div className="error-banner"><strong>Cache unavailable</strong><span>{error}</span></div>}
     <div className="settings-grid"><div className="panel"><span>Cache entries</span><h3>{entries.length}</h3></div><div className="panel"><span>Cached records</span><h3>{entries.reduce((sum, entry) => sum + (entry.record_count || 0), 0)}</h3></div><div className="panel"><span>State</span><h3>{snapshot?.cached ? 'Populated' : 'Empty'}</h3></div></div>
     {!loading && entries.length === 0 && !error && <p className="settings-intro">No cached data is currently held in this backend process. Visit AutoTrender or refresh market data to populate it.</p>}
-    {entries.map((entry) => <details className="cache-entry" key={entry.key} open={Boolean(expanded[entry.key])} onToggle={(event) => setExpanded((current) => ({ ...current, [entry.key]: event.currentTarget.open }))}>
+    {entries.map((entry) => <details className="cache-entry" key={entry.key} open={Boolean(expanded[entry.key])} onToggle={(event) => { const isOpen = event.currentTarget.open; setExpanded((current) => ({ ...current, [entry.key]: isOpen })); }}>
       <summary><strong>{entry.key}</strong><span>{entry.record_count} records · {entry.age_seconds ?? '—'}s old · TTL {entry.ttl_seconds}s</span></summary>
       <p className="settings-intro">Source: {entry.source} · Fetched: {entry.fetched_at || 'Never'}</p>
       <div className="cache-json-wrap"><pre>{JSON.stringify(entry.data, null, 2)}</pre></div>
