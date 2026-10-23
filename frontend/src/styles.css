@@ -16,3 +16,18 @@
 .calculated-table .enter-tag.sell{background:#45262d;color:#ffaaaa}
 .calculated-table .enter-tag.wait{background:#3a3120;color:#f1d28b}
 @media(max-width:650px){.calculated-table{min-width:1500px}}
+
+/* Intraday price and VWAP chart restored alongside the calculated signal table. */
+.price-vwap-section{margin-bottom:16px}
+.price-vwap-panel{width:100%}
+.price-vwap-legend{padding-bottom:0}
+.price-vwap-legend .legend-price{background:var(--cyan)}
+.price-vwap-legend .legend-vwap{background:#b28aff}
+.price-vwap-wrap{padding-top:14px}
+.price-vwap-chart{height:250px}
+.price-line{fill:none;stroke:var(--cyan);stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.vwap-line{fill:none;stroke:#b28aff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;stroke-dasharray:6 3}
+.price-vwap-summary{padding-top:14px}
+.price-vwap-summary .positive{color:var(--green)}
+.price-vwap-summary .negative{color:var(--red)}
+@media(max-width:650px){.price-vwap-chart{height:200px}.price-vwap-summary{grid-template-columns:1fr 1fr}}
