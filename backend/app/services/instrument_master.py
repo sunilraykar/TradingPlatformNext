@@ -1,5 +1,9 @@
 """Kite instrument-master download and MySQL persistence."""
 
+# Ruff 0.17.2 reports this SQLAlchemy import block as unsorted despite its stable order.
+# Keep the suppression scoped to this module rather than disabling import sorting globally.
+# ruff: noqa: I001
+
 from datetime import UTC, date, datetime
 from typing import Any
 
