@@ -84,11 +84,12 @@
 .price-vwap-point:focus{outline:none}
 .price-vwap-point:focus .price-hover-dot,.price-vwap-point:focus .vwap-hover-dot{opacity:1;r:5}
 
-.application-tabs{display:flex;align-items:center;gap:8px;margin:0 0 22px;padding:6px;border:1px solid var(--line);border-radius:12px;background:#0b1421;width:max-content;max-width:100%}
-.application-tabs button{min-width:132px;border:1px solid transparent;border-radius:8px;padding:10px 20px;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease}
+/* Application tabs sit inline beside the TP / TradingPlatformNext brand. */
+.application-tabs{display:flex;align-items:center;gap:5px;margin:0 0 0 28px;padding:4px;border:1px solid var(--line);border-radius:10px;background:#0b1421;width:max-content;max-width:100%;flex-shrink:0}
+.application-tabs button{min-width:112px;border:1px solid transparent;border-radius:7px;padding:9px 16px;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s ease,color .15s ease,border-color .15s ease}
 .application-tabs button:hover{color:#fff;background:#172438}
 .application-tabs button.active{color:#f5f8ff;background:#20324a;border-color:#395572;box-shadow:inset 0 0 0 1px #263e58}
 .kite-placeholder{min-height:280px;padding:28px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:12px}
 .kite-placeholder h1{margin:0;font-size:28px}
 .kite-placeholder p{max-width:620px;color:var(--muted);line-height:1.65;margin:0}
-@media(max-width:500px){.application-tabs{width:100%}.application-tabs button{flex:1;min-width:0;padding:10px 12px}}
+@media(max-width:760px){.topbar{height:auto;min-height:78px;flex-wrap:wrap;padding:12px 0}.application-tabs{margin-left:auto}.topbar-right{margin-left:auto}}@media(max-width:500px){.application-tabs{order:3;width:100%;margin:8px 0 0}.application-tabs button{flex:1;min-width:0;padding:10px 12px}.topbar-right{width:100%;margin:0;justify-content:space-between}}
