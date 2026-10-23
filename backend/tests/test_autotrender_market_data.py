@@ -52,5 +52,40 @@ def test_sensex_oi_graph_uses_supported_upstream_category() -> None:
 
 
 def test_unsupported_autotrender_index_is_rejected() -> None:
-    response = TestClient(app).get("/api/v1/autotrender/indices/BANKNIFTY/intraday")
+    response = TestClient(app).get("/api/v1/autotrender/indices/UNKNOWN/intraday")
     assert response.status_code == 404
+def test_banknifty_intraday_uses_supported_upstream_category() -> None:
+    auth = MagicMock()
+    auth.get.return_value.status_code = 200
+    auth.get.return_value.headers = {"Content-Type": "application/json"}
+    auth.get.return_value.json.return_value = {"data": []}
+    app.state.autotrender_auth = auth
+    try:
+        response = TestClient(app).get("/api/v1/autotrender/indices/BANKNIFTY/intraday")
+    finally:
+        del app.state.autotrender_auth
+
+    assert response.status_code == 200
+    auth.get.assert_called_once_with(
+        "/api/derivatives/intra-day",
+        params={"category": "BankNifty", "mins": 5},
+    )
+
+
+def test_nifty_oi_graph_uses_supported_upstream_category() -> None:
+    auth = MagicMock()
+    auth.get.return_value.status_code = 200
+    auth.get.return_value.headers = {"Content-Type": "application/json"}
+    auth.get.return_value.json.return_value = {"data": {"graph": {"option": [], "future": []}}}
+    app.state.autotrender_auth = auth
+    try:
+        response = TestClient(app).get("/api/v1/autotrender/indices/NIFTY/oi-graph")
+    finally:
+        del app.state.autotrender_auth
+
+    assert response.status_code == 200
+    auth.get.assert_called_once_with(
+        "/api/derivatives/table/graph",
+        params={"category": "Nifty"},
+    )
+
