@@ -130,6 +130,56 @@ def _exchange_and_save(request_token: str) -> str:
     return session.user_id
 
 
+class SettingsUpdateRequest(BaseModel):
+    settings: dict[str, Any]
+
+
+@router.get("/settings", tags=["settings"])
+def read_application_settings() -> dict[str, Any]:
+    """Read application UI settings from MySQL app_settings."""
+    try:
+        with get_engine().connect() as connection:
+            rows = connection.execute(text(
+                "SELECT setting_key, setting_value FROM app_settings WHERE setting_key LIKE 'ui.%'"
+            )).mappings().all()
+        result: dict[str, Any] = {}
+        for row in rows:
+            key = str(row["setting_key"])[3:]
+            value = row["setting_value"]
+            if isinstance(value, str):
+                import json
+                try:
+                    value = json.loads(value)
+                except (TypeError, ValueError):
+                    pass
+            result[key] = value
+        return {"settings": result}
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Unable to read settings from MySQL. Check database configuration and migrations.") from exc
+
+
+@router.put("/settings", tags=["settings"])
+def write_application_settings(request: SettingsUpdateRequest) -> dict[str, Any]:
+    """Persist non-secret application UI settings in MySQL."""
+    import json
+    try:
+        with get_engine().begin() as connection:
+            for key, value in request.settings.items():
+                if not isinstance(key, str) or not key or len(key) > 180:
+                    raise HTTPException(status_code=422, detail="Invalid setting key")
+                if key.lower().endswith(("password", "secret", "token", "api_key", "apikey")):
+                    raise HTTPException(status_code=422, detail="Secrets and provider credentials must remain in backend environment configuration")
+                connection.execute(text(
+                    "INSERT INTO app_settings (setting_key, setting_value, description, is_secret) "
+                    "VALUES (:key, CAST(:value AS JSON), 'Trading platform UI setting', FALSE) "
+                    "ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), "
+                    "description = VALUES(description), is_secret = FALSE, version = version + 1"
+                ), {"key": "ui." + key, "value": json.dumps(value, separators=(",", ":"))})
+        return {"saved": True, "count": len(request.settings)}
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Unable to save settings to MySQL. Check database configuration and migrations.") from exc
+
+
 @router.get("/kite/login-url", tags=["kite"])
 def kite_login_url() -> dict[str, str]:
     settings = get_settings()
