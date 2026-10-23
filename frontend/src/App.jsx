@@ -626,7 +626,7 @@ export default function App() {
       </footer>
       </> : <>
         <section className="page-heading">
-          <div><div className="eyebrow">ZERODHA KITE</div><h1>Kite Trading</h1><p>Trading workspace navigation for Kite-connected features.</p></div>
+          <div><h1>Kite Trading</h1></div>
         </section>
         <nav className="kite-tabs" aria-label="Kite sections">
           {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings', 'Funds'].map((tab) =>
@@ -665,7 +665,7 @@ export default function App() {
                 <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
                 {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
               </div>
-              <div className="holdings-search-sort"><label className="holdings-search"><span>Search stock symbol</span><input type="search" value={holdingsSearch} onChange={(e) => setHoldingsSearch(e.target.value)} placeholder="e.g. RELIANCE, INFY" /></label><label className="holdings-sort"><span>Sort holdings by</span><select value={holdingsSort} onChange={(e) => setHoldingsSort(e.target.value)}><option value="SYMBOL_ASC">Symbol (A–Z)</option><option value="PNL_PERCENT_DESC">P&amp;L % (high to low)</option><option value="PNL_PERCENT_ASC">P&amp;L % (low to high)</option><option value="VALUE_DESC">Current value (high to low)</option><option value="VALUE_ASC">Current value (low to high)</option><option value="QUANTITY_DESC">Quantity (high to low)</option><option value="QUANTITY_ASC">Quantity (low to high)</option></select></label></div>
+              <div className="holdings-search-sort"><label className="holdings-search"><span className="sr-only">Search stock symbol</span><input type="search" value={holdingsSearch} onChange={(e) => setHoldingsSearch(e.target.value)} placeholder="e.g. RELIANCE, INFY" /></label><label className="holdings-sort"><span className="sr-only">Sort holdings by</span><select value={holdingsSort} onChange={(e) => setHoldingsSort(e.target.value)}><option value="SYMBOL_ASC">Symbol (A–Z)</option><option value="PNL_PERCENT_DESC">P&amp;L % (high to low)</option><option value="PNL_PERCENT_ASC">P&amp;L % (low to high)</option><option value="VALUE_DESC">Current value (high to low)</option><option value="VALUE_ASC">Current value (low to high)</option><option value="QUANTITY_DESC">Quantity (high to low)</option><option value="QUANTITY_ASC">Quantity (low to high)</option></select></label></div>
               <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
                 {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,label]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{label}<span>{counts[key]}</span></button>)}
               </div>
