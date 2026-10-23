@@ -5,8 +5,8 @@ from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
-from app.api.routes import router
 from app.api.account import router as account_router
+from app.api.routes import router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.kite.client import KiteProvider, KiteProviderError
