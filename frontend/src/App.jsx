@@ -287,13 +287,7 @@ export default function App() {
           <div className="panel-footer">Calculated in memory from the current API response. No MySQL writes. Showing latest {Math.min(calculatedRows.length, 100)} records.</div>
         </article>
 
-        <article className="panel oi-panel">
-          <div className="panel-header"><div><div className="eyebrow">CHANGE IN OPEN INTEREST</div><h2>OI graph</h2></div><span className="data-count">{optionSeries.length} points</span></div>
-          <div className="legend"><span><i className="legend-option" />Option OI</span><span><i className="legend-future" />Future OI</span></div>
-          <OiChart series={optionSeries} />
-          <div className="series-summary"><div><span>Latest option OI change</span><strong>{number(optionSeries.at(-1)?.value, 0)}</strong></div><div><span>Latest future OI change</span><strong>{number(futureSeries.at(-1)?.value, 0)}</strong></div></div>
-          {futureSeries.length > 0 && futureSeries.every((p) => Number(p.value) === 0) && <p className="subtle-warning">The upstream future series contains only zero values; it is not plotted as a meaningful trend.</p>}
-        </article>
+
       </section>
 
       <footer className="footer">
