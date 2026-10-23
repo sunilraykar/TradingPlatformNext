@@ -269,6 +269,7 @@ const SETTINGS_FIELDS = {
     ['trailingTarget', 'Trailing Target Distance', 'number', '10', 'Distance used to advance the target.', '0.01'],
     ['trailingTargetType', 'Trailing Target Unit', 'select', 'POINTS', '', ['POINTS|Points', 'PERCENTAGE|Percentage (%)']],
     ['intelligenceExitEnabled', 'Intelligence-Based Exit', 'boolean', false, 'Allow market intelligence to trigger an exit.'],
+    ['manualExitEnabled', 'Manual Exit', 'boolean', true, 'Allow manual exit of an active trade.'],
     ['manualExitEnabled', 'Manual Exit', 'boolean', true, 'Allow a user to manually exit an active trade.'],
   ],
   'market-session': [
@@ -351,7 +352,7 @@ function SettingsPanel() {
         {fieldControl(['accountStatus','Account Status','select','ACTIVE','','ACTIVE|ACTIVE;INACTIVE|INACTIVE'])}
         {fieldControl(['enableApiPlatform','Enable APIPLATFORM','boolean',true,'Enable Market Intelligence provider access.'])}
         {fieldControl(['enableAutoTrender','Enable AutoTrender','boolean',true,'Enable AutoTrender provider access.'])}
-      </div><p className="settings-intro">The account form is configuration-only in this first UI pass; persistent account CRUD and account listing require the dedicated Trading Account API/model phase.</p><h3>Portfolios</h3><div className="settings-grid">
+      </div><p className="settings-intro">The account form is configuration-only in this first UI pass; persistent account CRUD and account listing require the dedicated Trading Account API/model phase.</p><h3>Provider Configuration</h3><div className="provider-config-list"><div><strong>Kite Connect</strong><span>API key, API secret, redirect URL, token-encryption key and access-token handling</span><code>KITE_API_KEY · KITE_API_SECRET · KITE_REDIRECT_URL · KITE_TOKEN_ENCRYPTION_KEY</code></div><div><strong>APIPLATFORM</strong><span>Provider username/password and shared runtime session</span><code>APIPLATFORM_USERNAME · APIPLATFORM_PASSWORD</code></div><div><strong>AutoTrender</strong><span>Provider username/password and authentication status</span><code>AUTOTRENDER_USERNAME · AUTOTRENDER_PASSWORD</code></div></div><p className="settings-intro">Secret values are intentionally not editable or returned by this UI. Configure them in backend/.env; runtime sessions remain owned by the provider/session layer.</p><h3>Portfolios</h3><div className="settings-grid">
         {fieldControl(['portfolioName','Portfolio Name','text','Swing Trading','Logical trading mandate within the selected account.'])}
         {fieldControl(['portfolioStatus','Portfolio Status','select','ACTIVE','','ACTIVE|ACTIVE;INACTIVE|INACTIVE'])}
         {fieldControl(['portfolioBaseCurrency','Base Currency','select','INR','','INR|INR'])}
