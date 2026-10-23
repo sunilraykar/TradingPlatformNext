@@ -393,9 +393,10 @@ function SettingsPanel() {
   </section>;
 }
 
-function KiteDataTable({ rows, emptyText = 'No records returned.' }) {
+function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [] }) {
   if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
-  const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))].slice(0, 18);
+  const hidden = new Set(hiddenColumns.map((key) => key.toLowerCase()));
+  const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(key.toLowerCase())).slice(0, 18);
   const formatCell = (value) => { if (value === null || value === undefined || value === '') return '—'; if (typeof value === 'object') return JSON.stringify(value); if (typeof value === 'number') return value.toLocaleString('en-IN', { maximumFractionDigits: 2 }); return String(value); };
   return <div className="table-scroll kite-data-scroll"><table className="kite-data-table"><thead><tr>{columns.map((key) => <th key={key}>{key.replaceAll('_', ' ')}</th>)}</tr></thead><tbody>{rows.map((row, i) => <tr key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key}>{formatCell(row[key])}</td>)}</tr>)}</tbody></table></div>;
 }
@@ -631,7 +632,7 @@ export default function App() {
         <section className="kite-data-panel panel">
           <div className="panel-header"><div><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></div><button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button></div>
           {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and import the instrument master for Option Chain.</small></div>}
-          {kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />}
+          {kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} hiddenColumns={kiteTab === 'Holdings' ? ['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity'] : []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />}
           <div className="panel-footer">Read-only data view. No order placement or modification is performed by these tabs.</div>
         </section>
       </>}
