@@ -176,3 +176,5 @@
 .holdings-data-table td.holding-pnl-negative{color:#ff8793;font-weight:750;background:rgba(255,101,119,.08)}
 .holdings-data-table td.holding-pnl-zero{color:#b7c3d5;font-weight:650}
 @media(max-width:760px){.holdings-search-sort{grid-template-columns:minmax(0,1fr)}}
+
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
