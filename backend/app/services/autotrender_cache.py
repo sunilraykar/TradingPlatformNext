@@ -59,6 +59,44 @@ class AutoTrenderCache:
                     return self._response(stale=True)
                 raise RuntimeError("AutoTrender Index Price is unavailable and no cached data exists") from exc
 
+
+    def viewer(self) -> dict[str, Any]:
+        """Return a read-only, redacted view of the cached index-price payload."""
+        import re
+
+        def redact(value: Any) -> Any:
+            if isinstance(value, dict):
+                cleaned = {}
+                for key, item in value.items():
+                    if re.search(r"(token|secret|password|credential|authorization|cookie|api.?key)", str(key), re.I):
+                        cleaned[key] = "[REDACTED]"
+                    else:
+                        cleaned[key] = redact(item)
+                return cleaned
+            if isinstance(value, list):
+                return [redact(item) for item in value]
+            if isinstance(value, str) and re.search(r"(?i)(bearer\\s+|access_token=|refresh_token=)", value):
+                return "[REDACTED]"
+            return value
+
+        with self._lock:
+            age = None if self._fetched_at is None else round(max(0.0, time.time() - self._fetched_at), 3)
+            payload = redact(self._payload) if self._payload is not None else None
+            return {
+                "read_only": True,
+                "entries": [{
+                    "key": "autotrend:index-price",
+                    "source": "process memory",
+                    "record_count": len(self._payload.get("data", {})) if isinstance(self._payload, dict) and isinstance(self._payload.get("data"), dict) else 0,
+                    "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self._fetched_at)) if self._fetched_at is not None else None,
+                    "age_seconds": age,
+                    "ttl_seconds": self._ttl_seconds,
+                    "data": payload,
+                }] if payload is not None else [],
+                "cached": payload is not None,
+                "last_refresh_error": self._last_error,
+            }
+
     def status(self) -> dict[str, Any]:
         with self._lock:
             age = None if self._fetched_at is None else max(0.0, time.time() - self._fetched_at)
