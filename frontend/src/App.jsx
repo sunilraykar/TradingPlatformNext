@@ -408,8 +408,6 @@ export default function App() {
   const [kiteError, setKiteError] = useState('');
   const [holdingsLetter, setHoldingsLetter] = useState('ALL');
   const [holdingsProfitFilter, setHoldingsProfitFilter] = useState('ALL');
-  const [holdingsSearch, setHoldingsSearch] = useState('');
-  const [holdingsSort, setHoldingsSort] = useState('SYMBOL_ASC');
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
   const [indexPrices, setIndexPrices] = useState(null);
@@ -644,7 +642,7 @@ export default function App() {
             const filtered = holdings.filter((row) => {
               const symbol = symbolOf(row).trim().toUpperCase();
               const pnl = pnlOf(row);
-              return symbol.includes(holdingsSearch.trim().toUpperCase()) && (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
+              return (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
                 (holdingsProfitFilter === 'ALL' || (holdingsProfitFilter === 'PROFITABLE' && pnl > 0) || (holdingsProfitFilter === 'LOSS' && pnl < 0) || (holdingsProfitFilter === 'BREAKEVEN' && pnl === 0));
             });
             const quantityOf = (row) => Number(row.quantity ?? row.net_quantity ?? 0);
@@ -652,7 +650,6 @@ export default function App() {
             const averageOf = (row) => Number(row.average_price ?? row.averagePrice ?? 0);
             const valueOf = (row) => Number(row.current_value ?? row.market_value ?? priceOf(row) * quantityOf(row));
             const pnlPercentOf = (row) => { const cost = averageOf(row) * quantityOf(row); return cost ? pnlOf(row) / Math.abs(cost) * 100 : 0; };
-            filtered.sort((a, b) => { switch (holdingsSort) { case 'PNL_PERCENT_DESC': return pnlPercentOf(b) - pnlPercentOf(a); case 'PNL_PERCENT_ASC': return pnlPercentOf(a) - pnlPercentOf(b); case 'VALUE_DESC': return valueOf(b) - valueOf(a); case 'VALUE_ASC': return valueOf(a) - valueOf(b); case 'QUANTITY_DESC': return quantityOf(b) - quantityOf(a); case 'QUANTITY_ASC': return quantityOf(a) - quantityOf(b); default: return symbolOf(a).localeCompare(symbolOf(b)); } });
             const counts = {
               ALL: holdings.length,
               PROFITABLE: holdings.filter((row) => pnlOf(row) > 0).length,
@@ -665,7 +662,7 @@ export default function App() {
                 <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
                 {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
               </div>
-              <div className="holdings-search-sort"><label className="holdings-search"><span className="sr-only">Search stock symbol</span><input type="search" value={holdingsSearch} onChange={(e) => setHoldingsSearch(e.target.value)} placeholder="e.g. RELIANCE, INFY" /></label><label className="holdings-sort"><span className="sr-only">Sort holdings by</span><select value={holdingsSort} onChange={(e) => setHoldingsSort(e.target.value)}><option value="SYMBOL_ASC">Symbol (A–Z)</option><option value="PNL_PERCENT_DESC">P&amp;L % (high to low)</option><option value="PNL_PERCENT_ASC">P&amp;L % (low to high)</option><option value="VALUE_DESC">Current value (high to low)</option><option value="VALUE_ASC">Current value (low to high)</option><option value="QUANTITY_DESC">Quantity (high to low)</option><option value="QUANTITY_ASC">Quantity (low to high)</option></select></label></div>
+
               <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
                 {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,label]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{label}<span>{counts[key]}</span></button>)}
               </div>
