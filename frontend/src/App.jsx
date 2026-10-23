@@ -115,7 +115,6 @@ function Metric({ label, value, tone }) {
 
 export default function App() {
   const [index, setIndex] = useState('FINNIFTY');
-  const [indices, setIndices] = useState(DEFAULT_INDICES);
   const [indexPrices, setIndexPrices] = useState(null);
   const [mins, setMins] = useState(5);
   const [intraday, setIntraday] = useState(null);
@@ -144,14 +143,9 @@ export default function App() {
     if (results[2].status === 'fulfilled') setAuth(results[2].value);
     if (results[3].status === 'fulfilled') setCache(results[3].value);
     if (results[4].status === 'fulfilled') {
-      const payload = results[4].value;
-      setIndexPrices(payload);
-      const keys = Object.keys(payload?.data || {});
-      const available = DEFAULT_INDICES.filter((label) => keys.some((key) => INDEX_LABELS[key.toLowerCase()] === label));
-      if (available.length) {
-        setIndices(available);
-        if (!available.includes(index)) setIndex(available[0]);
-      }
+      // Price data is independent from the selector: upstream may omit indices
+      // from this response, but all five requested indices must remain selectable.
+      setIndexPrices(results[4].value);
     }
     setLastUpdated(new Date());
     setLoading(false);
@@ -197,13 +191,13 @@ export default function App() {
       </header>
 
       <section className="page-heading">
-        <div><div className="eyebrow">READ-ONLY MARKET DATA</div><h1>AutoTrender Monitor</h1><p>Intraday option strength and change-in-open-interest for FINNIFTY and SENSEX.</p></div>
+        <div><div className="eyebrow">READ-ONLY MARKET DATA</div><h1>AutoTrender Monitor</h1><p>Intraday option strength and change-in-open-interest for NIFTY, BANKNIFTY, FINNIFTY, SENSEX and BANKEX.</p></div>
         <div className="heading-meta"><span className={stale ? 'stale' : 'fresh'}>{stale ? 'Check data freshness' : 'Source status'}</span><small>Updated {lastUpdated ? lastUpdated.toLocaleTimeString('en-IN') : '—'}</small></div>
       </section>
 
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
-          {indices.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
+          {DEFAULT_INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
         </div>
         <label className="interval-select">Intraday interval
           <select value={mins} onChange={(e) => setMins(Number(e.target.value))}>
