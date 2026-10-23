@@ -533,10 +533,7 @@ export default function App() {
       </header>
 
       {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'autotrender' ? <>
-      <section className="page-heading">
-        <div><div className="eyebrow">READ-ONLY MARKET DATA</div><h1>AutoTrender Monitor</h1><p>Intraday option strength and change-in-open-interest for NIFTY, BANKNIFTY, FINNIFTY and SENSEX.</p></div>
-        <div className="heading-meta"><span className={stale ? 'stale' : 'fresh'}>{stale ? 'Check data freshness' : 'Source status'}</span><small>Updated {lastUpdated ? lastUpdated.toLocaleTimeString('en-IN') : '—'}</small></div>
-      </section>
+      
 
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
@@ -622,10 +619,7 @@ export default function App() {
         <span>Cache {cache?.cached ? `${number(cache.cache_age_seconds, 1)}s old` : 'not populated'} · API proxy: local backend</span>
       </footer>
       </> : <>
-        <section className="page-heading">
-          <div><h1>Kite Trading</h1></div>
-        </section>
-        <nav className="kite-tabs" aria-label="Kite sections">
+                <nav className="kite-tabs" aria-label="Kite sections">
           {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings', 'Funds'].map((tab) =>
             <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => setKiteTab(tab)}>{tab}</button>
           )}
