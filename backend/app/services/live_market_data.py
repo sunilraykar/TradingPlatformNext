@@ -1,10 +1,13 @@
 """Lifecycle manager for Kite WebSocket market data."""
+import logging
 from threading import RLock
 from typing import Any
 
 from app.core.config import get_settings
 from app.providers.kite.ticker import KiteTickerAdapter
 from app.services.live_quotes import live_quotes
+
+logger = logging.getLogger(__name__)
 
 _lock = RLock()
 _ticker: KiteTickerAdapter | None = None
@@ -61,7 +64,8 @@ def stop() -> None:
     if ticker is not None:
         try:
             ticker.close()
-        except Exception:
+        except (RuntimeError, OSError) as exc:
+            logger.exception("Failed to close Kite ticker: %s", exc)
             _state = "error"
 
 
