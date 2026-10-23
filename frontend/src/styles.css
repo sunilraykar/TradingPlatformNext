@@ -165,3 +165,14 @@
 .holdings-profit-filters button{border:1px solid var(--line);background:#111c2b}
 .holdings-profit-filters button span{padding:2px 5px;border-radius:5px;background:#243247;color:#dbe6f7;font-size:10px}
 .holdings-filters .kite-data-empty{padding:28px;text-align:center}
+
+/* Portfolio search, sorting and P&L gain/loss cues. */
+.holdings-search-sort{display:grid;grid-template-columns:minmax(220px,1.4fr) minmax(220px,1fr);gap:12px}
+.holdings-search,.holdings-sort{display:flex;flex-direction:column;gap:7px;color:#dce5f4;font-size:11px;font-weight:700}
+.holdings-search input,.holdings-sort select{width:100%;min-width:0;padding:10px 12px;background:#0b1421;color:var(--text);border:1px solid #2c3b51;border-radius:8px;font:inherit;font-weight:500}
+.holdings-data-table tbody tr.holding-gain{box-shadow:inset 3px 0 #27c58a}
+.holdings-data-table tbody tr.holding-loss{box-shadow:inset 3px 0 #ff6577}
+.holdings-data-table td.holding-pnl-positive{color:#55dfa8;font-weight:750;background:rgba(39,197,138,.08)}
+.holdings-data-table td.holding-pnl-negative{color:#ff8793;font-weight:750;background:rgba(255,101,119,.08)}
+.holdings-data-table td.holding-pnl-zero{color:#b7c3d5;font-weight:650}
+@media(max-width:760px){.holdings-search-sort{grid-template-columns:minmax(0,1fr)}}
