@@ -14,3 +14,11 @@ def test_live_quote_cache_updates_and_returns_copy():
 
 def test_missing_quote_returns_none():
     assert LiveQuoteCache().get(1) is None
+
+
+def test_clear_removes_cached_quotes():
+    cache = LiveQuoteCache()
+    cache.update(256265, {"last_price": 22000.5})
+    cache.clear()
+    assert cache.snapshot() == {}
+    assert cache.get(256265) is None
