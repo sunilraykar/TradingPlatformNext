@@ -61,3 +61,34 @@ def test_trading_account_ui_is_served():
     response = client.get("/api/v1/trading-account")
     assert response.status_code == 200
     assert "Place live Kite order" in response.text
+
+
+
+def test_modify_order_requires_confirmation_before_broker_call():
+    provider = MagicMock()
+    with patch("app.api.account.get_kite_provider", return_value=provider):
+        response = client.put(
+            "/api/v1/kite/orders/regular/order-123",
+            json={"quantity": 2, "confirm_live_action": True, "confirmation_text": "no"},
+        )
+    assert response.status_code == 400
+    provider.modify_order.assert_not_called()
+
+
+def test_modify_order_calls_kite_after_confirmation():
+    provider = MagicMock()
+    provider.modify_order.return_value = "order-123"
+    with patch("app.api.account.get_kite_provider", return_value=provider):
+        response = client.put(
+            "/api/v1/kite/orders/regular/order-123",
+            json={
+                "quantity": 2,
+                "confirm_live_action": True,
+                "confirmation_text": "CONFIRM LIVE ORDER",
+            },
+        )
+    assert response.status_code == 200
+    assert response.json()["status"] == "modified"
+    provider.modify_order.assert_called_once_with(
+        order_id="order-123", variety="regular", quantity=2
+    )
