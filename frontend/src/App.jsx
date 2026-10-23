@@ -359,7 +359,7 @@ function SettingsPanel() {
   };
 
   return <section className="settings-page">
-    <div className="page-heading"><div><div className="eyebrow">APPLICATION CONFIGURATION</div><h1>Settings</h1><p>Configure trading accounts, provider access, refresh intervals, market rules and trade management.</p></div><button className="button primary" onClick={save} disabled={saving || loading}>{saving ? 'Saving…' : 'Save settings'}</button></div>
+    <div className="page-heading"><div><h1>Settings</h1></div></div>
     <nav className="settings-tabs" aria-label="Settings sections">{SETTINGS_TABS.map(([id, label]) => <button type="button" key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>{label}</button>)}</nav>
     {error && <div className="error-banner"><strong>Settings issue</strong><span>{error}</span></div>}
     {message && <div className="settings-success">{message}</div>}
