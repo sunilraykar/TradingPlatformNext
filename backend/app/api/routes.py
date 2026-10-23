@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
@@ -55,8 +57,6 @@ def _exchange_and_save(request_token: str) -> str:
         live_market_data.start()
     except (RuntimeError, ValueError, OSError):
         # Authentication remains valid even if the WebSocket cannot connect yet.
-        import logging
-
         logging.getLogger(__name__).exception("Kite session saved but WebSocket startup failed")
     return session.user_id
 
