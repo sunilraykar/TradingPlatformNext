@@ -13,7 +13,7 @@ _DEFAULT_TTL_SECONDS = 2.0
 
 
 class AutoTrenderCache:
-    """Cache Index Price data in RAM and serve stale data during upstream failures."""
+    """Cache the full Index Price response (NIFTY, BANKNIFTY, FINNIFTY, SENSEX, etc.)."""
 
     def __init__(self, auth: AutoTrenderAuth, ttl_seconds: float | None = None) -> None:
         self._auth = auth
@@ -29,7 +29,7 @@ class AutoTrenderCache:
         self._last_error: str | None = None
 
     def get_index_price(self) -> dict[str, Any]:
-        """Return cached data while fresh; refresh on expiry and fall back to stale data."""
+        """Return the entire upstream index set from memory, refreshing only after TTL."""
         with self._lock:
             now = time.time()
             if (
@@ -48,6 +48,7 @@ class AutoTrenderCache:
                 payload = response.json()
                 if not isinstance(payload, dict) or not isinstance(payload.get("data"), dict):
                     raise RuntimeError("AutoTrender Index Price returned an unexpected JSON structure")
+                # Preserve the complete upstream payload; do not filter out index symbols.
                 self._payload = payload
                 self._fetched_at = time.time()
                 self._last_error = None
