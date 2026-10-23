@@ -64,8 +64,8 @@ def stop() -> None:
     if ticker is not None:
         try:
             ticker.close()
-        except (RuntimeError, OSError) as exc:
-            logger.exception("Failed to close Kite ticker: %s", exc)
+        except (RuntimeError, OSError):
+            logger.exception("Failed to close Kite ticker")
             _state = "error"
 
 
