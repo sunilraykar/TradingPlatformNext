@@ -1,7 +1,10 @@
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import get_settings
+from app.db.session import get_engine
 from app.providers.kite.client import KiteProvider, KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services.live_quotes import live_quotes
@@ -58,10 +61,26 @@ def get_quote(instrument_token: int) -> dict:
 
 
 @router.get("/kite/quotes", tags=["kite"])
-def get_quotes(instrument_tokens: list[int] = Query(..., min_length=1, max_length=200)) -> dict:
+def get_quotes(
+    instrument_tokens: list[int] = Query(..., min_length=1, max_length=200),  # noqa: B008
+) -> dict:
     provider = get_kite_provider()
     try:
         result = provider.quotes(instrument_tokens)
     except KiteProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"quotes": result}
+
+
+@router.get("/health/db", tags=["health"])
+def database_health() -> dict[str, str]:
+    try:
+        with get_engine().connect() as connection:
+            connection.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=503,
+            detail="Database unavailable",
+        ) from None
+
+    return {"status": "ok", "database": "connected"}
