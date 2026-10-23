@@ -26,5 +26,10 @@ class LiveQuoteCache:
         with self._lock:
             return {key: dict(value) for key, value in self._quotes.items()}
 
+    def clear(self) -> None:
+        """Remove cached quotes when the active provider session is reset."""
+        with self._lock:
+            self._quotes.clear()
+
 
 live_quotes = LiveQuoteCache()
