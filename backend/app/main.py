@@ -43,7 +43,10 @@ async def _restore_kite_session() -> None:
             return
         except KiteProviderError:
             logger.info("Saved Kite session is no longer valid; login is required")
-            reset_sessions()
+            try:
+                reset_sessions()
+            except KiteSessionStoreError:
+                logger.exception("Could not mark the invalid saved Kite session as expired")
             clear_active_kite_session()
     elif settings.kite_access_token:
         try:
