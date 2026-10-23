@@ -143,3 +143,12 @@
 .settings-page .error-banner{margin:0 0 14px}
 .settings-page .page-heading p{max-width:700px}
 @media(max-width:760px){.settings-grid,.settings-check-grid{grid-template-columns:minmax(0,1fr)}.settings-section{padding:15px}.settings-page>.page-heading{align-items:flex-start;flex-direction:column}.settings-tabs{overflow-x:auto;flex-wrap:nowrap}.settings-tabs button{white-space:nowrap}}
+
+.provider-config-list,.settings-record-list{display:flex;flex-direction:column;gap:9px}
+.provider-config-list>div,.settings-record-list>div{display:flex;flex-direction:column;gap:6px;padding:13px 14px;background:#101b2a;border:1px solid #29384c;border-radius:9px}
+.provider-config-list strong,.settings-record-list strong{font-size:12px;color:#e7eef9}
+.provider-config-list span,.settings-record-list small{font-size:11px;color:var(--muted);line-height:1.5}
+.provider-config-list code{font-family:'DM Mono',monospace;font-size:10px;color:#8fd7e4;overflow-wrap:anywhere}
+.settings-record-list>div{flex-direction:row;align-items:center;justify-content:space-between;gap:12px}
+.settings-record-list>div>span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.settings-record-list .button{flex-shrink:0}
