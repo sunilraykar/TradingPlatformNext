@@ -27,7 +27,7 @@ async function api(path, options = {}) {
 function scalarValue(value) {
   if (value === null || value === undefined || value === '') return null;
   if (typeof value !== 'object') return value;
-  for (const key of ['value', 'price', 'ltp', 'close', 'current', 'amount', 'number']) {
+  for (const key of ['value', 'price', 'ltp', 'close', 'current', 'amount', 'number', 'type']) {
     const candidate = value[key];
     if (candidate !== null && candidate !== undefined && candidate !== '' && typeof candidate !== 'object') {
       return candidate;
