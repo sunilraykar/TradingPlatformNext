@@ -562,7 +562,7 @@ export default function App() {
         <article className="panel price-vwap-panel">
           <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
-              <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><span className="data-count">{calculatedRows.filter((row) => row.price !== null || row.vwap !== null).length} points</span></div>
+              <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><div className="chart-header-right"><div className="chart-enter-card"><span>Enter</span><strong className={'latest-enter ' + (calculatedRowsDescending[0]?.enter || 'wait').toLowerCase()}>{calculatedRowsDescending[0]?.enter || '—'}</strong></div><span className="data-count">{calculatedRows.filter((row) => row.price !== null || row.vwap !== null).length} points</span></div></div>
               <PriceVwapChart rows={calculatedRows} />
             </div>
             <aside className="latest-candle-card">
@@ -579,7 +579,6 @@ export default function App() {
                 <div><span>Put Strength</span><strong>{calculatedRowsDescending[0]?.putStrength == null ? '—' : number(calculatedRowsDescending[0].putStrength) + '%'}</strong></div>
                 <div><span>Strength Diff</span><strong className={calculatedRowsDescending[0]?.strengthDiff == null ? '' : calculatedRowsDescending[0].strengthDiff > 0 ? 'positive' : 'negative'}>{calculatedRowsDescending[0]?.strengthDiff == null ? '—' : number(calculatedRowsDescending[0].strengthDiff)}</strong></div>
                 <div><span>Buffer (%)</span><strong className={calculatedRowsDescending[0]?.buffer == null ? '' : calculatedRowsDescending[0].buffer > 0 ? 'positive' : 'negative'}>{calculatedRowsDescending[0]?.buffer == null ? '—' : number(calculatedRowsDescending[0].buffer, 3) + '%'}</strong></div>
-                <div><span>Enter</span><strong className={'latest-enter ' + (calculatedRowsDescending[0]?.enter || 'wait').toLowerCase()}>{calculatedRowsDescending[0]?.enter || '—'}</strong></div>
               </div>
               {!calculatedRowsDescending.length && <div className="chart-empty">No intraday records returned.</div>}
             </aside>
