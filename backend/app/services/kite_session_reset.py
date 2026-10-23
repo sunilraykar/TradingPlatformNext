@@ -8,8 +8,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from app.core.config import get_settings
 from app.providers.kite.client import KiteProvider
 from app.providers.kite.registry import clear_active_kite_session
-from app.services.kite_sessions import KiteSessionStoreError, reset_sessions
 from app.services import live_market_data
+from app.services.kite_sessions import KiteSessionStoreError, reset_sessions
 
 logger = logging.getLogger(__name__)
 
