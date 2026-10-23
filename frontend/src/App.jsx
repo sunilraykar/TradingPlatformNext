@@ -132,7 +132,7 @@ function linePoints(series, width = 720, height = 220) {
 }
 
 function PriceVwapChart({ rows }) {
-  const usable = rows.map((row) => ({ time: row.time, price: row.price, vwap: row.vwap }))
+  const usable = rows.map((row) => ({ time: row.time, price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer }))
     .filter((row) => row.price !== null || row.vwap !== null);
   const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
   if (usable.length < 2 || !values.length) {
@@ -146,7 +146,7 @@ function PriceVwapChart({ rows }) {
   const pathFor = (key) => usable.map((row, i) => row[key] === null ? null : `${x(i)},${y(row[key])}`).filter(Boolean).join(' ');
   const latest = usable[usable.length - 1];
   const gap = latest.price !== null && latest.vwap !== null ? latest.price - latest.vwap : null;
-  const buffer = latest.price !== null && latest.vwap !== null && latest.vwap !== 0 ? ((latest.price - latest.vwap) / latest.vwap) * 100 : null;
+  const buffer = latest.buffer ?? (latest.price !== null && latest.vwap !== null && latest.vwap !== 0 ? ((latest.price - latest.vwap) / latest.vwap) * 100 : null);
   return <>
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span></div>
     <div className="chart-wrap price-vwap-wrap">
@@ -157,10 +157,15 @@ function PriceVwapChart({ rows }) {
         <line x1="12" x2="708" y1="202" y2="202" className="zero-line" />
         <polyline points={pathFor('price')} className="price-line" />
         <polyline points={pathFor('vwap')} className="vwap-line" />
-        {usable.map((row, i) => <g key={`${row.time}-${i}`} className="price-vwap-point">
-          {row.price !== null && <circle cx={x(i)} cy={y(row.price)} r="4" className="price-hover-dot"><title>{`${row.time || 'Time'} · Price: ${number(row.price)}`}</title></circle>}
-          {row.vwap !== null && <circle cx={x(i)} cy={y(row.vwap)} r="4" className="vwap-hover-dot"><title>{`${row.time || 'Time'} · VWAP: ${number(row.vwap)}`}</title></circle>}
-        </g>)}
+        {usable.map((row, i) => {
+          const tooltip = `${row.time || 'Time'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`;
+          const hitY = Math.min(row.price === null ? 202 : y(row.price), row.vwap === null ? 202 : y(row.vwap));
+          return <g key={`${row.time}-${i}`} className="price-vwap-point">
+            <rect x={x(i) - 9} y="20" width="18" height="185" className="chart-hover-target"><title>{tooltip}</title></rect>
+            {row.price !== null && <circle cx={x(i)} cy={y(row.price)} r="4" className="price-hover-dot"><title>{tooltip}</title></circle>}
+            {row.vwap !== null && <circle cx={x(i)} cy={y(row.vwap)} r="4" className="vwap-hover-dot"><title>{tooltip}</title></circle>}
+          </g>;
+        })}
       </svg>
       <div className="chart-times"><span>{usable[0].time || '—'}</span><span>{usable[Math.floor(usable.length / 2)].time || '—'}</span><span>{latest.time || '—'}</span></div>
     </div>
