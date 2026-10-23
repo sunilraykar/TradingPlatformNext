@@ -131,6 +131,44 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
+function PriceVwapChart({ rows }) {
+  const usable = rows.map((row) => ({ time: row.time, price: row.price, vwap: row.vwap }))
+    .filter((row) => row.price !== null || row.vwap !== null);
+  const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
+  if (usable.length < 2 || !values.length) {
+    return <div className="chart-empty">Price/VWAP history is unavailable in the current intraday API response.</div>;
+  }
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const x = (index) => 12 + (index / Math.max(usable.length - 1, 1)) * 696;
+  const y = (value) => 202 - ((value - min) / span) * 168;
+  const pathFor = (key) => usable.map((row, i) => row[key] === null ? null : `${x(i)},${y(row[key])}`).filter(Boolean).join(' ');
+  const latest = usable[usable.length - 1];
+  const gap = latest.price !== null && latest.vwap !== null ? latest.price - latest.vwap : null;
+  const buffer = latest.price !== null && latest.vwap !== null && latest.vwap !== 0 ? ((latest.price - latest.vwap) / latest.vwap) * 100 : null;
+  return <>
+    <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span></div>
+    <div className="chart-wrap price-vwap-wrap">
+      <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
+      <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart" preserveAspectRatio="none">
+        <line x1="12" x2="708" y1="34" y2="34" className="zero-line" />
+        <line x1="12" x2="708" y1="118" y2="118" className="zero-line" />
+        <line x1="12" x2="708" y1="202" y2="202" className="zero-line" />
+        <polyline points={pathFor('price')} className="price-line" />
+        <polyline points={pathFor('vwap')} className="vwap-line" />
+      </svg>
+      <div className="chart-times"><span>{usable[0].time || '—'}</span><span>{usable[Math.floor(usable.length / 2)].time || '—'}</span><span>{latest.time || '—'}</span></div>
+    </div>
+    <div className="series-summary price-vwap-summary">
+      <div><span>Latest price</span><strong>{number(latest.price)}</strong></div>
+      <div><span>Latest VWAP</span><strong>{number(latest.vwap)}</strong></div>
+      <div><span>Price − VWAP</span><strong className={gap === null ? '' : gap >= 0 ? 'positive' : 'negative'}>{gap === null ? '—' : number(gap)}</strong></div>
+      <div><span>VWAP price buffer</span><strong className={buffer === null ? '' : buffer >= 0 ? 'positive' : 'negative'}>{buffer === null ? '—' : `${number(buffer, 3)}%`}</strong></div>
+    </div>
+  </>;
+}
+
 function OiChart({ series }) {
   const usable = (Array.isArray(series) ? series : [])
     .map((p) => ({ value: Number(p.value), time: p.time }))
@@ -268,6 +306,14 @@ export default function App() {
         <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
         <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
         <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
+      </section>
+
+      <section className="price-vwap-section">
+        <article className="panel price-vwap-panel">
+          <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><span className="data-count">{calculatedRows.filter((row) => row.price !== null || row.vwap !== null).length} points</span></div>
+          <PriceVwapChart rows={calculatedRows} />
+          <div className="panel-footer">Price and VWAP are plotted from the selected index's intraday API records. No database writes.</div>
+        </article>
       </section>
 
       <section className="content-grid">
