@@ -69,3 +69,35 @@ class KiteProvider:
             return self._client.quote(*keys)
         except Exception as exc:
             raise KiteProviderError("Kite quote request failed") from exc
+
+    def _account_call(self, operation: str, *args, **kwargs):
+        if not self._client.access_token:
+            raise KiteProviderError("Kite session is not configured")
+        try:
+            return getattr(self._client, operation)(*args, **kwargs)
+        except Exception as exc:
+            raise KiteProviderError(f"Kite {operation.replace('_', ' ')} request failed") from exc
+
+    def margins(self, segment: str | None = None) -> dict[str, Any]:
+        return self._account_call("margins", segment) if segment else self._account_call("margins")
+
+    def positions(self) -> dict[str, Any]:
+        return self._account_call("positions")
+
+    def orders(self) -> list[dict[str, Any]]:
+        return self._account_call("orders")
+
+    def holdings(self) -> list[dict[str, Any]]:
+        return self._account_call("holdings")
+
+    def trades(self) -> list[dict[str, Any]]:
+        return self._account_call("trades")
+
+    def place_order(self, **params) -> str:
+        return self._account_call("place_order", variety="regular", **params)
+
+    def modify_order(self, order_id: str, variety: str = "regular", **params) -> str:
+        return self._account_call("modify_order", variety=variety, order_id=order_id, **params)
+
+    def cancel_order(self, order_id: str, variety: str = "regular") -> str:
+        return self._account_call("cancel_order", variety=variety, order_id=order_id)
