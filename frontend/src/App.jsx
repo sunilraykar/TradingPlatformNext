@@ -29,6 +29,15 @@ function timeLabel(value) {
   return raw;
 }
 
+function displayValue(value) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (typeof value === 'object') {
+    // AutoTrender may encode signals as { type, colorCode } objects.
+    return value.type ?? value.label ?? value.name ?? value.value ?? '—';
+  }
+  return String(value);
+}
+
 function extractTrend(payload) {
   const trend = payload?.data?.trend || payload?.trend || {};
   return {
@@ -177,14 +186,14 @@ export default function App() {
         <Metric label="LATEST PRICE" value={number(latest.price ?? latest.close ?? latest.ltp)} />
         <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
         <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
-        <Metric label="OPTION SIGNAL" value={trend.signal ?? latest.optionSignal ?? '—'} />
+        <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
       </section>
 
       <section className="content-grid">
         <article className="panel intraday-panel">
           <div className="panel-header"><div><div className="eyebrow">OPTION STRENGTH</div><h2>Intraday data</h2></div><span className="data-count">{intradayRows.length} points</span></div>
           <div className="table-scroll"><table><thead><tr><th>Time</th><th>Price</th><th>VWAP</th><th>PCR</th><th>Option signal</th><th>VWAP signal</th></tr></thead>
-            <tbody>{intradayRows.slice(-30).reverse().map((row, i) => <tr key={`${row.time || row.mtime || i}`}><td>{timeLabel(row.time ?? row.mtime)}</td><td>{number(row.price)}</td><td>{number(row.vWap ?? row.vwap)}</td><td>{number(row.pcr?.value ?? row.pcr)}</td><td><span className="signal-tag">{row.optionSignal ?? '—'}</span></td><td>{row.vWapSignal ?? row.vwapSignal ?? '—'}</td></tr>)}
+            <tbody>{intradayRows.slice(-30).reverse().map((row, i) => <tr key={`${row.time || row.mtime || i}`}><td>{timeLabel(row.time ?? row.mtime)}</td><td>{number(row.price)}</td><td>{number(row.vWap ?? row.vwap)}</td><td>{number(row.pcr?.value ?? row.pcr)}</td><td><span className="signal-tag">{displayValue(row.optionSignal)}</span></td><td>{displayValue(row.vWapSignal ?? row.vwapSignal)}</td></tr>)}
             {!intradayRows.length && <tr><td colSpan="6" className="empty-cell">{loading ? 'Loading market data…' : 'No intraday records returned.'}</td></tr>}</tbody>
           </table></div>
           <div className="panel-footer">Showing latest {Math.min(intradayRows.length, 30)} records from the API response.</div>
