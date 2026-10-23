@@ -27,3 +27,9 @@ def clear_active_kite_session() -> None:
     global _runtime_access_token
     _runtime_access_token = ""
     get_kite_provider.cache_clear()
+
+
+def get_active_kite_token() -> str:
+    if _runtime_access_token is not None:
+        return _runtime_access_token
+    return get_settings().kite_access_token
