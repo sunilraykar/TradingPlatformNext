@@ -14,6 +14,7 @@ from app.providers.kite.registry import (
     configure_active_kite_session,
 )
 from app.services.kite_session_reset import run_daily_reset_scheduler
+from app.services import live_market_data
 from app.services.kite_sessions import (
     KiteSessionStoreError,
     load_session,
@@ -40,6 +41,10 @@ async def _restore_kite_session() -> None:
         try:
             profile = KiteProvider(settings.kite_api_key, access_token).profile()
             logger.info("Restored saved Kite session for user %s", profile.get("user_id", user_id))
+            try:
+                live_market_data.start()
+            except Exception:
+                logger.exception("Kite session restored but WebSocket startup failed")
             return
         except KiteProviderError:
             logger.info("Saved Kite session is no longer valid; login is required")
@@ -52,6 +57,11 @@ async def _restore_kite_session() -> None:
         try:
             KiteProvider(settings.kite_api_key, settings.kite_access_token).profile()
             logger.info("Using configured Kite access token")
+            configure_active_kite_session(settings.kite_access_token)
+            try:
+                live_market_data.start()
+            except Exception:
+                logger.exception("Configured Kite session is valid but WebSocket startup failed")
             return
         except KiteProviderError:
             logger.info("Configured Kite access token is no longer valid")
