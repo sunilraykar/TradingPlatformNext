@@ -321,6 +321,26 @@ function SettingsPanel() {
 
   const value = (key) => settings[key] === undefined ? defaults[key] : settings[key];
   const change = (key, next) => setSettings((current) => ({ ...current, [key]: next }));
+  const addTradingAccount = () => {
+    const name = String(value('accountName') || '').trim();
+    const brokerAccountId = String(value('brokerAccountId') || '').trim();
+    if (!name || !brokerAccountId) { setError('Trading Account requires both Account Name and Broker Account ID.'); return; }
+    if (!value('enableApiPlatform') && !value('enableAutoTrender')) { setError('Enable at least one intelligence provider: APIPLATFORM or AutoTrender.'); return; }
+    const account = { accountId: 'acct-' + Date.now(), name, broker: value('broker') || 'KITE', brokerAccountId, status: value('accountStatus') || 'ACTIVE', intelligenceProviders: [value('enableApiPlatform') ? 'APIPLATFORM' : null, value('enableAutoTrender') ? 'AutoTrender' : null].filter(Boolean) };
+    change('tradingAccounts', [...(value('tradingAccounts') || []), account]);
+    setMessage('Trading Account added to pending settings. Click Save settings to persist.');
+    setError('');
+  };
+  const addPortfolio = () => {
+    const name = String(value('portfolioName') || '').trim();
+    if (!name) { setError('Portfolio Name is required.'); return; }
+    change('portfolios', [...(value('portfolios') || []), { portfolioId: 'portfolio-' + Date.now(), accountName: value('accountName') || 'Unassigned account', name, description: value('portfolioDescription') || '', baseCurrency: value('portfolioBaseCurrency') || 'INR', status: value('portfolioStatus') || 'ACTIVE' }]);
+    setMessage('Portfolio added to pending settings. Click Save settings to persist.');
+    setError('');
+  };
+  const removeAccount = (accountId) => change('tradingAccounts', (value('tradingAccounts') || []).filter((item) => item.accountId !== accountId));
+  const removePortfolio = (portfolioId) => change('portfolios', (value('portfolios') || []).filter((item) => item.portfolioId !== portfolioId));
+
   const save = async () => {
     setSaving(true); setMessage(''); setError('');
     try {
@@ -352,12 +372,12 @@ function SettingsPanel() {
         {fieldControl(['accountStatus','Account Status','select','ACTIVE','','ACTIVE|ACTIVE;INACTIVE|INACTIVE'])}
         {fieldControl(['enableApiPlatform','Enable APIPLATFORM','boolean',true,'Enable Market Intelligence provider access.'])}
         {fieldControl(['enableAutoTrender','Enable AutoTrender','boolean',true,'Enable AutoTrender provider access.'])}
-      </div><p className="settings-intro">The account form is configuration-only in this first UI pass; persistent account CRUD and account listing require the dedicated Trading Account API/model phase.</p><h3>Provider Configuration</h3><div className="provider-config-list"><div><strong>Kite Connect</strong><span>API key, API secret, redirect URL, token-encryption key and access-token handling</span><code>KITE_API_KEY · KITE_API_SECRET · KITE_REDIRECT_URL · KITE_TOKEN_ENCRYPTION_KEY</code></div><div><strong>APIPLATFORM</strong><span>Provider username/password and shared runtime session</span><code>APIPLATFORM_USERNAME · APIPLATFORM_PASSWORD</code></div><div><strong>AutoTrender</strong><span>Provider username/password and authentication status</span><code>AUTOTRENDER_USERNAME · AUTOTRENDER_PASSWORD</code></div></div><p className="settings-intro">Secret values are intentionally not editable or returned by this UI. Configure them in backend/.env; runtime sessions remain owned by the provider/session layer.</p><h3>Portfolios</h3><div className="settings-grid">
+      </div><p className="settings-intro">The account form is configuration-only in this first UI pass; persistent account CRUD and account listing require the dedicated Trading Account API/model phase.</p><h3>Provider Configuration</h3><div className="provider-config-list"><div><strong>Kite Connect</strong><span>API key, API secret, redirect URL, token-encryption key and access-token handling</span><code>KITE_API_KEY · KITE_API_SECRET · KITE_REDIRECT_URL · KITE_TOKEN_ENCRYPTION_KEY</code></div><div><strong>APIPLATFORM</strong><span>Provider username/password and shared runtime session</span><code>APIPLATFORM_USERNAME · APIPLATFORM_PASSWORD</code></div><div><strong>AutoTrender</strong><span>Provider username/password and authentication status</span><code>AUTOTRENDER_USERNAME · AUTOTRENDER_PASSWORD</code></div></div><p className="settings-intro">Secret values are intentionally not editable or returned by this UI. Configure them in backend/.env; runtime sessions remain owned by the provider/session layer.</p><div className="settings-actions"><button type="button" className="button secondary" onClick={addTradingAccount}>Add Trading Account</button></div><div className="settings-record-list"><h3>Configured Trading Accounts ({(value('tradingAccounts') || []).length})</h3>{(value('tradingAccounts') || []).map((account) => <div key={account.accountId}><span><strong>{account.name}</strong><small>{account.broker} · {account.brokerAccountId} · {account.intelligenceProviders.join(' + ')}</small></span><button type="button" className="button secondary" onClick={() => removeAccount(account.accountId)}>Remove</button></div>)}{!(value('tradingAccounts') || []).length && <p className="settings-intro">No Trading Accounts added yet.</p>}</div><h3>Portfolios</h3><div className="settings-grid">
         {fieldControl(['portfolioName','Portfolio Name','text','Swing Trading','Logical trading mandate within the selected account.'])}
         {fieldControl(['portfolioStatus','Portfolio Status','select','ACTIVE','','ACTIVE|ACTIVE;INACTIVE|INACTIVE'])}
         {fieldControl(['portfolioBaseCurrency','Base Currency','select','INR','','INR|INR'])}
         {fieldControl(['portfolioDescription','Portfolio Description','text','','Optional description.'])}
-      </div></>}
+      </div><div className="settings-actions"><button type="button" className="button secondary" onClick={addPortfolio}>Add Portfolio</button></div><div className="settings-record-list"><h3>Configured Portfolios ({(value('portfolios') || []).length})</h3>{(value('portfolios') || []).map((portfolio) => <div key={portfolio.portfolioId}><span><strong>{portfolio.name}</strong><small>{portfolio.accountName} · {portfolio.baseCurrency} · {portfolio.status}</small></span><button type="button" className="button secondary" onClick={() => removePortfolio(portfolio.portfolioId)}>Remove</button></div>)}{!(value('portfolios') || []).length && <p className="settings-intro">No Portfolios added yet.</p>}</div></>}
       {tab === 'market-intelligence' && <><h2>Market Intelligence</h2><div className="settings-grid">{SETTINGS_FIELDS['market-intelligence'].map(fieldControl)}</div></>}
       {tab === 'option-chain' && <><h2>Option Chain</h2><div className="settings-grid">{SETTINGS_FIELDS['option-chain'].map(fieldControl)}</div><div className="settings-grid">
         {fieldControl(['kiteUnderlying','Default Option Chain Underlying','select','NIFTY','','NIFTY|NIFTY;BANKNIFTY|BANKNIFTY;FINNIFTY|FINNIFTY;SENSEX|SENSEX'])}
