@@ -406,6 +406,8 @@ export default function App() {
   const [kiteData, setKiteData] = useState(null);
   const [kiteLoading, setKiteLoading] = useState(false);
   const [kiteError, setKiteError] = useState('');
+  const [holdingsLetter, setHoldingsLetter] = useState('ALL');
+  const [holdingsProfitFilter, setHoldingsProfitFilter] = useState('ALL');
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
   const [indexPrices, setIndexPrices] = useState(null);
@@ -632,7 +634,37 @@ export default function App() {
         <section className="kite-data-panel panel">
           <div className="panel-header"><div><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></div><button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button></div>
           {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and import the instrument master for Option Chain.</small></div>}
-          {kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} hiddenColumns={kiteTab === 'Holdings' ? ['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf'] : []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />}
+          {kiteTab === 'Holdings' && Array.isArray(kiteData?.rows) && kiteData.rows.length > 0 && (() => {
+            const holdings = kiteData.rows;
+            const symbolOf = (row) => String(row.tradingsymbol || row.trading_symbol || row.symbol || '');
+            const pnlOf = (row) => Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
+            const availableLetters = [...new Set(holdings.map((row) => symbolOf(row).trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
+            const filtered = holdings.filter((row) => {
+              const symbol = symbolOf(row).trim().toUpperCase();
+              const pnl = pnlOf(row);
+              return (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
+                (holdingsProfitFilter === 'ALL' || (holdingsProfitFilter === 'PROFITABLE' && pnl > 0) || (holdingsProfitFilter === 'LOSS' && pnl < 0) || (holdingsProfitFilter === 'BREAKEVEN' && pnl === 0));
+            });
+            const counts = {
+              ALL: holdings.length,
+              PROFITABLE: holdings.filter((row) => pnlOf(row) > 0).length,
+              LOSS: holdings.filter((row) => pnlOf(row) < 0).length,
+              BREAKEVEN: holdings.filter((row) => pnlOf(row) === 0).length,
+            };
+            return <div className="holdings-filters">
+              <div className="holdings-filter-heading"><strong>Filter portfolio by symbol</strong><span>{filtered.length} of {holdings.length} holdings</span></div>
+              <div className="holdings-alphabet" aria-label="Filter portfolio holdings by first letter">
+                <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
+                {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
+              </div>
+              <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
+                {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,label]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{label}<span>{counts[key]}</span></button>)}
+              </div>
+              <KiteDataTable rows={filtered} hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf']} emptyText="No holdings match the selected filters." />
+            </div>;
+          })()}
+          {kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
+          {kiteTab === 'Holdings' && (!Array.isArray(kiteData?.rows) || kiteData.rows.length === 0) && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading holdings…</div> : <KiteDataTable rows={[]} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No holdings returned by Kite.'} />)}
           <div className="panel-footer">Read-only data view. No order placement or modification is performed by these tabs.</div>
         </section>
       </>}
