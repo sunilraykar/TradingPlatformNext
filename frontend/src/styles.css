@@ -31,3 +31,20 @@
 .price-vwap-summary .positive{color:var(--green)}
 .price-vwap-summary .negative{color:var(--red)}
 @media(max-width:650px){.price-vwap-chart{height:200px}.price-vwap-summary{grid-template-columns:1fr 1fr}}
+
+/* Use the full viewport width for the market monitor and its wide signal table. */
+.app-shell{width:100%;max-width:none;margin:0;padding:0 24px 24px}
+.content-grid{grid-template-columns:minmax(0,1fr);width:100%}
+.calculated-table-panel{width:100%;min-width:0}
+.calculated-table-scroll{width:100%;max-width:100%;overflow:auto}
+.calculated-table{width:100%;min-width:1600px}
+.price-hover-dot,.vwap-hover-dot{opacity:0;stroke:#08111c;stroke-width:1.5;cursor:crosshair;transition:opacity .12s ease,r .12s ease}
+.price-hover-dot{fill:var(--cyan)}
+.vwap-hover-dot{fill:#b28aff}
+.price-vwap-point:hover circle{opacity:1;r:5}
+.price-vwap-chart{overflow:visible}
+.calculated-table tbody tr{transition:background-color .12s ease;cursor:default}
+.calculated-table tbody tr:hover{background:#20334a;box-shadow:inset 3px 0 0 var(--cyan)}
+.calculated-table tbody td{transition:color .12s ease}
+.calculated-table tbody tr:hover td{color:#f2f7ff}
+@media(max-width:650px){.app-shell{padding:0 10px 18px}.calculated-table{min-width:1600px}}
