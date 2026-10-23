@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -6,7 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.config import get_settings
 from app.db.session import get_engine
 from app.providers.kite.client import KiteProvider, KiteProviderError
-from app.providers.kite.registry import get_kite_provider
+from app.providers.kite.registry import configure_active_kite_session, get_kite_provider
+from app.services.kite_sessions import KiteSessionStoreError, save_session
 from app.services.live_quotes import live_quotes
 
 router = APIRouter()
@@ -23,6 +25,25 @@ class QuoteResponse(BaseModel):
     received_at: str
 
 
+def _exchange_and_save(request_token: str) -> str:
+    settings = get_settings()
+    if not settings.kite_api_key or not settings.kite_api_secret:
+        raise HTTPException(status_code=503, detail="Kite API credentials are not configured")
+    try:
+        session = KiteProvider.exchange_request_token(
+            api_key=settings.kite_api_key,
+            api_secret=settings.kite_api_secret,
+            request_token=request_token,
+        )
+        save_session(session.user_id, session.access_token)
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except KiteSessionStoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    configure_active_kite_session(session.access_token)
+    return session.user_id
+
+
 @router.get("/kite/login-url", tags=["kite"])
 def kite_login_url() -> dict[str, str]:
     settings = get_settings()
@@ -31,21 +52,42 @@ def kite_login_url() -> dict[str, str]:
     return {"login_url": KiteProvider.login_url(settings.kite_api_key)}
 
 
+@router.get("/kite/callback", tags=["kite"], response_class=HTMLResponse)
+def kite_login_callback(
+    request_token: str = Query(..., min_length=1, max_length=256),
+    status: str = Query(default="success"),
+) -> HTMLResponse:
+    if status != "success":
+        return HTMLResponse(
+            "<h2>Kite login was not completed.</h2><p>You may close this tab and retry from TradingPlatformNext.</p>",
+            status_code=401,
+        )
+    _exchange_and_save(request_token)
+    return HTMLResponse(
+        "<!doctype html><html><head><title>TradingPlatformNext</title></head>"
+        "<body><h2>Kite login successful</h2>"
+        "<p>Your session was saved securely. You may return to TradingPlatformNext.</p></body></html>"
+    )
+
+
 @router.post("/kite/session", tags=["kite"])
 def exchange_session(payload: SessionExchangeRequest) -> dict[str, str]:
-    settings = get_settings()
-    if not settings.kite_api_key or not settings.kite_api_secret:
-        raise HTTPException(status_code=503, detail="Kite API credentials are not configured")
+    user_id = _exchange_and_save(payload.request_token)
+    return {"status": "authenticated", "user_id": user_id}
+
+
+@router.get("/kite/session/status", tags=["kite"])
+def kite_session_status() -> dict[str, str | bool]:
+    provider = get_kite_provider()
     try:
-        session = KiteProvider.exchange_request_token(
-            api_key=settings.kite_api_key,
-            api_secret=settings.kite_api_secret,
-            request_token=payload.request_token,
-        )
-    except KiteProviderError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    # Token is returned only to the caller; this initial scaffold does not log it.
-    return {"status": "authenticated", "access_token": session.access_token, "user_id": session.user_id}
+        profile = provider.profile()
+    except KiteProviderError:
+        return {"authenticated": False, "status": "login_required"}
+    return {
+        "authenticated": True,
+        "status": "authenticated",
+        "user_id": str(profile.get("user_id", "")),
+    }
 
 
 @router.get("/kite/quote/{instrument_token}", tags=["kite"])

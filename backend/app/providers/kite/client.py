@@ -41,6 +41,14 @@ class KiteProvider:
             raise KiteProviderError("Kite returned an incomplete session")
         return KiteSession(access_token=token, user_id=user_id)
 
+    def profile(self) -> dict[str, Any]:
+        if not self._client.access_token:
+            raise KiteProviderError("Kite session is not configured")
+        try:
+            return self._client.profile()
+        except Exception as exc:
+            raise KiteProviderError("Kite session validation failed") from exc
+
     def quote(self, instrument_token: int) -> dict[str, Any]:
         return self.quotes([instrument_token]).get(str(instrument_token), {})
 

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -21,6 +22,11 @@ class Settings(BaseSettings):
     kite_api_secret: str = ""
     kite_access_token: str = ""
     kite_redirect_url: str = "http://127.0.0.1:8000/api/v1/kite/callback"
+    kite_token_encryption_key: str = ""
+    kite_auto_login_enabled: bool = True
+    kite_session_reset_enabled: bool = True
+    kite_session_reset_time: str = "23:00"
+    kite_session_reset_timezone: str = "Asia/Kolkata"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -31,7 +37,6 @@ class Settings(BaseSettings):
 
     @property
     def mysql_url(self) -> str:
-        from urllib.parse import quote_plus
         password = quote_plus(self.mysql_password)
         return (
             f"mysql+pymysql://{self.mysql_user}:{password}"
