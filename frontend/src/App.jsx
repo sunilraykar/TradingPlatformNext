@@ -408,6 +408,8 @@ export default function App() {
   const [kiteError, setKiteError] = useState('');
   const [holdingsLetter, setHoldingsLetter] = useState('ALL');
   const [holdingsProfitFilter, setHoldingsProfitFilter] = useState('ALL');
+  const [holdingsSearch, setHoldingsSearch] = useState('');
+  const [holdingsSort, setHoldingsSort] = useState('SYMBOL_ASC');
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
   const [indexPrices, setIndexPrices] = useState(null);
@@ -642,9 +644,15 @@ export default function App() {
             const filtered = holdings.filter((row) => {
               const symbol = symbolOf(row).trim().toUpperCase();
               const pnl = pnlOf(row);
-              return (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
+              return symbol.includes(holdingsSearch.trim().toUpperCase()) && (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
                 (holdingsProfitFilter === 'ALL' || (holdingsProfitFilter === 'PROFITABLE' && pnl > 0) || (holdingsProfitFilter === 'LOSS' && pnl < 0) || (holdingsProfitFilter === 'BREAKEVEN' && pnl === 0));
             });
+            const quantityOf = (row) => Number(row.quantity ?? row.net_quantity ?? 0);
+            const priceOf = (row) => Number(row.last_price ?? row.lastPrice ?? row.price ?? row.close_price ?? 0);
+            const averageOf = (row) => Number(row.average_price ?? row.averagePrice ?? 0);
+            const valueOf = (row) => Number(row.current_value ?? row.market_value ?? priceOf(row) * quantityOf(row));
+            const pnlPercentOf = (row) => { const cost = averageOf(row) * quantityOf(row); return cost ? pnlOf(row) / Math.abs(cost) * 100 : 0; };
+            filtered.sort((a, b) => { switch (holdingsSort) { case 'PNL_PERCENT_DESC': return pnlPercentOf(b) - pnlPercentOf(a); case 'PNL_PERCENT_ASC': return pnlPercentOf(a) - pnlPercentOf(b); case 'VALUE_DESC': return valueOf(b) - valueOf(a); case 'VALUE_ASC': return valueOf(a) - valueOf(b); case 'QUANTITY_DESC': return quantityOf(b) - quantityOf(a); case 'QUANTITY_ASC': return quantityOf(a) - quantityOf(b); default: return symbolOf(a).localeCompare(symbolOf(b)); } });
             const counts = {
               ALL: holdings.length,
               PROFITABLE: holdings.filter((row) => pnlOf(row) > 0).length,
