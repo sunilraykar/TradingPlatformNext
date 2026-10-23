@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const INDICES = ['FINNIFTY', 'SENSEX'];
+const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'MIDCPNIFTY', 'SENSEX', 'BANKEX'];
+const INDEX_LABELS = {
+  nifty: 'NIFTY',
+  banknifty: 'BANKNIFTY',
+  finnifty: 'FINNIFTY',
+  midcpnifty: 'MIDCPNIFTY',
+  sensex: 'SENSEX',
+  bankex: 'BANKEX',
+};
 
 async function api(path, options = {}) {
   const response = await fetch(`${API}/api/v1${path}`, {
@@ -16,10 +24,23 @@ async function api(path, options = {}) {
   return payload;
 }
 
+function scalarValue(value) {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value !== 'object') return value;
+  for (const key of ['value', 'price', 'ltp', 'close', 'current', 'amount', 'number']) {
+    const candidate = value[key];
+    if (candidate !== null && candidate !== undefined && candidate !== '' && typeof candidate !== 'object') {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 function number(value, digits = 2) {
-  if (value === null || value === undefined || value === '') return '—';
-  const n = Number(value);
-  return Number.isFinite(n) ? n.toLocaleString('en-IN', { maximumFractionDigits: digits }) : String(value);
+  const scalar = scalarValue(value);
+  if (scalar === null) return '—';
+  const n = Number(scalar);
+  return Number.isFinite(n) ? n.toLocaleString('en-IN', { maximumFractionDigits: digits }) : String(scalar);
 }
 
 function timeLabel(value) {
@@ -32,17 +53,9 @@ function timeLabel(value) {
 function displayValue(value) {
   if (value === null || value === undefined || value === '') return '—';
   if (typeof value !== 'object') return String(value);
-
-  // AutoTrender may encode signals as structured objects, e.g. { type, colorCode }.
-  // Only return a primitive so React never receives an object as a child.
-  for (const key of ['type', 'label', 'name', 'value', 'status', 'signal', 'text']) {
+  for (const key of ['type', 'label', 'name', 'value', 'status', 'signal', 'text', 'price', 'ltp', 'close']) {
     const candidate = value[key];
-    if (
-      candidate !== null &&
-      candidate !== undefined &&
-      candidate !== '' &&
-      (typeof candidate === 'string' || typeof candidate === 'number' || typeof candidate === 'boolean')
-    ) {
+    if (candidate !== null && candidate !== undefined && candidate !== '' && typeof candidate !== 'object') {
       return String(candidate);
     }
   }
@@ -102,6 +115,8 @@ function Metric({ label, value, tone }) {
 
 export default function App() {
   const [index, setIndex] = useState('FINNIFTY');
+  const [indices, setIndices] = useState(DEFAULT_INDICES);
+  const [indexPrices, setIndexPrices] = useState(null);
   const [mins, setMins] = useState(5);
   const [intraday, setIntraday] = useState(null);
   const [oi, setOi] = useState(null);
@@ -120,6 +135,7 @@ export default function App() {
       api(`/autotrender/indices/${index}/oi-graph`),
       api('/autotrender/auth/status'),
       api('/autotrender/cache/status'),
+      api('/autotrender/index-price'),
     ]);
     if (results[0].status === 'fulfilled') setIntraday(results[0].value);
     else setError((prev) => prev || `Intraday: ${results[0].reason.message}`);
@@ -127,6 +143,16 @@ export default function App() {
     else setError((prev) => prev || `OI graph: ${results[1].reason.message}`);
     if (results[2].status === 'fulfilled') setAuth(results[2].value);
     if (results[3].status === 'fulfilled') setCache(results[3].value);
+    if (results[4].status === 'fulfilled') {
+      const payload = results[4].value;
+      setIndexPrices(payload);
+      const keys = Object.keys(payload?.data || {});
+      const available = keys.map((key) => INDEX_LABELS[key.toLowerCase()]).filter(Boolean);
+      if (available.length) {
+        setIndices(available);
+        if (!available.includes(index)) setIndex(available[0]);
+      }
+    }
     setLastUpdated(new Date());
     setLoading(false);
   }, [index, mins]);
@@ -151,6 +177,8 @@ export default function App() {
   const trend = useMemo(() => extractTrend(oi), [oi]);
   const intradayRows = Array.isArray(intraday?.data) ? intraday.data : [];
   const latest = intradayRows[intradayRows.length - 1] || {};
+  const indexPriceKey = Object.keys(indexPrices?.data || {}).find((key) => INDEX_LABELS[key.toLowerCase()] === index);
+  const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
   const graph = oi?.data?.graph || {};
   const optionSeries = Array.isArray(graph.option) ? graph.option : [];
   const futureSeries = Array.isArray(graph.future) ? graph.future : [];
@@ -175,7 +203,7 @@ export default function App() {
 
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
-          {INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
+          {indices.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
         </div>
         <label className="interval-select">Intraday interval
           <select value={mins} onChange={(e) => setMins(Number(e.target.value))}>
@@ -194,7 +222,7 @@ export default function App() {
 
       <section className="metric-grid">
         <Metric label="INDEX" value={index} />
-        <Metric label="LATEST PRICE" value={number(latest.price ?? latest.close ?? latest.ltp)} />
+        <Metric label="LATEST PRICE" value={number(latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)} />
         <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
         <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
         <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
@@ -204,7 +232,7 @@ export default function App() {
         <article className="panel intraday-panel">
           <div className="panel-header"><div><div className="eyebrow">OPTION STRENGTH</div><h2>Intraday data</h2></div><span className="data-count">{intradayRows.length} points</span></div>
           <div className="table-scroll"><table><thead><tr><th>Time</th><th>Price</th><th>VWAP</th><th>PCR</th><th>Option signal</th><th>VWAP signal</th></tr></thead>
-            <tbody>{intradayRows.slice(-30).reverse().map((row, i) => <tr key={`${row.time || row.mtime || i}`}><td>{timeLabel(row.time ?? row.mtime)}</td><td>{number(row.price)}</td><td>{number(row.vWap ?? row.vwap)}</td><td>{number(row.pcr?.value ?? row.pcr)}</td><td><span className="signal-tag">{displayValue(row.optionSignal)}</span></td><td>{displayValue(row.vWapSignal ?? row.vwapSignal)}</td></tr>)}
+            <tbody>{intradayRows.slice(-30).reverse().map((row, i) => <tr key={`${row.time || row.mtime || i}`}><td>{timeLabel(row.time ?? row.mtime)}</td><td>{number(row.price)}</td><td>{number(row.vWap ?? row.vwap)}</td><td>{number(row.pcr)}</td><td><span className="signal-tag">{displayValue(row.optionSignal)}</span></td><td>{displayValue(row.vWapSignal ?? row.vwapSignal)}</td></tr>)}
             {!intradayRows.length && <tr><td colSpan="6" className="empty-cell">{loading ? 'Loading market data…' : 'No intraday records returned.'}</td></tr>}</tbody>
           </table></div>
           <div className="panel-footer">Showing latest {Math.min(intradayRows.length, 30)} records from the API response.</div>
