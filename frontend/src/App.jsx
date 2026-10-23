@@ -524,6 +524,7 @@ export default function App() {
         <div className="topbar-right">
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
           <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={'Kite WebSocket: ' + (websocketStatus?.state || 'checking')}><i />WS {websocketStatus?.connected ? 'Connected' : (websocketStatus?.state || 'Checking')}</span>
+          <span className={`status-pill ${cache?.cached ? 'online' : 'offline'}`} title={cache?.cached ? `Cache populated · ${number(cache.cache_age_seconds, 1)} seconds old` : 'Cache is not populated'}><i />Cache {cache?.cached ? `${number(cache.cache_age_seconds, 1)}s old` : 'Empty'}</span>
           <button className="button secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button>
         </div>
       </header>
