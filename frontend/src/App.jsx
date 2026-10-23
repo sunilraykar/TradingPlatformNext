@@ -134,7 +134,7 @@ function linePoints(series, width = 720, height = 220) {
 function PriceVwapChart({ rows }) {
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
-    const match = raw.match(/(?:^|\\s)(\\d{1,2}):(\\d{2})(?:\\s|$)/) || raw.match(/^(\\d{1,2}):(\\d{2})$/);
+    const match = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?:\s|$)/) || raw.match(/^(\d{1,2}):(\d{2})$/);
     if (!match) return null;
     return Number(match[1]) * 60 + Number(match[2]);
   };
