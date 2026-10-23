@@ -52,3 +52,22 @@
 /* Transparent per-time hit areas make graph hover details easy to access. */
 .price-vwap-chart .chart-hover-target{fill:transparent;stroke:none;pointer-events:all;cursor:crosshair}
 .price-vwap-point:hover .price-hover-dot,.price-vwap-point:hover .vwap-hover-dot{opacity:1;r:5}
+
+
+/* Split chart and latest-record card 60:40 on desktop. */
+.price-vwap-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(280px,2fr);gap:0;align-items:stretch}
+.price-vwap-graph-column{min-width:0;border-right:1px solid var(--line);padding-bottom:10px}
+.latest-candle-card{min-width:0;padding:22px 20px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(145deg,#111d2c,#0d1522)}
+.latest-candle-card h2{font-size:20px;margin:0;font-family:'DM Mono',monospace;letter-spacing:-.5px}
+.latest-record-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.latest-record-grid>div{min-width:0;padding:10px 11px;border:1px solid #243145;border-radius:8px;background:#141f30}
+.latest-record-grid span{display:block;color:var(--muted);font-size:10px;line-height:1.4;margin-bottom:6px}
+.latest-record-grid strong{display:block;overflow-wrap:anywhere;font-family:'DM Mono',monospace;font-size:12px;color:#e5eaf3}
+.latest-record-grid .latest-signal{font-family:'DM Sans',sans-serif;font-size:11px;color:var(--cyan)}
+.latest-record-grid .positive{color:var(--green)}
+.latest-record-grid .negative{color:var(--red)}
+.latest-record-grid .latest-enter{display:inline-block;width:max-content;padding:3px 8px;border-radius:5px;font-family:'DM Sans',sans-serif;font-size:11px;background:#3a3120;color:#f1d28b}
+.latest-record-grid .latest-enter.buy{background:#163b32;color:#80e0b4}
+.latest-record-grid .latest-enter.sell{background:#45262d;color:#ffaaaa}
+@media(max-width:900px){.price-vwap-layout{grid-template-columns:minmax(0,1fr)}.price-vwap-graph-column{border-right:0;border-bottom:1px solid var(--line)}.latest-record-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.latest-candle-card{padding:17px 13px}.latest-record-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.price-vwap-chart{height:200px}}
