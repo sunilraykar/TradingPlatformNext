@@ -314,16 +314,15 @@ export default function App() {
       <header className="topbar">
         <div className="brand-mark">TP</div>
         <div className="brand-copy"><strong>TradingPlatformNext</strong><span>MARKET INTELLIGENCE</span></div>
+      <nav className="application-tabs" aria-label="Application section">
+        <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
+        <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
+      </nav>
         <div className="topbar-right">
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
           <button className="button secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button>
         </div>
       </header>
-
-      <nav className="application-tabs" aria-label="Application section">
-        <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
-        <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
-      </nav>
 
       {applicationTab === 'autotrender' ? <>
       <section className="page-heading">
