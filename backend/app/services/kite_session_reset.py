@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from app.core.config import get_settings
 from app.providers.kite.registry import clear_active_kite_session
 from app.services.kite_sessions import KiteSessionStoreError, reset_sessions
+from app.services.live_quotes import live_quotes
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +33,11 @@ async def run_daily_reset_scheduler() -> None:
                 timezone = ZoneInfo(settings.kite_session_reset_timezone)
                 now = datetime.now(timezone)
                 if _reset_due(now, settings.kite_session_reset_time) and last_reset_date != now.date():
-                    reset_sessions()
-                    clear_active_kite_session()
+                    try:
+                        reset_sessions()
+                    finally:
+                        clear_active_kite_session()
+                        live_quotes.clear()
                     last_reset_date = now.date()
                     logger.info("Scheduled local Kite session reset completed")
             except (ZoneInfoNotFoundError, KiteSessionStoreError):
