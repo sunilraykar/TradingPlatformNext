@@ -19,6 +19,72 @@ from app.services.option_chain import get_option_chain
 router = APIRouter()
 
 
+_OPTION_CHAIN_UI = r"""
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TradingPlatformNext · Option Chain</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:#121a2c;--line:#29354c;--muted:#9aabc4;--text:#edf3ff;--green:#22c55e;--red:#f87171;--blue:#7dd3fc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:22px 4vw;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+h1{font-size:22px;margin:0}small,.muted{color:var(--muted)}main{padding:24px 4vw;max-width:1600px;margin:auto}
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:end;background:var(--panel);border:1px solid var(--line);padding:16px;border-radius:12px}
+label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:12px}select,input,button{background:#0b1222;color:var(--text);border:1px solid #35435e;border-radius:7px;padding:10px 12px;font:inherit}
+button{background:#164e63;border-color:#0e7490;cursor:pointer;font-weight:650}button:hover{background:#155e75}
+.status{display:flex;gap:8px;align-items:center;padding:8px 12px;border:1px solid var(--line);border-radius:99px}.dot{width:8px;height:8px;border-radius:50%;background:#fbbf24}.dot.live{background:var(--green)}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.metric{background:var(--panel);border:1px solid var(--line);padding:14px;border-radius:10px}.metric span{display:block;color:var(--muted);font-size:12px}.metric strong{display:block;font-size:20px;margin-top:5px}
+.tablewrap{overflow:auto;border:1px solid var(--line);border-radius:10px}table{width:100%;border-collapse:collapse;min-width:900px;font-variant-numeric:tabular-nums}th,td{padding:10px 12px;text-align:right;border-bottom:1px solid #202b40;white-space:nowrap}thead th{background:#18243a;position:sticky;top:0;z-index:1}th.strike,td.strike{text-align:center;background:#172239;font-weight:700}.callhead{color:#86efac}.puthead{color:#fca5a5}.empty{color:var(--muted);text-align:center;padding:36px}.error{color:#fca5a5;padding:12px}.foot{padding:12px;color:var(--muted);font-size:12px}
+@media(max-width:700px){.metrics{grid-template-columns:1fr}.controls>*{flex:1}.metrics strong{font-size:18px}}
+</style></head>
+<body>
+<header><div><h1>TradingPlatformNext <span style="color:var(--blue)">/ Option Chain</span></h1><small>NIFTY 50 · BANK NIFTY · Kite live market data</small></div><div class="status"><span id="dot" class="dot"></span><span id="connection">Checking feed…</span></div></header>
+<main>
+<div class="controls">
+<label>Underlying<select id="underlying"><option value="NIFTY">NIFTY 50</option><option value="BANKNIFTY">BANK NIFTY</option></select></label>
+<label>Expiry<select id="expiry"><option value="">Nearest available</option></select></label>
+<label>Strikes each side<select id="count"><option>5</option><option selected>10</option><option>15</option><option>20</option><option>30</option></select></label>
+<button id="refresh">Refresh chain</button>
+<span class="muted" id="updated">Waiting for first update…</span>
+</div>
+<div class="metrics">
+<div class="metric"><span>Underlying</span><strong id="spot">—</strong></div>
+<div class="metric"><span>Selected expiry</span><strong id="expiryLabel">—</strong></div>
+<div class="metric"><span>Live subscriptions</span><strong id="subs">—</strong></div>
+</div>
+<div id="error" class="error" hidden></div>
+<div class="tablewrap"><table><thead><tr><th colspan="4" class="callhead">CALLS (CE)</th><th class="strike">STRIKE</th><th colspan="4" class="puthead">PUTS (PE)</th></tr><tr><th class="callhead">LTP</th><th class="callhead">Volume</th><th class="callhead">OI</th><th class="callhead">Symbol</th><th class="strike">Price</th><th class="puthead">Symbol</th><th class="puthead">OI</th><th class="puthead">Volume</th><th class="puthead">LTP</th></tr></thead><tbody id="rows"><tr><td colspan="9" class="empty">Load an option chain to begin.</td></tr></tbody></table></div>
+<div class="foot">Prices are supplied by your configured Kite session. A dash means no tick has been received yet. This screen does not place orders or provide a trading recommendation.</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);let busy=false,selectedExpiry="";
+function fmt(v){return v===null||v===undefined||v===""?"—":Number(v).toLocaleString("en-IN",{maximumFractionDigits:2})}
+function side(v){if(!v)return ["—","—","—","—"];return [fmt(v.last_price),fmt(v.volume),fmt(v.oi),v.tradingsymbol||"—"]}
+async function loadChain(){if(busy)return;busy=true;$("error").hidden=true;try{
+const u=$("underlying").value,e=$("expiry").value,n=$("count").value;
+const p=new URLSearchParams({underlying:u,strike_count:n});if(e)p.set("expiry",e);
+const res=await fetch("/api/v1/kite/option-chain?"+p.toString(),{cache:"no-store"});
+const data=await res.json();if(!res.ok)throw new Error(data.detail||"Could not load option chain");
+if(!selectedExpiry||selectedExpiry!==u){selectedExpiry=u;const exp=$("expiry");exp.innerHTML="";for(const x of data.available_expiries||[]){const o=document.createElement("option");o.value=x;o.textContent=x;exp.appendChild(o)}if(data.expiry)exp.value=data.expiry}
+$("spot").textContent=fmt(data.spot_price);$("expiryLabel").textContent=data.expiry||"—";$("subs").textContent=(data.live_subscription?.subscription_count??"—")+" instruments";
+$("rows").innerHTML="";for(const r of data.strikes||[]){const c=side(r.CE),p2=side(r.PE),tr=document.createElement("tr");tr.innerHTML="<td>"+c[0]+"</td><td>"+c[1]+"</td><td>"+c[2]+"</td><td>"+c[3]+"</td><td class='strike'>"+fmt(r.strike)+"</td><td>"+p2[3]+"</td><td>"+p2[2]+"</td><td>"+p2[1]+"</td><td>"+p2[0]+"</td>";$("rows").appendChild(tr)}
+if(!data.strikes?.length)$("rows").innerHTML="<tr><td colspan='9' class='empty'>No strikes returned for this expiry.</td></tr>";
+$("updated").textContent="Updated "+new Date().toLocaleTimeString();const status=await fetch("/api/v1/kite/market-data/status",{cache:"no-store"}).then(x=>x.json());$("dot").classList.toggle("live",status.connected===true);$("connection").textContent=status.connected?"WebSocket connected":"Feed: "+status.state;
+}catch(err){$("error").hidden=false;$("error").textContent=err.message;$("dot").classList.remove("live");$("connection").textContent="Feed unavailable"}finally{busy=false}}
+$("underlying").addEventListener("change",()=>{selectedExpiry="";loadChain()});$("expiry").addEventListener("change",loadChain);$("count").addEventListener("change",loadChain);$("refresh").addEventListener("click",loadChain);loadChain();setInterval(loadChain,2000);
+</script></body></html>
+"""
+
+
+@router.get("/option-chain", tags=["market intelligence"], response_class=HTMLResponse)
+def option_chain_ui() -> HTMLResponse:
+    """Serve the first browser-based option-chain screen."""
+    return HTMLResponse(_OPTION_CHAIN_UI)
+
+
+
+
 class SessionExchangeRequest(BaseModel):
     request_token: str = Field(min_length=1, max_length=256)
 
