@@ -62,15 +62,48 @@ function displayValue(value) {
   return '—';
 }
 
-function extractTrend(payload) {
-  const trend = payload?.data?.trend || payload?.trend || {};
-  return {
-    call: trend.call ?? trend.callPercent ?? trend.call_percentage,
-    put: trend.put ?? trend.putPercent ?? trend.put_percentage,
-    signal: trend.signal ?? trend.optionSignal ?? trend.title,
-  };
+function numericValue(value) {
+  const scalar = scalarValue(value);
+  if (scalar === null || scalar === '') return null;
+  const parsed = Number(scalar);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
+function signalValue(value) {
+  if (value === null || value === undefined) return '';
+  if (typeof value !== 'object') return String(value).trim().toUpperCase();
+  for (const key of ['type', 'value', 'signal', 'label', 'status', 'name', 'text']) {
+    const candidate = value[key];
+    if (candidate !== null && candidate !== undefined && typeof candidate !== 'object' && candidate !== '') return String(candidate).trim().toUpperCase();
+  }
+  return '';
+}
+
+function recordTime(row) {
+  return timeLabel(row.time ?? row.mtime ?? row.timestamp ?? row.dateTime ?? row.datetime ?? row.createdAt);
+}
+
+function buildIntradayRows(rows) {
+  return rows.map((row, index) => {
+    const call = numericValue(row.call);
+    const put = numericValue(row.put);
+    const total = call !== null && put !== null ? call + put : null;
+    const callStrength = total !== null && total > 0 ? (call / total) * 100 : null;
+    const putStrength = total !== null && total > 0 ? (put / total) * 100 : null;
+    // Positive difference means call strength is higher.
+    const strengthDiff = callStrength !== null && putStrength !== null ? callStrength - putStrength : null;
+    const price = numericValue(row.price ?? row.close ?? row.ltp);
+    const vwap = numericValue(row.vWap ?? row.vwap);
+    const buffer = price !== null && vwap !== null && vwap !== 0 ? ((price - vwap) / vwap) * 100 : null;
+    const optionSignal = signalValue(row.optionSignal);
+    const vwapSignal = signalValue(row.vWapSignal ?? row.vwapSignal);
+    const pcr = numericValue(row.pcr);
+    let enter = '—';
+    if (optionSignal === 'BUY' && vwapSignal === 'BUY') enter = strengthDiff !== null && strengthDiff > 10 && pcr !== null && pcr > 1 && buffer !== null && Math.abs(buffer) < 0.3 ? 'BUY' : 'WAIT';
+    else if (optionSignal === 'SELL' && vwapSignal === 'SELL') enter = strengthDiff !== null && strengthDiff < -10 && pcr !== null && pcr < 1 && buffer !== null && Math.abs(buffer) < 0.3 ? 'SELL' : 'WAIT';
+    return { key: recordTime(row) + '-' + index, time: recordTime(row), call, put, diff: numericValue(row.diff), pcr, price, vwap, vwapSignal, optionSignal, callStrength, putStrength, strengthDiff, buffer, enter };
+  });
+}
 function linePoints(series, width = 720, height = 220) {
   const values = series.map((point) => Number(point.value)).filter(Number.isFinite);
   if (!values.length) return '';
@@ -170,6 +203,7 @@ export default function App() {
 
   const trend = useMemo(() => extractTrend(oi), [oi]);
   const intradayRows = Array.isArray(intraday?.data) ? intraday.data : [];
+  const calculatedRows = useMemo(() => buildIntradayRows(intradayRows), [intradayRows]);
   const latest = intradayRows[intradayRows.length - 1] || {};
   const indexPriceKey = Object.keys(indexPrices?.data || {}).find((key) => INDEX_LABELS[key.toLowerCase()] === index);
   const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
@@ -223,13 +257,20 @@ export default function App() {
       </section>
 
       <section className="content-grid">
-        <article className="panel intraday-panel">
-          <div className="panel-header"><div><div className="eyebrow">OPTION STRENGTH</div><h2>Intraday data</h2></div><span className="data-count">{intradayRows.length} points</span></div>
-          <div className="table-scroll"><table><thead><tr><th>Time</th><th>Price</th><th>VWAP</th><th>PCR</th><th>Option signal</th><th>VWAP signal</th></tr></thead>
-            <tbody>{intradayRows.slice(-30).reverse().map((row, i) => <tr key={`${row.time || row.mtime || i}`}><td>{timeLabel(row.time ?? row.mtime)}</td><td>{number(row.price)}</td><td>{number(row.vWap ?? row.vwap)}</td><td>{number(row.pcr)}</td><td><span className="signal-tag">{displayValue(row.optionSignal)}</span></td><td>{displayValue(row.vWapSignal ?? row.vwapSignal)}</td></tr>)}
-            {!intradayRows.length && <tr><td colSpan="6" className="empty-cell">{loading ? 'Loading market data…' : 'No intraday records returned.'}</td></tr>}</tbody>
+        <article className="panel intraday-panel calculated-table-panel">
+          <div className="panel-header"><div><div className="eyebrow">INTRADAY SIGNALS</div><h2>Calculated intraday table</h2></div><span className="data-count">{calculatedRows.length} points</span></div>
+          <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>Call</th><th>Put</th><th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th><th>VWAP Signal</th><th>Option Signal</th><th>Call Strength (%)</th><th>Put Strength (%)</th><th>Call-Put Strength Diff</th><th>VWAP-Price Buffer (%)</th><th>Enter</th></tr></thead>
+            <tbody>{calculatedRows.slice(-100).reverse().map((row) => <tr key={row.key}>
+              <td>{row.time || '—'}</td><td>{number(row.call)}</td><td>{number(row.put)}</td><td>{number(row.diff)}</td><td>{number(row.pcr, 2)}</td><td>{number(row.price)}</td><td>{number(row.vwap)}</td>
+              <td><span className="signal-tag">{row.vwapSignal || '—'}</span></td><td><span className="signal-tag">{row.optionSignal || '—'}</span></td>
+              <td>{row.callStrength === null ? '—' : number(row.callStrength) + '%'}</td><td>{row.putStrength === null ? '—' : number(row.putStrength) + '%'}</td>
+              <td className={row.strengthDiff === null ? '' : row.strengthDiff > 0 ? 'cell-positive' : row.strengthDiff < 0 ? 'cell-negative' : ''}>{row.strengthDiff === null ? '—' : number(row.strengthDiff)}</td>
+              <td className={row.buffer === null ? '' : row.buffer > 0 ? 'cell-positive' : row.buffer < 0 ? 'cell-negative' : ''}>{row.buffer === null ? '—' : number(row.buffer, 3)}</td>
+              <td><span className={'signal-tag enter-tag ' + row.enter.toLowerCase()}>{row.enter}</span></td>
+            </tr>)}
+            {!calculatedRows.length && <tr><td colSpan="14" className="empty-cell">{loading ? 'Loading market data…' : 'No intraday records returned.'}</td></tr>}</tbody>
           </table></div>
-          <div className="panel-footer">Showing latest {Math.min(intradayRows.length, 30)} records from the API response.</div>
+          <div className="panel-footer">Calculated in memory from the current API response. No MySQL writes. Showing latest {Math.min(calculatedRows.length, 100)} records.</div>
         </article>
 
         <article className="panel oi-panel">
