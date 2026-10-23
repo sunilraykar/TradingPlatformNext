@@ -36,6 +36,10 @@ class KiteTickerAdapter:
             raise ValueError(f"Unsupported Kite ticker mode: {mode}")
         self._ticker.set_mode(modes[mode], instrument_tokens)
 
+    def unsubscribe(self, instrument_tokens: list[int]) -> None:
+        if instrument_tokens:
+            self._ticker.unsubscribe(instrument_tokens)
+
     def close(self) -> None:
         self._ticker.close()
 
