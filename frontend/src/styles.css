@@ -48,3 +48,7 @@
 .calculated-table tbody td{transition:color .12s ease}
 .calculated-table tbody tr:hover td{color:#f2f7ff}
 @media(max-width:650px){.app-shell{padding:0 10px 18px}.calculated-table{min-width:1600px}}
+
+/* Transparent per-time hit areas make graph hover details easy to access. */
+.price-vwap-chart .chart-hover-target{fill:transparent;stroke:none;pointer-events:all;cursor:crosshair}
+.price-vwap-point:hover .price-hover-dot,.price-vwap-point:hover .vwap-hover-dot{opacity:1;r:5}
