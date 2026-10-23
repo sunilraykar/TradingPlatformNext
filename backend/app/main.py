@@ -13,8 +13,8 @@ from app.providers.kite.registry import (
     clear_active_kite_session,
     configure_active_kite_session,
 )
-from app.services.kite_session_reset import run_daily_reset_scheduler
 from app.services import live_market_data
+from app.services.kite_session_reset import run_daily_reset_scheduler
 from app.services.kite_sessions import (
     KiteSessionStoreError,
     load_session,
