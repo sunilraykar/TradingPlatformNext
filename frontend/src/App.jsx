@@ -228,9 +228,19 @@ function Metric({ label, value, tone }) {
   return <div className="metric"><span>{label}</span><strong className={tone || ''}>{displayValue(value)}</strong></div>;
 }
 
+function KiteDataTable({ rows, emptyText = 'No records returned.' }) {
+  if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
+  const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))].slice(0, 18);
+  const formatCell = (value) => { if (value === null || value === undefined || value === '') return '—'; if (typeof value === 'object') return JSON.stringify(value); if (typeof value === 'number') return value.toLocaleString('en-IN', { maximumFractionDigits: 2 }); return String(value); };
+  return <div className="table-scroll kite-data-scroll"><table className="kite-data-table"><thead><tr>{columns.map((key) => <th key={key}>{key.replaceAll('_', ' ')}</th>)}</tr></thead><tbody>{rows.map((row, i) => <tr key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key}>{formatCell(row[key])}</td>)}</tr>)}</tbody></table></div>;
+}
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
   const [kiteTab, setKiteTab] = useState('Dashboard');
+  const [kiteData, setKiteData] = useState(null);
+  const [kiteLoading, setKiteLoading] = useState(false);
+  const [kiteError, setKiteError] = useState('');
+  const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
   const [indexPrices, setIndexPrices] = useState(null);
   const [mins, setMins] = useState(5);
@@ -269,6 +279,34 @@ export default function App() {
   }, [index, mins]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const refreshWebsocketStatus = useCallback(async () => {
+    try { setWebsocketStatus(await api('/kite/market-data/status')); }
+    catch (e) { setWebsocketStatus({ connected: false, state: 'unavailable', error: e.message }); }
+  }, []);
+  useEffect(() => { refreshWebsocketStatus(); const timer = window.setInterval(refreshWebsocketStatus, 3000); return () => window.clearInterval(timer); }, [refreshWebsocketStatus]);
+
+  const loadKiteTab = useCallback(async () => {
+    if (applicationTab !== 'kite') return;
+    setKiteLoading(true); setKiteError('');
+    try {
+      let result;
+      if (kiteTab === 'Option Chain') {
+        result = await api('/kite/option-chain?underlying=NIFTY&strike_count=10');
+        const rows = (result.strikes || []).map((s) => ({ call_symbol: s.CE?.tradingsymbol, call_ltp: s.CE?.last_price, call_volume: s.CE?.volume, call_oi: s.CE?.oi, strike: s.strike, put_oi: s.PE?.oi, put_volume: s.PE?.volume, put_ltp: s.PE?.last_price, put_symbol: s.PE?.tradingsymbol }));
+        setKiteData({ title: 'Option Chain', subtitle: (result.underlying || 'NIFTY') + ' · Expiry ' + (result.expiry || '—') + ' · Spot ' + number(result.spot_price), rows });
+      } else if (kiteTab === 'Orders') { result = await api('/kite/orders'); setKiteData({ title: 'Orders', subtitle: (result.orders || []).length + ' orders', rows: result.orders || [] });
+      } else if (kiteTab === 'Positions') { result = await api('/kite/positions'); setKiteData({ title: 'Positions', subtitle: 'Net and day positions', rows: [...(result.net || []).map((r) => ({ book: 'Net', ...r })), ...(result.day || []).map((r) => ({ book: 'Day', ...r }))] });
+      } else if (kiteTab === 'Holdings') { result = await api('/kite/holdings'); setKiteData({ title: 'Holdings', subtitle: (result.holdings || []).length + ' holdings', rows: result.holdings || [] });
+      } else if (kiteTab === 'Funds') { result = await api('/kite/funds'); const rows = Object.entries(result || {}).flatMap(([segment, vals]) => vals && typeof vals === 'object' ? Object.entries(vals).map(([metric, value]) => ({ segment, metric, value: typeof value === 'object' ? JSON.stringify(value) : value })) : [{ segment: 'Account', metric: segment, value: vals }]); setKiteData({ title: 'Funds & Margins', subtitle: 'Available balance and margin details', rows });
+      } else {
+        const all = await Promise.all([api('/kite/orders'), api('/kite/positions'), api('/kite/holdings'), api('/kite/funds')]);
+        setKiteData({ title: 'Kite Dashboard', subtitle: 'Live account snapshot', rows: [{ metric: 'Orders today', value: (all[0].orders || []).length }, { metric: 'Net positions', value: (all[1].net || []).length }, { metric: 'Day positions', value: (all[1].day || []).length }, { metric: 'Holdings', value: (all[2].holdings || []).length }, ...Object.entries(all[3] || {}).flatMap(([segment, vals]) => vals && typeof vals === 'object' ? Object.entries(vals).map(([metric, value]) => ({ metric: segment + ' · ' + metric, value: typeof value === 'object' ? JSON.stringify(value) : value })) : [{ metric: segment, value: vals }])] });
+      }
+    } catch (e) { setKiteData(null); setKiteError(e.message || 'Unable to load Kite data. Check Kite login and backend.'); }
+    finally { setKiteLoading(false); }
+  }, [applicationTab, kiteTab]);
+  useEffect(() => { loadKiteTab(); }, [loadKiteTab]);
 
   const login = async () => {
     setLoggingIn(true);
@@ -321,6 +359,7 @@ export default function App() {
       </nav>
         <div className="topbar-right">
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
+          <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={'Kite WebSocket: ' + (websocketStatus?.state || 'checking')}><i />WS {websocketStatus?.connected ? 'Connected' : (websocketStatus?.state || 'Checking')}</span>
           <button className="button secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button>
         </div>
       </header>
@@ -423,12 +462,11 @@ export default function App() {
             <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => setKiteTab(tab)}>{tab}</button>
           )}
         </nav>
-        <section className="kite-placeholder panel">
-          <div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div>
-          <h1>{kiteTab}</h1>
-          <p>{kiteTab === 'Dashboard'
-            ? 'Kite workspace overview. Connect the Kite API and implement the relevant widgets here.'
-            : `${kiteTab} workspace selected. The dedicated Kite screen and live API integration are not yet implemented in this frontend; live trading data is not being simulated.`}</p>
+        <section className="kite-data-panel panel">
+          <div className="panel-header"><div><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></div><button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button></div>
+          {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and import the instrument master for Option Chain.</small></div>}
+          {kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />}
+          <div className="panel-footer">Read-only data view. No order placement or modification is performed by these tabs.</div>
         </section>
       </>}
     </main>
