@@ -229,6 +229,7 @@ function Metric({ label, value, tone }) {
 }
 
 export default function App() {
+  const [applicationTab, setApplicationTab] = useState('autotrender');
   const [index, setIndex] = useState('FINNIFTY');
   const [indexPrices, setIndexPrices] = useState(null);
   const [mins, setMins] = useState(5);
@@ -319,6 +320,12 @@ export default function App() {
         </div>
       </header>
 
+      <nav className="application-tabs" aria-label="Application section">
+        <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>Autiotrender</button>
+        <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
+      </nav>
+
+      {applicationTab === 'autotrender' ? <>
       <section className="page-heading">
         <div><div className="eyebrow">READ-ONLY MARKET DATA</div><h1>AutoTrender Monitor</h1><p>Intraday option strength and change-in-open-interest for NIFTY, BANKNIFTY, FINNIFTY and SENSEX.</p></div>
         <div className="heading-meta"><span className={stale ? 'stale' : 'fresh'}>{stale ? 'Check data freshness' : 'Source status'}</span><small>Updated {lastUpdated ? lastUpdated.toLocaleTimeString('en-IN') : '—'}</small></div>
@@ -407,6 +414,11 @@ export default function App() {
         <span>{hasMarketData ? 'Data received from AutoTrender API' : 'Waiting for AutoTrender market data'}</span>
         <span>Cache {cache?.cached ? `${number(cache.cache_age_seconds, 1)}s old` : 'not populated'} · API proxy: local backend</span>
       </footer>
+      </> : <section className="kite-placeholder panel">
+        <div className="eyebrow">KITE TRADING</div>
+        <h1>Kite</h1>
+        <p>The Kite application tab is ready. Kite-specific screens and API integration are not currently present in this repository's frontend, so they have not been replaced with mock trading data.</p>
+      </section>}
     </main>
   );
 }
