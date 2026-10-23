@@ -3,12 +3,11 @@
 from datetime import UTC, date, datetime
 from typing import Any
 
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
-
 from app.db.session import get_engine
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 
 UPSERT_INSTRUMENT = text(
@@ -72,10 +71,7 @@ def normalize_instrument(item: dict[str, Any], version: int) -> dict[str, Any]:
 def import_instrument_master() -> dict[str, Any]:
     """Download the complete Kite master and atomically replace the active KITE set."""
     provider = get_kite_provider()
-    try:
-        records = provider.instruments()
-    except KiteProviderError:
-        raise
+    records = provider.instruments()
     if not records:
         raise ValueError("Kite returned an empty instrument master; existing data was not changed")
 
@@ -97,5 +93,5 @@ def import_instrument_master() -> dict[str, Any]:
         "source": "KITE",
         "instrument_version": version,
         "imported_count": len(rows),
-        "imported_at": datetime.now(timezone.utc).isoformat(),
+        "imported_at": datetime.now(UTC).isoformat(),
     }
