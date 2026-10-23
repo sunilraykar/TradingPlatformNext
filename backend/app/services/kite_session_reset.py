@@ -9,7 +9,7 @@ from app.core.config import get_settings
 from app.providers.kite.client import KiteProvider
 from app.providers.kite.registry import clear_active_kite_session
 from app.services.kite_sessions import KiteSessionStoreError, reset_sessions
-from app.services.live_quotes import live_quotes
+from app.services import live_market_data
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +39,7 @@ async def run_daily_reset_scheduler() -> None:
                         reset_sessions()
                     finally:
                         clear_active_kite_session()
-                        live_quotes.clear()
+                        live_market_data.reset()
                     last_reset_date = now.date()
                     logger.info("Scheduled local Kite session reset completed")
                     if (
