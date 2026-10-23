@@ -109,4 +109,6 @@ def status() -> dict[str, Any]:
 
 def reset() -> None:
     stop()
+    with _lock:
+        _subscriptions.clear()
     live_quotes.clear()
