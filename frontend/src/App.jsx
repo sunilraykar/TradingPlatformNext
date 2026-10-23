@@ -191,10 +191,6 @@ function PriceVwapChart({ rows }) {
       <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
     <div className="series-summary price-vwap-summary">
-      <div><span>Latest price</span><strong>{number(latest.price)}</strong></div>
-      <div><span>Latest VWAP</span><strong>{number(latest.vwap)}</strong></div>
-      <div><span>Price − VWAP</span><strong className={gap === null ? '' : gap >= 0 ? 'positive' : 'negative'}>{gap === null ? '—' : number(gap)}</strong></div>
-      <div><span>VWAP price buffer</span><strong className={buffer === null ? '' : buffer >= 0 ? 'positive' : 'negative'}>{buffer === null ? '—' : `${number(buffer, 3)}%`}</strong></div>
     </div>
   </>;
 }
@@ -570,8 +566,6 @@ export default function App() {
               <PriceVwapChart rows={calculatedRows} />
             </div>
             <aside className="latest-candle-card">
-              <div className="eyebrow">LATEST INTRADAY RECORD</div>
-              <h2>{calculatedRowsDescending[0]?.time || 'Latest record'}</h2>
               <div className="latest-record-grid">
                 <div><span>Call</span><strong>{number(calculatedRowsDescending[0]?.call)}</strong></div>
                 <div><span>Put</span><strong>{number(calculatedRowsDescending[0]?.put)}</strong></div>
