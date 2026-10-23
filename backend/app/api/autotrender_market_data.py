@@ -95,3 +95,9 @@ def index_oi_graph(index: str, request: Request) -> dict:
 def cache_status(request: Request) -> dict:
     """Report the in-memory index-price cache age and refresh status without querying MySQL."""
     return _cache(request).status()
+
+
+@router.get("/cache/content")
+def cache_content(request: Request) -> dict:
+    """Read-only, redacted view of currently cached index-price data."""
+    return _cache(request).viewer()
