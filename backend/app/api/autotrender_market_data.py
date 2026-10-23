@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, Request
+import requests
 
 from app.providers.autotrender.auth import AutoTrenderAuth
 from app.services.autotrender_cache import AutoTrenderCache
@@ -36,11 +37,11 @@ def _get_json(auth: AutoTrenderAuth, endpoint: str, **params) -> dict:
         if not isinstance(payload, dict):
             raise RuntimeError("AutoTrender returned an unexpected response")
         return payload
-    except (RuntimeError, ValueError) as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
-    except Exception as exc:
-        # Upstream transport errors should be surfaced as gateway errors, not 500s.
-        raise HTTPException(status_code=502, detail="AutoTrender market data is unavailable") from exc
+    except (RuntimeError, ValueError, requests.RequestException) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="AutoTrender market data is unavailable or invalid",
+        ) from exc
 
 
 @router.get("/index-price")
