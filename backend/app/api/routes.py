@@ -11,6 +11,7 @@ from app.db.session import get_engine
 from app.providers.kite.client import KiteProvider, KiteProviderError
 from app.providers.kite.registry import configure_active_kite_session, get_kite_provider
 from app.services import live_market_data
+from app.services.instrument_master import import_instrument_master
 from app.services.kite_sessions import KiteSessionStoreError, save_session
 from app.services.live_quotes import live_quotes
 
@@ -157,6 +158,79 @@ def get_quotes(
     except KiteProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"quotes": result}
+
+
+
+@router.post("/kite/instruments/import", tags=["kite"])
+def import_kite_instruments() -> dict:
+    """Download and persist Kite's complete instrument master."""
+    try:
+        return import_instrument_master()
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/instruments", tags=["instruments"])
+def list_instruments(
+    search: str | None = Query(default=None, min_length=1, max_length=100),
+    exchange: str | None = Query(default=None, max_length=30),
+    segment: str | None = Query(default=None, max_length=40),
+    instrument_type: str | None = Query(default=None, max_length=30),
+    expiry: str | None = Query(default=None, max_length=10),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> dict:
+    """Search the active instrument master, including expiry/option filtering."""
+    clauses = ["is_active = TRUE"]
+    params: dict[str, object] = {"limit": limit, "offset": offset}
+    if search:
+        clauses.append("(tradingsymbol LIKE :search OR name LIKE :search)")
+        params["search"] = f"%{search.strip()}%"
+    if exchange:
+        clauses.append("exchange = :exchange")
+        params["exchange"] = exchange.upper()
+    if segment:
+        clauses.append("segment = :segment")
+        params["segment"] = segment.upper()
+    if instrument_type:
+        clauses.append("instrument_type = :instrument_type")
+        params["instrument_type"] = instrument_type.upper()
+    if expiry:
+        try:
+            from datetime import date
+
+            params["expiry"] = date.fromisoformat(expiry)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="expiry must use YYYY-MM-DD format") from exc
+        clauses.append("expiry = :expiry")
+
+    where_sql = " AND ".join(clauses)
+    try:
+        with get_engine().connect() as connection:
+            total = connection.execute(
+                text(f"SELECT COUNT(*) FROM instruments WHERE {where_sql}"), params
+            ).scalar_one()
+            rows = connection.execute(
+                text(
+                    "SELECT instrument_token, exchange, tradingsymbol, name, instrument_type, "
+                    "segment, expiry, strike, lot_size, tick_size, instrument_version, updated_at "
+                    f"FROM instruments WHERE {where_sql} "
+                    "ORDER BY exchange, tradingsymbol LIMIT :limit OFFSET :offset"
+                ),
+                params,
+            ).mappings().all()
+    except SQLAlchemyError:
+        raise HTTPException(status_code=503, detail="Instrument database unavailable") from None
+
+    instruments = [
+        {key: (value.isoformat() if hasattr(value, "isoformat") else value) for key, value in row.items()}
+        for row in rows
+    ]
+    return {"total": total, "limit": limit, "offset": offset, "instruments": instruments}
 
 
 @router.get("/health/db", tags=["health"])
