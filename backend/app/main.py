@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 from app.api.account import router as account_router
 from app.api.routes import router
+from app.api.subscription_test import router as subscription_test_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.kite.client import KiteProvider, KiteProviderError
@@ -91,6 +92,7 @@ settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 app.include_router(router, prefix="/api/v1")
 app.include_router(account_router, prefix="/api/v1")
+app.include_router(subscription_test_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])
