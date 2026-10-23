@@ -31,11 +31,22 @@ function timeLabel(value) {
 
 function displayValue(value) {
   if (value === null || value === undefined || value === '') return '—';
-  if (typeof value === 'object') {
-    // AutoTrender may encode signals as { type, colorCode } objects.
-    return value.type ?? value.label ?? value.name ?? value.value ?? '—';
+  if (typeof value !== 'object') return String(value);
+
+  // AutoTrender may encode signals as structured objects, e.g. { type, colorCode }.
+  // Only return a primitive so React never receives an object as a child.
+  for (const key of ['type', 'label', 'name', 'value', 'status', 'signal', 'text']) {
+    const candidate = value[key];
+    if (
+      candidate !== null &&
+      candidate !== undefined &&
+      candidate !== '' &&
+      (typeof candidate === 'string' || typeof candidate === 'number' || typeof candidate === 'boolean')
+    ) {
+      return String(candidate);
+    }
   }
-  return String(value);
+  return '—';
 }
 
 function extractTrend(payload) {
@@ -86,7 +97,7 @@ function OiChart({ series }) {
 }
 
 function Metric({ label, value, tone }) {
-  return <div className="metric"><span>{label}</span><strong className={tone || ''}>{value ?? '—'}</strong></div>;
+  return <div className="metric"><span>{label}</span><strong className={tone || ''}>{displayValue(value)}</strong></div>;
 }
 
 export default function App() {
