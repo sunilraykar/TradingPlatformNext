@@ -1,6 +1,6 @@
 """Kite instrument-master download and MySQL persistence."""
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from typing import Any
 
 from sqlalchemy import text
@@ -79,7 +79,7 @@ def import_instrument_master() -> dict[str, Any]:
     if not records:
         raise ValueError("Kite returned an empty instrument master; existing data was not changed")
 
-    version = int(datetime.now(timezone.utc).timestamp())
+    version = int(datetime.now(UTC).timestamp())
     rows = [normalize_instrument(item, version) for item in records]
     tokens = [row["instrument_token"] for row in rows]
     if len(tokens) != len(set(tokens)):
