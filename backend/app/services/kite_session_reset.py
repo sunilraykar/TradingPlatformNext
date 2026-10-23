@@ -42,8 +42,11 @@ async def run_daily_reset_scheduler() -> None:
                         live_quotes.clear()
                     last_reset_date = now.date()
                     logger.info("Scheduled local Kite session reset completed")
-                    if settings.kite_auto_login_enabled and settings.app_env.lower() == "development":
-                        if settings.kite_api_key:
+                    if (
+                        settings.kite_auto_login_enabled
+                        and settings.app_env.lower() == "development"
+                        and settings.kite_api_key
+                    ):
                             opened = webbrowser.open(KiteProvider.login_url(settings.kite_api_key))
                             logger.info(
                                 "Daily Kite login initiated (browser opened=%s)",
