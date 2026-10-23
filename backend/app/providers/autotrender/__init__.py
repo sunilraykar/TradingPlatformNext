@@ -1,0 +1,1 @@
+"""AutoTrender provider integration."""
