@@ -5,7 +5,6 @@ from zoneinfo import ZoneInfo
 from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import text
 
-from app.core.config import get_settings
 from app.db.session import get_engine
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -28,7 +27,6 @@ def _cipher() -> Fernet:
 
 
 def save_session(user_id: str, access_token: str) -> None:
-    settings = get_settings()
     encrypted = _cipher().encrypt(access_token.encode("utf-8"))
     session_date = datetime.now(IST).date()
     try:
