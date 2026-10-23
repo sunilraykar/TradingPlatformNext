@@ -157,6 +157,10 @@ function PriceVwapChart({ rows }) {
         <line x1="12" x2="708" y1="202" y2="202" className="zero-line" />
         <polyline points={pathFor('price')} className="price-line" />
         <polyline points={pathFor('vwap')} className="vwap-line" />
+        {usable.map((row, i) => <g key={`${row.time}-${i}`} className="price-vwap-point">
+          {row.price !== null && <circle cx={x(i)} cy={y(row.price)} r="4" className="price-hover-dot"><title>{`${row.time || 'Time'} · Price: ${number(row.price)}`}</title></circle>}
+          {row.vwap !== null && <circle cx={x(i)} cy={y(row.vwap)} r="4" className="vwap-hover-dot"><title>{`${row.time || 'Time'} · VWAP: ${number(row.vwap)}`}</title></circle>}
+        </g>)}
       </svg>
       <div className="chart-times"><span>{usable[0].time || '—'}</span><span>{usable[Math.floor(usable.length / 2)].time || '—'}</span><span>{latest.time || '—'}</span></div>
     </div>
@@ -320,7 +324,7 @@ export default function App() {
         <article className="panel intraday-panel calculated-table-panel">
           <div className="panel-header"><div><div className="eyebrow">INTRADAY SIGNALS</div><h2>Calculated intraday table</h2></div><span className="data-count">{calculatedRows.length} points</span></div>
           <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>Call</th><th>Put</th><th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th><th>VWAP Signal</th><th>Option Signal</th><th>Call Strength (%)</th><th>Put Strength (%)</th><th>Call-Put Strength Diff</th><th>VWAP-Price Buffer (%)</th><th>Enter</th></tr></thead>
-            <tbody>{calculatedRows.slice(-100).reverse().map((row) => <tr key={row.key}>
+            <tbody>{calculatedRows.slice(-100).reverse().map((row) => <tr key={row.key} title={`Time: ${row.time || '—'} | Call: ${number(row.call)} | Put: ${number(row.put)} | Diff: ${number(row.diff)} | PCR: ${number(row.pcr, 2)} | Price: ${number(row.price)} | VWAP: ${number(row.vwap)} | VWAP Signal: ${row.vwapSignal || '—'} | Option Signal: ${row.optionSignal || '—'} | Call Strength: ${row.callStrength === null ? '—' : number(row.callStrength) + '%'} | Put Strength: ${row.putStrength === null ? '—' : number(row.putStrength) + '%'} | Strength Diff: ${number(row.strengthDiff)} | VWAP Buffer: ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'} | Enter: ${row.enter}`}>
               <td>{row.time || '—'}</td><td>{number(row.call)}</td><td>{number(row.put)}</td><td>{number(row.diff)}</td><td>{number(row.pcr, 2)}</td><td>{number(row.price)}</td><td>{number(row.vwap)}</td>
               <td><span className="signal-tag">{row.vwapSignal || '—'}</span></td><td><span className="signal-tag">{row.optionSignal || '—'}</span></td>
               <td>{row.callStrength === null ? '—' : number(row.callStrength) + '%'}</td><td>{row.putStrength === null ? '—' : number(row.putStrength) + '%'}</td>
