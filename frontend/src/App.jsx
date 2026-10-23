@@ -333,7 +333,7 @@ function SettingsPanel() {
     const [key, label, type, fallback, help, extra] = field;
     const current = value(key);
     if (type === 'boolean') return <label className="settings-toggle" key={key}><input type="checkbox" checked={Boolean(current)} onChange={(e) => change(key, e.target.checked)} /><span><strong>{label}</strong><small>{help}</small></span></label>;
-    if (type === 'select') return <label className="settings-control" key={key}><span>{label}</span><select value={current} onChange={(e) => change(key, e.target.value)}>{extra.map((item) => { const [v, name] = item.split('|'); return <option key={v} value={v}>{name}</option>; })}</select>{help && <small>{help}</small>}</label>;
+    if (type === 'select') { const options = Array.isArray(extra) ? extra : String(extra || '').split(';').filter(Boolean); return <label className="settings-control" key={key}><span>{label}</span><select value={current} onChange={(e) => change(key, e.target.value)}>{options.map((item) => { const [v, name] = item.split('|'); return <option key={v} value={v}>{name || v}</option>; })}</select>{help && <small>{help}</small>}</label>; }
     return <label className="settings-control" key={key}><span>{label}</span><input type={type} min={type === 'number' ? extra : undefined} step={type === 'number' ? 'any' : undefined} value={current ?? fallback} onChange={(e) => change(key, type === 'number' ? e.target.value : e.target.value)} />{help && <small>{help}</small>}</label>;
   };
 
