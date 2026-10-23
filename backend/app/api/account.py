@@ -1,6 +1,6 @@
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Path, Query
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field, model_validator
 
@@ -178,8 +178,8 @@ def place_live_order(payload: LiveOrderRequest) -> dict[str, Any]:
 
 @router.put("/kite/orders/{variety}/{order_id}", tags=["trading account"])
 def modify_live_order(
-    variety: Literal["regular", " amo", "co", "iceberg", "auction"],
-    order_id: str = Field(min_length=1, max_length=64),
+    variety: Literal["regular", "amo", "co", "iceberg", "auction"],
+    order_id: str = Path(min_length=1, max_length=64),
     payload: OrderModifyRequest = ...,
 ) -> dict[str, Any]:
     _require_confirmation(payload.confirm_live_action, payload.confirmation_text)
@@ -195,8 +195,8 @@ def modify_live_order(
 @router.delete("/kite/orders/{variety}/{order_id}", tags=["trading account"])
 def cancel_live_order(
     variety: Literal["regular", " amo", "co", "iceberg", "auction"],
-    order_id: str,
-    payload: LiveActionConfirmation,
+    order_id: str = Path(min_length=1, max_length=64),
+    payload: LiveActionConfirmation = ...,
 ) -> dict[str, Any]:
     _require_confirmation(payload.confirm_live_action, payload.confirmation_text)
     provider = _provider()
