@@ -74,7 +74,12 @@ function extractTrend(payload) {
 function numericValue(value) {
   const scalar = scalarValue(value);
   if (scalar === null || scalar === '') return null;
-  const parsed = Number(scalar);
+  // AutoTrender sends Indian-formatted numeric strings such as "1,49,640"
+  // and wraps fields like price, VWAP, PCR and diff in { value, colorCode }.
+  // scalarValue unwraps the object; remove grouping commas before parsing.
+  const normalized = String(scalar).replace(/,/g, '').replace(/%/g, '').trim();
+  if (!normalized) return null;
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
