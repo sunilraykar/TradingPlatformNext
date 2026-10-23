@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.config import get_settings
 from app.providers.kite.registry import clear_active_kite_session
@@ -39,7 +39,3 @@ async def run_daily_reset_scheduler() -> None:
             except (ZoneInfoNotFoundError, KiteSessionStoreError):
                 logger.exception("Scheduled Kite session reset failed")
         await asyncio.sleep(30)
-
-
-# Imported lazily in the exception clause above via this alias.
-from zoneinfo import ZoneInfoNotFoundError
