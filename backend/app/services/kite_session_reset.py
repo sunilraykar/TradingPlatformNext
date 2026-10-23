@@ -1,10 +1,12 @@
 """Configurable daily local Kite-session reset scheduler."""
 import asyncio
 import logging
+import webbrowser
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.core.config import get_settings
+from app.providers.kite.client import KiteProvider
 from app.providers.kite.registry import clear_active_kite_session
 from app.services.kite_sessions import KiteSessionStoreError, reset_sessions
 from app.services.live_quotes import live_quotes
@@ -40,6 +42,13 @@ async def run_daily_reset_scheduler() -> None:
                         live_quotes.clear()
                     last_reset_date = now.date()
                     logger.info("Scheduled local Kite session reset completed")
+                    if settings.kite_auto_login_enabled and settings.app_env.lower() == "development":
+                        if settings.kite_api_key:
+                            opened = webbrowser.open(KiteProvider.login_url(settings.kite_api_key))
+                            logger.info(
+                                "Daily Kite login initiated (browser opened=%s)",
+                                opened,
+                            )
             except (ZoneInfoNotFoundError, KiteSessionStoreError):
                 logger.exception("Scheduled Kite session reset failed")
         await asyncio.sleep(30)
