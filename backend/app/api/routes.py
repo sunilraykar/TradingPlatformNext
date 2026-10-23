@@ -14,6 +14,7 @@ from app.services import live_market_data
 from app.services.instrument_master import import_instrument_master
 from app.services.kite_sessions import KiteSessionStoreError, save_session
 from app.services.live_quotes import live_quotes
+from app.services.option_chain import get_option_chain
 
 router = APIRouter()
 
@@ -231,6 +232,23 @@ def list_instruments(
         for row in rows
     ]
     return {"total": total, "limit": limit, "offset": offset, "instruments": instruments}
+
+
+@router.get("/kite/option-chain", tags=["kite"])
+def kite_option_chain(
+    underlying: str = Query(default="NIFTY", pattern="^(NIFTY|BANKNIFTY)$"),
+    expiry: str | None = Query(default=None, max_length=10),
+    strike_count: int = Query(default=10, ge=1, le=30),
+) -> dict:
+    """Return a live-updating option-chain slice and subscribe its option tokens."""
+    try:
+        return get_option_chain(underlying, expiry, strike_count)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except SQLAlchemyError:
+        raise HTTPException(status_code=503, detail="Instrument database unavailable") from None
 
 
 @router.get("/health/db", tags=["health"])
