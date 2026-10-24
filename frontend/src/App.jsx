@@ -444,7 +444,7 @@ function InstrumentsViewer() {
     try {
       const params = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
       if (category !== 'ALL') params.set('category', category);
-      if (letter !== 'ALL') params.set('search', letter);
+      if (letter !== 'ALL') params.set('symbol_prefix', letter);
       if (exchange !== 'ALL') params.set('exchange', exchange);
       if (expiryFilter === 'WITH_EXPIRY') params.set('expiry_filter', 'WITH_EXPIRY');
       if (expiryFilter === 'NO_EXPIRY') params.set('expiry_filter', 'NO_EXPIRY');
