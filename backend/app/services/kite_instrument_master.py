@@ -176,7 +176,7 @@ async def run_daily_instrument_refresh_scheduler() -> None:
         if due and not succeeded_today:
             try:
                 await asyncio.to_thread(refresh_instrument_master)
-            except Exception
+            except Exception:
                 # Log failures and retry after five minutes; the prior master remains intact.
                 logger.exception("Scheduled Kite instrument-master refresh failed; retrying in five minutes")
         await asyncio.sleep(300)
