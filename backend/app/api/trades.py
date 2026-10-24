@@ -1,11 +1,12 @@
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
 
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import trade_terminal
+from app.services import trade_terminal_stream
 
 router = APIRouter(prefix="/trades", tags=["trade terminal"])
 
@@ -102,3 +103,23 @@ def reconcile_live_terminal_positions() -> dict[str, Any]:
         return {"reconciliation": result, "terminal": trade_terminal.status()}
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+
+@router.websocket("/stream")
+async def trade_terminal_stream_socket(websocket: WebSocket) -> None:
+    """Push trade lifecycle and quote updates to the terminal without polling."""
+    await trade_terminal_stream.connect(websocket)
+    try:
+        await websocket.send_json({
+            "type": "snapshot",
+            "trades": trade_terminal.list_trades(),
+            "terminal": trade_terminal.status(),
+        })
+        while True:
+            # Keep the connection alive; client messages are not commands.
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        trade_terminal_stream.disconnect(websocket)
+    except Exception:
+        trade_terminal_stream.disconnect(websocket)
