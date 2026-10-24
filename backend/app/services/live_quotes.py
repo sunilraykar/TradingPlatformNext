@@ -1,6 +1,11 @@
+import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 from threading import RLock
-from typing import Any, Callable
+from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 class LiveQuoteCache:
@@ -23,7 +28,7 @@ class LiveQuoteCache:
             try:
                 listener(dict(record))
             except Exception:
-                continue
+                logger.exception("Live quote listener failed for instrument token %s", instrument_token)
 
     def add_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:
         with self._lock:
