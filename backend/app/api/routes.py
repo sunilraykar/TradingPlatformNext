@@ -1,4 +1,7 @@
+import json
 import logging
+import re
+from datetime import time
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -161,9 +164,36 @@ def read_application_settings() -> dict[str, Any]:
 @router.put("/settings", tags=["settings"])
 def write_application_settings(request: SettingsUpdateRequest) -> dict[str, Any]:
     """Persist non-secret application UI settings in MySQL."""
-    import json
+    time_keys = {
+        "autoTrenderEntryStartTime": "10:00",
+        "autoTrenderEntryEndTime": "14:00",
+    }
     try:
         with get_engine().begin() as connection:
+            # Validate the combined saved configuration, including partial updates.
+            existing_rows = connection.execute(
+                text("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN (:start_key, :end_key)"),
+                {"start_key": "ui.autoTrenderEntryStartTime", "end_key": "ui.autoTrenderEntryEndTime"},
+            ).mappings().all()
+            merged_times = dict(time_keys)
+            for row in existing_rows:
+                stored = row["setting_value"]
+                if isinstance(stored, str):
+                    try:
+                        stored = json.loads(stored)
+                    except (TypeError, ValueError):
+                        pass
+                merged_times[str(row["setting_key"])[3:]] = stored
+            for key in time_keys:
+                if key in request.settings:
+                    merged_times[key] = request.settings[key]
+            if any(key in request.settings for key in time_keys):
+                for key, label in (("autoTrenderEntryStartTime", "start"), ("autoTrenderEntryEndTime", "end")):
+                    candidate = merged_times[key]
+                    if not isinstance(candidate, str) or not re.fullmatch(r"(?:[01]\\d|2[0-3]):[0-5]\\d", candidate):
+                        raise HTTPException(status_code=422, detail=f"AutoTrender entry {label} time must use valid 24-hour HH:MM format")
+                if time.fromisoformat(merged_times["autoTrenderEntryEndTime"]) <= time.fromisoformat(merged_times["autoTrenderEntryStartTime"]):
+                    raise HTTPException(status_code=422, detail="AutoTrender entry end time must be later than the start time")
             for key, value in request.settings.items():
                 if not isinstance(key, str) or not key or len(key) > 180:
                     raise HTTPException(status_code=422, detail="Invalid setting key")
