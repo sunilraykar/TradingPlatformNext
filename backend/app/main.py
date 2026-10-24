@@ -19,6 +19,7 @@ from app.providers.kite.registry import (
     configure_active_kite_session,
 )
 from app.services import live_market_data, trade_terminal
+from app.services.live_quotes import live_quotes
 from app.services.kite_session_reset import run_daily_reset_scheduler
 from app.services.kite_sessions import (
     KiteSessionStoreError,
@@ -82,12 +83,14 @@ async def lifespan(_: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
     trade_terminal.hydrate_cache()
+    live_quotes.add_listener(trade_terminal.apply_quote_to_open_trades)
     await _restore_kite_session()
     reset_task = asyncio.create_task(run_daily_reset_scheduler())
     trade_task = asyncio.create_task(trade_terminal.run_maintenance_scheduler())
     try:
         yield
     finally:
+        live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
         reset_task.cancel()
         trade_task.cancel()
         with suppress(asyncio.CancelledError):
