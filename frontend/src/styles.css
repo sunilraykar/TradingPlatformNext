@@ -214,3 +214,20 @@
 .trade-close-button{padding:6px 9px;font-size:10px}
 .trade-persistence-warning{padding:12px 15px;margin:12px 0;border:1px solid #7a5c2a;background:#352b1b;color:#f2d7a1;border-radius:8px;font-size:12px;overflow-wrap:anywhere}
 @media(max-width:760px){.trade-terminal-page .page-heading{align-items:flex-start;flex-direction:column}.trade-terminal-actions{width:100%}.trade-terminal-metrics{grid-template-columns:1fr}.trade-terminal-count{margin-left:0;width:100%}.trade-terminal-filters .settings-control{flex:1}.trade-create-form{padding:14px}.trade-terminal-table-scroll{max-height:65vh}}
+
+
+/* Trade Terminal compact toggle-button filters */
+.trade-terminal-heading{justify-content:flex-end;min-height:64px;margin-bottom:18px}
+.trade-terminal-heading .trade-terminal-actions{margin-left:auto}
+.trade-terminal-filters{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;padding:12px 14px;margin:0 0 14px;border:1px solid var(--line);border-radius:12px;background:rgba(12,20,33,.72)}
+.trade-filter-group{display:flex;flex-direction:column;gap:7px;min-width:0}
+.trade-filter-label{font-size:11px;font-weight:700;letter-spacing:.04em;color:#d6dfef;white-space:nowrap}
+.trade-filter-buttons{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.trade-filter-button{appearance:none;border:1px solid #2b3b52;background:#101a2a;color:#c7d2e3;border-radius:20px;padding:9px 13px;min-height:38px;font:600 12px 'DM Sans',sans-serif;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,color .15s}
+.trade-filter-button:hover{border-color:#4b8298;background:#17283b;color:#fff}
+.trade-filter-button.active{background:linear-gradient(135deg,#6dc8e4,#59d8cf);border-color:#70d6df;color:#071522;box-shadow:0 0 0 1px rgba(83,214,206,.12)}
+.trade-filter-search input{width:190px;min-height:38px}
+.trade-date-custom{margin-top:5px;max-width:150px}
+.trade-terminal-count{margin-left:auto;align-self:center;color:var(--muted);font-size:11px;white-space:nowrap}
+@media(max-width:1100px){.trade-terminal-filters{align-items:stretch}.trade-terminal-count{width:100%;margin-left:0}.trade-filter-search input{width:100%}}
+@media(max-width:700px){.trade-terminal-heading{min-height:0}.trade-terminal-actions{flex-wrap:wrap}.trade-filter-group{width:100%}.trade-filter-buttons{flex-wrap:wrap}.trade-filter-search input{width:100%}}
