@@ -5,11 +5,13 @@ The database remains authoritative after process restart.
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import threading
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
+from zoneinfo import ZoneInfo
 from decimal import Decimal
 from typing import Any
 
@@ -62,7 +64,7 @@ def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
         "instrument_symbol": trade.get("instrument_symbol"),
         "status": trade.get("status", "OPEN"),
         "version": int(trade.get("version", 1)),
-        "payload": _dump(trade),
+        "payload": _dump({**trade, "persistence_state": "PERSISTED"}),
         "created_at": datetime.fromisoformat(trade["created_at"].replace("Z", "+00:00")).replace(tzinfo=None),
         "updated_at": datetime.fromisoformat(trade["updated_at"].replace("Z", "+00:00")).replace(tzinfo=None),
     }
@@ -286,3 +288,22 @@ def end_of_day_flush() -> dict[str, Any]:
         except RuntimeError as exc:
             failed.append({"trade_id": trade["trade_id"], "error": str(exc)})
     return {"persisted": persisted, "failed": failed, "date": datetime.now().date().isoformat()}
+
+
+async def run_maintenance_scheduler() -> None:
+    """Retry dirty writes periodically and flush a daily terminal snapshot after 15:30 IST."""
+    from datetime import timedelta
+
+    timezone_ist = ZoneInfo("Asia/Kolkata")
+    last_eod_date: str | None = None
+    while True:
+        try:
+            retry_dirty()
+            now = datetime.now(timezone_ist)
+            if now.time() >= time(15, 30) and last_eod_date != now.date().isoformat():
+                result = end_of_day_flush()
+                logger.info("Trade terminal EOD flush: %s", result)
+                last_eod_date = now.date().isoformat()
+        except Exception:
+            logger.exception("Trade terminal maintenance cycle failed")
+        await asyncio.sleep(60)
