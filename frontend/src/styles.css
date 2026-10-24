@@ -281,3 +281,7 @@
 
 /* Keep category, exchange and expiry on the first line; place alphabet on the next line. */
 .instrument-controls-layout{flex-wrap:wrap!important;align-items:flex-start!important;row-gap:10px!important}.instrument-controls-layout .instrument-filter-group:nth-child(1){order:4!important;flex:0 0 100%!important;margin-top:0!important}.instrument-controls-layout .instrument-filter-group:nth-child(2){order:2!important}.instrument-controls-layout .instrument-filter-group:nth-child(3){order:3!important}
+
+/* Live search for Kite instrument symbol or name. */
+.instrument-symbol-search{display:flex;align-items:center;gap:10px;max-width:760px;margin:10px 0 14px}.instrument-symbol-search label{flex:0 0 auto;color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap}.instrument-symbol-search input{flex:1 1 420px;min-width:180px;max-width:560px;background:var(--panel, #0b1422);color:var(--text, #e7edf7);border:1px solid var(--border, #26364d);border-radius:9px;padding:10px 12px;font:inherit;outline:none}.instrument-symbol-search input:focus{border-color:var(--accent, #5bcbd4);box-shadow:0 0 0 2px rgba(91,203,212,.12)}
+@media(max-width:640px){.instrument-symbol-search{flex-wrap:wrap}.instrument-symbol-search input{flex-basis:100%;max-width:100%}}
