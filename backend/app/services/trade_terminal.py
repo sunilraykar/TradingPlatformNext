@@ -1,0 +1,288 @@
+"""Canonical trade lifecycle, cache, and durable persistence.
+
+Quote/P&L-only updates stay in memory. Lifecycle changes are written immediately.
+The database remains authoritative after process restart.
+"""
+from __future__ import annotations
+
+import json
+import logging
+import threading
+import uuid
+from datetime import date, datetime, timezone
+from decimal import Decimal
+from typing import Any
+
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.db.session import get_engine
+
+logger = logging.getLogger(__name__)
+_lock = threading.RLock()
+_cache: dict[str, dict[str, Any]] = {}
+_dirty: set[str] = set()
+_persistence_error: str | None = None
+_TERMINAL = {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
+_MATERIAL_FIELDS = {
+    "status", "quantity", "open_quantity", "entry_price", "average_entry_price",
+    "exit_price", "average_exit_price", "stop_loss", "target", "mode",
+    "execution_mode", "source", "strategy", "underlying", "instrument_symbol",
+    "expiry", "strike", "option_type", "direction", "broker_order_id",
+}
+
+
+def _json_default(value: Any) -> Any:
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    raise TypeError(f"Unsupported JSON value: {type(value).__name__}")
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _dump(value: Any) -> str:
+    return json.dumps(value, separators=(",", ":"), default=_json_default)
+
+
+def _is_active(trade: dict[str, Any]) -> bool:
+    return str(trade.get("status", "OPEN")).upper() not in _TERMINAL
+
+
+def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "trade_id": trade["trade_id"],
+        "execution_mode": trade["execution_mode"],
+        "source": trade.get("source") or "MANUAL",
+        "strategy": trade.get("strategy"),
+        "underlying": trade.get("underlying"),
+        "instrument_symbol": trade.get("instrument_symbol"),
+        "status": trade.get("status", "OPEN"),
+        "version": int(trade.get("version", 1)),
+        "payload": _dump(trade),
+        "created_at": datetime.fromisoformat(trade["created_at"].replace("Z", "+00:00")).replace(tzinfo=None),
+        "updated_at": datetime.fromisoformat(trade["updated_at"].replace("Z", "+00:00")).replace(tzinfo=None),
+    }
+
+
+def hydrate_cache() -> dict[str, Any]:
+    """Restore persisted trades into cache. Safe to call repeatedly."""
+    global _persistence_error
+    try:
+        with get_engine().connect() as conn:
+            rows = conn.execute(text(
+                "SELECT payload FROM trade_records ORDER BY updated_at DESC"
+            )).mappings().all()
+        restored = {}
+        for row in rows:
+            payload = row["payload"]
+            trade = json.loads(payload) if isinstance(payload, str) else payload
+            if isinstance(trade, dict) and trade.get("trade_id"):
+                restored[str(trade["trade_id"])] = trade
+        with _lock:
+            _cache.clear()
+            _cache.update(restored)
+            _dirty.clear()
+            _persistence_error = None
+        return {"restored": len(restored), "open": sum(_is_active(t) for t in restored.values())}
+    except (SQLAlchemyError, ValueError, TypeError) as exc:
+        _persistence_error = str(exc)
+        logger.exception("Trade cache hydration failed")
+        return {"restored": 0, "open": 0, "persistence_degraded": True, "error": str(exc)}
+
+
+def status() -> dict[str, Any]:
+    with _lock:
+        return {
+            "cached_trades": len(_cache),
+            "open_trades": sum(_is_active(t) for t in _cache.values()),
+            "dirty_trades": len(_dirty),
+            "persistence_degraded": bool(_persistence_error or _dirty),
+            "persistence_error": _persistence_error,
+        }
+
+
+def list_trades(*, mode: str | None = None, status_filter: str | None = None,
+                source: str | None = None, underlying: str | None = None) -> list[dict[str, Any]]:
+    with _lock:
+        rows = [dict(trade) for trade in _cache.values()]
+    if mode:
+        rows = [t for t in rows if t.get("execution_mode") == mode.upper()]
+    if status_filter:
+        rows = [t for t in rows if t.get("status", "OPEN").upper() == status_filter.upper()]
+    if source:
+        rows = [t for t in rows if str(t.get("source", "")).lower() == source.lower()]
+    if underlying:
+        rows = [t for t in rows if str(t.get("underlying", "")).lower() == underlying.lower()]
+    return sorted(rows, key=lambda t: str(t.get("updated_at", "")), reverse=True)
+
+
+def get_trade(trade_id: str) -> dict[str, Any] | None:
+    with _lock:
+        trade = _cache.get(trade_id)
+        return dict(trade) if trade else None
+
+
+def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, Any]) -> None:
+    global _persistence_error
+    row = _db_row(trade)
+    event_id = str(uuid.uuid4())
+    event_version = int(trade["version"])
+    try:
+        with get_engine().begin() as conn:
+            conn.execute(text("""
+                INSERT INTO trade_records
+                  (trade_id, execution_mode, source, strategy, underlying, instrument_symbol,
+                   status, version, is_dirty, payload, created_at, updated_at, persisted_at)
+                VALUES
+                  (:trade_id, :execution_mode, :source, :strategy, :underlying, :instrument_symbol,
+                   :status, :version, FALSE, CAST(:payload AS JSON), :created_at, :updated_at, CURRENT_TIMESTAMP(6))
+                ON DUPLICATE KEY UPDATE
+                  execution_mode=VALUES(execution_mode), source=VALUES(source),
+                  strategy=VALUES(strategy), underlying=VALUES(underlying),
+                  instrument_symbol=VALUES(instrument_symbol), status=VALUES(status),
+                  version=VALUES(version), is_dirty=FALSE, payload=VALUES(payload),
+                  updated_at=VALUES(updated_at), persisted_at=CURRENT_TIMESTAMP(6)
+            """), row)
+            conn.execute(text("""
+                INSERT INTO trade_lifecycle_events
+                  (event_id, trade_id, event_type, event_version, event_at, payload)
+                VALUES (:event_id, :trade_id, :event_type, :event_version, :event_at, CAST(:payload AS JSON))
+                ON DUPLICATE KEY UPDATE event_id=event_id
+            """), {
+                "event_id": event_id, "trade_id": trade["trade_id"],
+                "event_type": event_type, "event_version": event_version,
+                "event_at": datetime.fromisoformat(trade["updated_at"].replace("Z", "+00:00")).replace(tzinfo=None),
+                "payload": _dump(event_payload),
+            })
+        with _lock:
+            _dirty.discard(trade["trade_id"])
+            _persistence_error = None
+    except SQLAlchemyError as exc:
+        with _lock:
+            _dirty.add(trade["trade_id"])
+            _persistence_error = str(exc)
+        logger.exception("Trade %s lifecycle persistence failed", trade["trade_id"])
+        raise RuntimeError("Trade updated in cache but database persistence failed; retry is required") from exc
+
+
+def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
+    mode = str(payload.get("execution_mode", "PAPER")).upper()
+    if mode not in {"PAPER", "LIVE"}:
+        raise ValueError("execution_mode must be PAPER or LIVE")
+    if mode == "LIVE":
+        raise ValueError("Live trade creation is read-only until broker reconciliation is implemented; no orders are placed.")
+    symbol = str(payload.get("instrument_symbol") or "").strip()
+    if not symbol:
+        raise ValueError("instrument_symbol is required")
+    quantity = int(payload.get("quantity") or 0)
+    if quantity <= 0:
+        raise ValueError("quantity must be greater than zero")
+    now = _now()
+    trade = {
+        **payload,
+        "trade_id": str(uuid.uuid4()),
+        "execution_mode": mode,
+        "source": str(payload.get("source") or "MANUAL"),
+        "strategy": payload.get("strategy"),
+        "instrument_symbol": symbol,
+        "quantity": quantity,
+        "open_quantity": quantity,
+        "status": "OPEN",
+        "created_at": now,
+        "updated_at": now,
+        "version": 1,
+        "realized_pnl": 0,
+        "unrealized_pnl": 0,
+        "persistence_state": "PENDING",
+    }
+    with _lock:
+        _cache[trade["trade_id"]] = trade
+        _dirty.add(trade["trade_id"])
+    try:
+        _persist(trade, "TRADE_CREATED", {"execution_mode": mode, "source": trade["source"], "quantity": quantity})
+    except RuntimeError:
+        trade["persistence_state"] = "DEGRADED"
+        raise
+    trade["persistence_state"] = "PERSISTED"
+    with _lock:
+        _cache[trade["trade_id"]] = trade
+    return dict(trade)
+
+
+def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "TRADE_UPDATED") -> dict[str, Any]:
+    if not changes:
+        raise ValueError("At least one trade field is required")
+    if "trade_id" in changes or "created_at" in changes or "version" in changes:
+        raise ValueError("Trade identity, creation timestamp, and version cannot be changed")
+    if "execution_mode" in changes and str(changes["execution_mode"]).upper() == "LIVE":
+        raise ValueError("Execution mode cannot be changed to LIVE through a manual update")
+    with _lock:
+        current = _cache.get(trade_id)
+        if not current:
+            raise KeyError(trade_id)
+        updated = dict(current)
+        updated.update(changes)
+        updated["version"] = int(current.get("version", 1)) + 1
+        updated["updated_at"] = _now()
+        updated["persistence_state"] = "PENDING"
+        _cache[trade_id] = updated
+        _dirty.add(trade_id)
+    try:
+        _persist(updated, event_type, {"changed_fields": sorted(changes), "changes": changes})
+    except RuntimeError:
+        updated["persistence_state"] = "DEGRADED"
+        with _lock:
+            _cache[trade_id] = updated
+        raise
+    updated["persistence_state"] = "PERSISTED"
+    with _lock:
+        _cache[trade_id] = updated
+    return dict(updated)
+
+
+def update_market_state(trade_id: str, *, last_price: float | None = None,
+                        unrealized_pnl: float | None = None, last_market_data_at: str | None = None) -> dict[str, Any]:
+    """Ephemeral quote/P&L update; intentionally does not touch the database."""
+    with _lock:
+        current = _cache.get(trade_id)
+        if not current:
+            raise KeyError(trade_id)
+        updated = dict(current)
+        if last_price is not None:
+            updated["last_price"] = last_price
+        if unrealized_pnl is not None:
+            updated["unrealized_pnl"] = unrealized_pnl
+        updated["last_market_data_at"] = last_market_data_at or _now()
+        updated["updated_at"] = _now()
+        _cache[trade_id] = updated
+        return dict(updated)
+
+
+def retry_dirty() -> dict[str, Any]:
+    with _lock:
+        trades = [dict(_cache[trade_id]) for trade_id in list(_dirty) if trade_id in _cache]
+    persisted, failed = 0, []
+    for trade in trades:
+        try:
+            _persist(trade, "PERSISTENCE_RETRY", {"version": trade["version"]})
+            persisted += 1
+        except RuntimeError as exc:
+            failed.append({"trade_id": trade["trade_id"], "error": str(exc)})
+    return {"persisted": persisted, "failed": failed}
+
+
+def end_of_day_flush() -> dict[str, Any]:
+    with _lock:
+        trades = [dict(t) for t in _cache.values()]
+    persisted, failed = 0, []
+    for trade in trades:
+        try:
+            _persist(trade, "END_OF_DAY_SNAPSHOT", {"status": trade.get("status"), "version": trade.get("version")})
+            persisted += 1
+        except RuntimeError as exc:
+            failed.append({"trade_id": trade["trade_id"], "error": str(exc)})
+    return {"persisted": persisted, "failed": failed, "date": datetime.now().date().isoformat()}
