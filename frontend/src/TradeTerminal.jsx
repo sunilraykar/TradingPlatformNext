@@ -117,7 +117,7 @@ export default function TradeTerminal() {
       const result = await request('/trades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       setShowCreate(false);
       setRequestKey(crypto.randomUUID());
-      setForm({ instrument_symbol: '', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
+      setForm({ instrument_symbol: '', exchange: 'NFO', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
       await refresh();
       if (result.trade?.persistence_state === 'DEGRADED') setError('Trade is not durably persisted; check database connectivity.');
     } catch (e) { setError(e.message || 'Trade could not be saved.'); }
