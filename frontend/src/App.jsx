@@ -341,21 +341,69 @@ function LiveDataCacheViewer() {
   const [runtime, setRuntime] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [masterStatus, setMasterStatus] = useState(null);
+  const [masterError, setMasterError] = useState('');
+  const [masterLoading, setMasterLoading] = useState(false);
+  const [masterMessage, setMasterMessage] = useState('');
   const load = useCallback(async () => {
     setLoading(true);
     try { setRuntime(await api('/kite/market-data/runtime')); setError(''); }
     catch (e) { setError(e.message || 'Unable to load live cache.'); }
     finally { setLoading(false); }
   }, []);
+  const loadMasterStatus = useCallback(async () => {
+    try { setMasterStatus(await api('/kite/instruments/refresh-status')); setMasterError(''); }
+    catch (e) { setMasterError(e.message || 'Unable to load instrument-master status.'); }
+  }, []);
+  const refreshMaster = useCallback(async () => {
+    setMasterLoading(true);
+    setMasterMessage('');
+    setMasterError('');
+    try {
+      const result = await api('/kite/instruments/refresh', { method: 'POST' });
+      setMasterStatus(result);
+      setMasterMessage(`Refresh successful: ${Number(result.stored || 0).toLocaleString('en-IN')} instruments stored.`);
+    } catch (e) {
+      setMasterMessage('');
+      setMasterError(e.message || 'Instrument-master refresh failed. The previous master should remain available.');
+      loadMasterStatus();
+    } finally {
+      setMasterLoading(false);
+      loadMasterStatus();
+    }
+  }, [loadMasterStatus]);
   useEffect(() => {
     load();
+    loadMasterStatus();
     const timer = window.setInterval(load, 2000);
-    return () => window.clearInterval(timer);
-  }, [load]);
+    const masterTimer = window.setInterval(loadMasterStatus, 30000);
+    return () => { window.clearInterval(timer); window.clearInterval(masterTimer); };
+  }, [load, loadMasterStatus]);
   const market = runtime?.market_data || {};
   const cache = runtime?.cache || {};
+  const master = masterStatus || {};
+  const displayTime = (value) => value ? new Date(value).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : 'Not yet recorded';
   return <div className="cache-viewer">
-    <div className="cache-viewer-toolbar"><div><h2>Live Market Data &amp; Cache</h2><p className="settings-intro">Subscribed Kite instruments and latest in-memory quote values. This diagnostics view refreshes every 2 seconds while open; quote ticks are not written to MySQL.</p></div><button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh now'}</button></div>
+    <div className="cache-viewer-toolbar"><div><h2>Live Market Data &amp; Cache</h2><p className="settings-intro">Subscribed Kite instruments and latest in-memory quote values. This diagnostics view refreshes every 2 seconds while open; quote ticks are not written to MySQL.</p></div><button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh live data'}</button></div>
+    <div className="panel cache-entry">
+      <div className="cache-viewer-toolbar"><div><h2>Kite Instrument Master</h2><p className="settings-intro">Daily download from Kite and transactional replacement of only the KITE rows in MySQL. Scheduled for 08:00 Asia/Kolkata; failed attempts retry every five minutes.</p></div><button type="button" className="button primary" onClick={refreshMaster} disabled={masterLoading}>{masterLoading ? 'Refreshing master…' : 'Refresh instrument master'}</button></div>
+      {masterMessage && <div className="success-banner"><strong>{master.state || 'Refresh'}</strong><span>{masterMessage}</span></div>}
+      {masterError && <div className="error-banner"><strong>Instrument-master status / refresh error</strong><span>{masterError}</span></div>}
+      <div className="settings-grid">
+        <div className="panel"><span>Refresh status</span><h3>{master.state || 'Loading…'}</h3></div>
+        <div className="panel"><span>Instruments downloaded</span><h3>{master.downloaded == null ? '—' : Number(master.downloaded).toLocaleString('en-IN')}</h3></div>
+        <div className="panel"><span>Instruments stored</span><h3>{master.stored == null ? '—' : Number(master.stored).toLocaleString('en-IN')}</h3></div>
+        <div className="panel"><span>Instrument version</span><h3>{master.instrument_version ?? '—'}</h3></div>
+      </div>
+      <div className="settings-grid">
+        <div className="panel"><span>Last attempt</span><p>{displayTime(master.last_attempt_at)}</p></div>
+        <div className="panel"><span>Last successful refresh</span><p>{displayTime(master.last_success_at)}</p></div>
+        <div className="panel"><span>Next scheduled refresh</span><p>{displayTime(master.next_scheduled_at)}</p></div>
+        <div className="panel"><span>Schedule</span><p>{master.schedule_time || '08:00'} · {master.schedule_timezone || 'Asia/Kolkata'}</p></div>
+      </div>
+      {master.last_error && <div className="error-banner"><strong>Last refresh failure</strong><span>{master.last_error}</span></div>}
+      <p className="settings-ui-only-note">A failed download or validation does not replace the previously committed KITE master. Refresh status is runtime-only and resets when the backend restarts.</p>
+    </div>
     {error && <div className="error-banner"><strong>Live cache unavailable</strong><span>{error}</span></div>}
     <div className="settings-grid">
       <div className="panel"><span>WebSocket</span><h3>{market.state || 'Unknown'}</h3></div>
