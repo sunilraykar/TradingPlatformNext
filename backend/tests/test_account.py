@@ -92,3 +92,15 @@ def test_modify_order_calls_kite_after_confirmation():
     provider.modify_order.assert_called_once_with(
         order_id="order-123", variety="regular", quantity=2
     )
+
+def test_cancel_amo_order_calls_kite_after_confirmation():
+    provider = MagicMock()
+    provider.cancel_order.return_value = "order-123"
+    with patch("app.api.account.get_kite_provider", return_value=provider):
+        response = client.request(
+            "DELETE", "/api/v1/kite/orders/amo/order-123",
+            json={"confirm_live_action": True, "confirmation_text": "CONFIRM LIVE ORDER"},
+        )
+    assert response.status_code == 200
+    assert response.json()["status"] == "cancel_requested"
+    provider.cancel_order.assert_called_once_with(order_id="order-123", variety="amo")
