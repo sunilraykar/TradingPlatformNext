@@ -10,10 +10,10 @@ import json
 import logging
 import threading
 import uuid
-from datetime import date, datetime, time, timezone
-from zoneinfo import ZoneInfo
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
@@ -26,12 +26,6 @@ _cache: dict[str, dict[str, Any]] = {}
 _dirty: set[str] = set()
 _persistence_error: str | None = None
 _TERMINAL = {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
-_MATERIAL_FIELDS = {
-    "status", "quantity", "open_quantity", "entry_price", "average_entry_price",
-    "exit_price", "average_exit_price", "stop_loss", "target", "mode",
-    "execution_mode", "source", "strategy", "underlying", "instrument_symbol",
-    "expiry", "strike", "option_type", "direction", "broker_order_id",
-}
 
 
 def _json_default(value: Any) -> Any:
@@ -43,7 +37,7 @@ def _json_default(value: Any) -> Any:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def _dump(value: Any) -> str:
@@ -52,6 +46,11 @@ def _dump(value: Any) -> str:
 
 def _is_active(trade: dict[str, Any]) -> bool:
     return str(trade.get("status", "OPEN")).upper() not in _TERMINAL
+
+
+def _naive_datetime(value: str) -> datetime:
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo is not None else parsed
 
 
 def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
@@ -65,8 +64,8 @@ def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
         "status": trade.get("status", "OPEN"),
         "version": int(trade.get("version", 1)),
         "payload": _dump({**trade, "persistence_state": "PERSISTED"}),
-        "created_at": datetime.fromisoformat(trade["created_at"].replace("Z", "+00:00")).replace(tzinfo=None),
-        "updated_at": datetime.fromisoformat(trade["updated_at"].replace("Z", "+00:00")).replace(tzinfo=None),
+        "created_at": _naive_datetime(trade["created_at"]),
+        "updated_at": _naive_datetime(trade["updated_at"]),
     }
 
 
