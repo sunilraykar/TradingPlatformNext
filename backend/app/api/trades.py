@@ -54,6 +54,49 @@ def list_terminal_trades(
             "terminal": trade_terminal.status()}
 
 
+@router.get("/instruments")
+def search_trade_instruments(
+    q: str = Query(default="", max_length=80),
+    exchange: str | None = Query(default=None, max_length=10),
+    instrument_type: str | None = Query(default=None, max_length=20),
+    limit: int = Query(default=100, ge=1, le=200),
+) -> dict[str, Any]:
+    """Search the active Kite instrument master for the paper-trade symbol picker."""
+    from sqlalchemy import text
+    from app.db.session import get_engine
+
+    search = q.strip().upper()
+    if len(search) < 2:
+        return {"instruments": [], "message": "Enter at least two characters to search."}
+    clauses = ["source = 'KITE'", "is_active = TRUE", "(UPPER(tradingsymbol) LIKE :query OR UPPER(name) LIKE :query)"]
+    params: dict[str, Any] = {"query": f"%{search}%", "limit": limit}
+    if exchange:
+        clauses.append("exchange = :exchange")
+        params["exchange"] = exchange.upper()
+    if instrument_type:
+        clauses.append("instrument_type = :instrument_type")
+        params["instrument_type"] = instrument_type.upper()
+    sql = text(f"""
+        SELECT instrument_token, exchange, tradingsymbol, name, instrument_type, segment,
+               expiry, strike, lot_size
+        FROM instruments
+        WHERE {' AND '.join(clauses)}
+        ORDER BY CASE WHEN UPPER(tradingsymbol) = :exact THEN 0
+                      WHEN UPPER(tradingsymbol) LIKE :prefix THEN 1 ELSE 2 END,
+                 exchange, tradingsymbol, expiry, strike
+        LIMIT :limit
+    """)
+    params["exact"] = search
+    params["prefix"] = f"{search}%"
+    with get_engine().connect() as connection:
+        rows = connection.execute(sql, params).mappings().all()
+    return {"instruments": [
+        {**dict(row), "instrument_token": int(row["instrument_token"]),
+         "expiry": row["expiry"].isoformat() if row["expiry"] else None}
+        for row in rows
+    ]}
+
+
 @router.get("/status")
 def terminal_status() -> dict[str, Any]:
     return trade_terminal.status()
