@@ -51,6 +51,17 @@ export default function TradeTerminal() {
     finally { setSaving(false); }
   };
 
+  const reconcileLive = async () => {
+    setLoading(true); setError('');
+    try {
+      const result = await request('/trades/reconcile-live', { method: 'POST' });
+      await refresh();
+      const r = result.reconciliation || {};
+      window.alert(`Kite reconciliation complete: ${r.created || 0} created, ${r.updated || 0} updated, ${r.closed || 0} closed.`);
+    } catch (e) { setError(e.message || 'Live-position reconciliation failed.'); }
+    finally { setLoading(false); }
+  };
+
   const updateStatus = async (trade, nextStatus) => {
     const realized = nextStatus === 'CLOSED' ? Number(trade.realized_pnl || 0) : trade.realized_pnl;
     try {
@@ -60,7 +71,7 @@ export default function TradeTerminal() {
   };
 
   return <section className="trade-terminal-page">
-    <div className="page-heading"><div><div className="eyebrow">EXECUTION MONITOR</div><h1>Trade Terminal</h1><p>One canonical record per trade. Paper and live modes share this terminal; live order placement is not enabled here.</p></div><div className="trade-terminal-actions"><button className="button secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button><button className="button primary" onClick={() => setShowCreate((v) => !v)}>{showCreate ? 'Cancel' : '+ New Paper Trade'}</button></div></div>
+    <div className="page-heading"><div><div className="eyebrow">EXECUTION MONITOR</div><h1>Trade Terminal</h1><p>One canonical record per trade. Paper and live modes share this terminal; live order placement is not enabled here.</p></div><div className="trade-terminal-actions"><button className="button secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button><button className="button secondary" onClick={reconcileLive} disabled={loading}>{loading ? 'Syncing…' : 'Sync Live Positions'}</button><button className="button primary" onClick={() => setShowCreate((v) => !v)}>{showCreate ? 'Cancel' : '+ New Paper Trade'}</button></div></div>
     {error && <div className="error-banner"><strong>Trade terminal issue</strong><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
     <div className="trade-terminal-metrics">
       <div className="metric"><span>Cached trades</span><strong>{fmt(terminal.cached_trades ?? 0)}</strong></div>
