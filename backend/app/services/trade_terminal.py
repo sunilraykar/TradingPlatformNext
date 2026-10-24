@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import threading
+from functools import wraps
 import uuid
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
@@ -22,10 +23,19 @@ from app.db.session import get_engine
 
 logger = logging.getLogger(__name__)
 _lock = threading.RLock()
+_lifecycle_lock = threading.RLock()
 _cache: dict[str, dict[str, Any]] = {}
 _dirty: set[str] = set()
 _persistence_error: str | None = None
 _TERMINAL = {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
+
+
+def _serialized_lifecycle(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        with _lifecycle_lock:
+            return function(*args, **kwargs)
+    return wrapper
 
 
 def _json_default(value: Any) -> Any:
@@ -56,6 +66,7 @@ def _naive_datetime(value: str) -> datetime:
 def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
     return {
         "trade_id": trade["trade_id"],
+        "idempotency_key": trade.get("idempotency_key"),
         "execution_mode": trade["execution_mode"],
         "source": trade.get("source") or "MANUAL",
         "strategy": trade.get("strategy"),
@@ -142,7 +153,7 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                   (:trade_id, :execution_mode, :source, :strategy, :underlying, :instrument_symbol,
                    :status, :version, FALSE, CAST(:payload AS JSON), :created_at, :updated_at, CURRENT_TIMESTAMP(6))
                 ON DUPLICATE KEY UPDATE
-                  execution_mode=VALUES(execution_mode), source=VALUES(source),
+                  idempotency_key=COALESCE(idempotency_key, VALUES(idempotency_key)),\n                  execution_mode=VALUES(execution_mode), source=VALUES(source),
                   strategy=VALUES(strategy), underlying=VALUES(underlying),
                   instrument_symbol=VALUES(instrument_symbol), status=VALUES(status),
                   version=VALUES(version), is_dirty=FALSE, payload=VALUES(payload),
@@ -170,7 +181,7 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
         raise RuntimeError("Trade updated in cache but database persistence failed; retry is required") from exc
 
 
-def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
+@_serialized_lifecycle\ndef create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     mode = str(payload.get("execution_mode", "PAPER")).upper()
     if mode not in {"PAPER", "LIVE"}:
         raise ValueError("execution_mode must be PAPER or LIVE")
@@ -182,10 +193,16 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     quantity = int(payload.get("quantity") or 0)
     if quantity <= 0:
         raise ValueError("quantity must be greater than zero")
+    idempotency_key = str(payload.get("idempotency_key") or uuid.uuid4())
+    with _lock:
+        for existing in _cache.values():
+            if existing.get("idempotency_key") == idempotency_key:
+                return dict(existing)
     now = _now()
     trade = {
         **payload,
-        "trade_id": str(uuid.uuid4()),
+        "trade_id": str(uuid.uuid5(uuid.NAMESPACE_URL, "trading-platform-next:trade:" + idempotency_key)),
+        "idempotency_key": idempotency_key,
         "execution_mode": mode,
         "source": str(payload.get("source") or "MANUAL"),
         "strategy": payload.get("strategy"),
@@ -214,7 +231,7 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     return dict(trade)
 
 
-def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "TRADE_UPDATED") -> dict[str, Any]:
+@_serialized_lifecycle\ndef update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "TRADE_UPDATED") -> dict[str, Any]:
     if not changes:
         raise ValueError("At least one trade field is required")
     if "trade_id" in changes or "created_at" in changes or "version" in changes:
@@ -308,7 +325,7 @@ async def run_maintenance_scheduler() -> None:
         await asyncio.sleep(60)
 
 
-def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, Any]:
+@_serialized_lifecycle\ndef reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Import broker net positions as canonical LIVE records; never place or modify orders."""
     normalized: dict[str, dict[str, Any]] = {}
     for row in position_rows:
