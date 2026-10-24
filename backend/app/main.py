@@ -10,8 +10,6 @@ from app.api.autotrender_auth import router as autotrender_auth_router
 from app.api.autotrender_market_data import router as autotrender_market_data_router
 from app.api.routes import router
 from app.api.subscription_test import router as subscription_test_router
-from app.api.trades import router as trades_router
-from app.services import trade_terminal
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.kite.client import KiteProvider, KiteProviderError
@@ -19,7 +17,7 @@ from app.providers.kite.registry import (
     clear_active_kite_session,
     configure_active_kite_session,
 )
-from app.services import live_market_data
+from app.services import live_market_data, trade_terminal
 from app.services.kite_session_reset import run_daily_reset_scheduler
 from app.services.kite_sessions import (
     KiteSessionStoreError,
