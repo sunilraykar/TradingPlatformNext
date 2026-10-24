@@ -283,11 +283,11 @@ def end_of_day_flush() -> dict[str, Any]:
     persisted, failed = 0, []
     for trade in trades:
         try:
-            _persist(trade, "END_OF_DAY_SNAPSHOT", {"status": trade.get("status"), "version": trade.get("version")})
+            _persist(trade, "END_OF_DAY_SNAPSHOT_" + datetime.now(ZoneInfo("Asia/Kolkata")).date().isoformat(), {"status": trade.get("status"), "version": trade.get("version")})
             persisted += 1
         except RuntimeError as exc:
             failed.append({"trade_id": trade["trade_id"], "error": str(exc)})
-    return {"persisted": persisted, "failed": failed, "date": datetime.now().date().isoformat()}
+    return {"persisted": persisted, "failed": failed, "date": datetime.now(ZoneInfo("Asia/Kolkata")).date().isoformat()}
 
 
 async def run_maintenance_scheduler() -> None:
