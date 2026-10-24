@@ -50,6 +50,23 @@ export default function TradeTerminal() {
 
   useEffect(() => {
     refresh();
+    // WebSocket ticks are the primary update path. This silent cache sync is a
+    // fallback for ticks cached before a trade subscription or a missed push event.
+    let syncInFlight = false;
+    const syncCachedQuotes = async () => {
+      if (syncInFlight || document.visibilityState === 'hidden') return;
+      syncInFlight = true;
+      try {
+        const result = await request('/trades');
+        setTrades(result.trades || []);
+        setTerminal(result.terminal || {});
+      } catch {
+        // Keep the current table visible; the next cycle or WebSocket can recover.
+      } finally {
+        syncInFlight = false;
+      }
+    };
+    const quoteSyncTimer = window.setInterval(syncCachedQuotes, 2000);
     let socket;
     let reconnectTimer;
     let disposed = false;
@@ -84,6 +101,7 @@ export default function TradeTerminal() {
     return () => {
       disposed = true;
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      window.clearInterval(quoteSyncTimer);
       if (socket) socket.close();
     };
   }, [refresh]);
