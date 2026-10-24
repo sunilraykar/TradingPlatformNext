@@ -7,6 +7,7 @@ import requests
 from dotenv import load_dotenv
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -76,7 +77,7 @@ class AutoTrenderAuth:
                         terms = driver.find_element(By.NAME, "terms")
                         if not terms.is_selected():
                             driver.execute_script("arguments[0].click();", terms)
-                    except Exception:
+                    except (NoSuchElementException, WebDriverException):
                         pass
                     wait.until(
                         EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))
@@ -112,12 +113,11 @@ class AutoTrenderAuth:
                 if driver is not None:
                     try:
                         driver.quit()
-                    except Exception:
+                    except WebDriverException:
                         pass
 
     def get(self, endpoint: str, **kwargs):
-        if not self.authenticated:
-            if not self._restore_saved_cookie() or not self._validate_session():
+        if not self.authenticated and (not self._restore_saved_cookie() or not self._validate_session()):
                 raise RuntimeError("AutoTrender is not authenticated.")
         url = endpoint if endpoint.startswith("http") else API_BASE_URL + endpoint
         return self.session.get(url, timeout=30, **kwargs)
