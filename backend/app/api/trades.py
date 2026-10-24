@@ -11,6 +11,7 @@ router = APIRouter(prefix="/trades", tags=["trade terminal"])
 
 
 class TradeCreate(BaseModel):
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=100)
     execution_mode: Literal["PAPER", "LIVE"] = "PAPER"
     source: str = Field(default="MANUAL", min_length=1, max_length=80)
     strategy: str | None = Field(default=None, max_length=120)
