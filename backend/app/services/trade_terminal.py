@@ -9,10 +9,10 @@ import asyncio
 import json
 import logging
 import threading
-from functools import wraps
 import uuid
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
+from functools import wraps
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -59,7 +59,8 @@ def _is_active(trade: dict[str, Any]) -> bool:
 
 
 def _naive_datetime(value: str) -> datetime:
-    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    parsed = datetime.fromisoformat(normalized)
     return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo is not None else parsed
 
 
