@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query, Request
 import requests
+
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.providers.autotrender.auth import AutoTrenderAuth
 from app.services.autotrender_cache import AutoTrenderCache
