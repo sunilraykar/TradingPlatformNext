@@ -476,17 +476,23 @@ function InstrumentsViewer() {
       ].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (category === value ? ' active' : '')} onClick={() => setCategory(value)}>{label}</button>)}
     </div>
     <div className="instrument-filter-section">
-      <div className="instrument-filter-label">Symbol starts with</div>
-      <div className="instrument-letter-buttons" role="group" aria-label="Filter symbols by first letter">
+      <div className="instrument-filter-group">
+        <div className="instrument-filter-label">Symbol starts with</div>
+        <div className="instrument-letter-buttons" role="group" aria-label="Filter symbols by first letter">
         {['ALL', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((value) => <button key={value} type="button" className={'trade-filter-button' + (letter === value ? ' active' : '')} onClick={() => setLetter(value)}>{value === 'ALL' ? 'All letters' : value}</button>)}
+        </div>
       </div>
-      <div className="instrument-filter-label">Exchange</div>
-      <div className="instrument-exchange-buttons" role="group" aria-label="Filter by exchange">
+      <div className="instrument-filter-group">
+        <div className="instrument-filter-label">Exchange</div>
+        <div className="instrument-exchange-buttons" role="group" aria-label="Filter by exchange">
         {['ALL', 'NSE', 'BSE', 'NFO', 'BFO', 'CDS', 'MCX'].map((value) => <button key={value} type="button" className={'trade-filter-button' + (exchange === value ? ' active' : '')} onClick={() => setExchange(value)}>{value === 'ALL' ? 'All exchanges' : value}</button>)}
+        </div>
       </div>
-      <div className="instrument-filter-label">Expiry</div>
-      <div className="instrument-expiry-buttons" role="group" aria-label="Filter by expiry">
+      <div className="instrument-filter-group">
+        <div className="instrument-filter-label">Expiry</div>
+        <div className="instrument-expiry-buttons" role="group" aria-label="Filter by expiry">
         {[['ALL', 'All instruments'], ['WITH_EXPIRY', 'Has expiry'], ['NO_EXPIRY', 'No expiry']].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (expiryFilter === value ? ' active' : '')} onClick={() => setExpiryFilter(value)}>{label}</button>)}
+        </div>
       </div>
     </div>
     {error && <div className="error-banner"><strong>Instrument query failed</strong><span>{error}</span></div>}
