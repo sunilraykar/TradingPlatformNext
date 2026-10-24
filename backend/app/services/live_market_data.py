@@ -103,6 +103,7 @@ def status() -> dict[str, Any]:
             "state": _state,
             "connected": _state == "connected",
             "subscribed_tokens": sorted(_subscriptions),
+            "subscriptions": [{"instrument_token": token, "mode": mode} for token, mode in sorted(_subscriptions.items())],
             "subscription_count": len(_subscriptions),
         }
 
