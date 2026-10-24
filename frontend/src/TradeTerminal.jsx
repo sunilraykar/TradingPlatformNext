@@ -21,6 +21,7 @@ export default function TradeTerminal() {
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [form, setForm] = useState({ instrument_symbol: '', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
 
   const refresh = useCallback(async () => {
@@ -40,10 +41,11 @@ export default function TradeTerminal() {
   const create = async (event) => {
     event.preventDefault(); setSaving(true); setError('');
     try {
-      const payload = { ...form, execution_mode: 'PAPER', source: 'MANUAL', quantity: Number(form.quantity) };
+      const payload = { ...form, idempotency_key: requestKey, execution_mode: 'PAPER', source: 'MANUAL', quantity: Number(form.quantity) };
       for (const key of ['entry_price', 'stop_loss', 'target']) payload[key] = payload[key] === '' ? null : Number(payload[key]);
       const result = await request('/trades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       setShowCreate(false);
+      setRequestKey(crypto.randomUUID());
       setForm({ instrument_symbol: '', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
       await refresh();
       if (result.trade?.persistence_state === 'DEGRADED') setError('Trade is not durably persisted; check database connectivity.');
