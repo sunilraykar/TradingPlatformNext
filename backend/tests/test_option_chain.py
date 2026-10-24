@@ -29,8 +29,22 @@ def test_option_chain_uses_full_mode_for_open_interest(monkeypatch):
     expiry = date(2026, 10, 29)
     index_row = {"instrument_token": 999, "tradingsymbol": "NIFTY 50"}
     option_rows = [
-        {"instrument_token": 1, "tradingsymbol": "NIFTY262925100CE", "instrument_type": "CE", "strike": 25100, "expiry": expiry, "lot_size": 65},
-        {"instrument_token": 2, "tradingsymbol": "NIFTY262925100PE", "instrument_type": "PE", "strike": 25100, "expiry": expiry, "lot_size": 65},
+        {
+            "instrument_token": 1,
+            "tradingsymbol": "NIFTY262925100CE",
+            "instrument_type": "CE",
+            "strike": 25100,
+            "expiry": expiry,
+            "lot_size": 65,
+        },
+        {
+            "instrument_token": 2,
+            "tradingsymbol": "NIFTY262925100PE",
+            "instrument_type": "PE",
+            "strike": 25100,
+            "expiry": expiry,
+            "lot_size": 65,
+        },
     ]
 
     class Result:
@@ -71,8 +85,18 @@ def test_option_chain_uses_full_mode_for_open_interest(monkeypatch):
     monkeypatch.setattr(option_chain, "get_engine", lambda: Engine())
     monkeypatch.setattr(option_chain, "_quote_price", lambda _token: 25100.0)
     quote_values = {
-        1: {"last_price": 125.5, "volume_traded": 1000, "oi": 25000, "received_at": "2026-10-24T10:00:00+00:00"},
-        2: {"last_price": 130.0, "volume_traded": 1200, "oi": 30000, "received_at": "2026-10-24T10:00:00+00:00"},
+        1: {
+            "last_price": 125.5,
+            "volume_traded": 1000,
+            "oi": 25000,
+            "received_at": "2026-10-24T10:00:00+00:00",
+        },
+        2: {
+            "last_price": 130.0,
+            "volume_traded": 1200,
+            "oi": 30000,
+            "received_at": "2026-10-24T10:00:00+00:00",
+        },
     }
     monkeypatch.setattr(live_quotes, "get", lambda token: quote_values.get(token))
     calls = []
