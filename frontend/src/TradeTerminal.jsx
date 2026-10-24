@@ -69,7 +69,8 @@ export default function TradeTerminal() {
       if (rawExit === null) return;
       const exitPrice = Number(rawExit);
       if (!Number.isFinite(exitPrice) || exitPrice < 0) { setError('Enter a valid non-negative exit price.'); return; }
-      const entryPrice = Number(trade.average_entry_price ?? trade.entry_price);
+      const rawEntryPrice = trade.average_entry_price ?? trade.entry_price;
+      const entryPrice = rawEntryPrice === null || rawEntryPrice === undefined || rawEntryPrice === '' ? NaN : Number(rawEntryPrice);
       const qty = Number(trade.open_quantity ?? trade.quantity ?? 0);
       const directionFactor = String(trade.direction).toUpperCase() === 'SELL' ? -1 : 1;
       changes = { ...changes, exit_price: exitPrice, average_exit_price: exitPrice, open_quantity: 0 };
