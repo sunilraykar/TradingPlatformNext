@@ -237,3 +237,19 @@
 .trade-symbol-letter-filter{flex:1 1 280px}
 .trade-symbol-letter-filter .trade-filter-buttons{gap:5px}
 .trade-symbol-letter-filter .trade-filter-button{min-width:36px;padding-left:11px;padding-right:11px}
+
+
+/* Settings instrument master browser */
+.instrument-category-filters{display:flex;gap:7px;flex-wrap:wrap;margin:16px 0}
+.instrument-filters{align-items:flex-end;margin:0 0 14px}
+.instrument-filters .settings-control{min-width:155px;flex:0 1 220px}
+.instrument-filters .instrument-search{flex:1 1 260px}
+.instrument-results-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;color:var(--muted);font-size:12px}
+.instrument-results-summary strong{color:var(--text,#e8eef8);font-size:13px}
+.instrument-table-scroll{max-height:calc(100vh - 440px);min-height:240px}
+.instrument-table{min-width:1100px;font-size:11px}
+.instrument-table th{position:sticky;top:0;z-index:1}
+.instrument-table td{white-space:nowrap}
+.instrument-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;color:var(--muted);font-size:12px}
+.instrument-pagination>div{display:flex;gap:8px}
+@media(max-width:700px){.instrument-filters .settings-control{flex:1 1 100%;min-width:0}.instrument-results-summary{align-items:flex-start;flex-direction:column}.instrument-pagination{align-items:flex-start;flex-direction:column}.instrument-table-scroll{max-height:65vh}}
