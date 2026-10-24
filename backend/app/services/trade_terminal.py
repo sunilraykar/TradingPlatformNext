@@ -368,6 +368,17 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
     updated["persistence_state"] = "PERSISTED"
     with _lock:
         _cache[trade_id] = updated
+        token = int(updated.get("instrument_token") or 0)
+        still_used = token > 0 and any(
+            other_id != trade_id and int(other.get("instrument_token") or 0) == token and _is_active(other)
+            for other_id, other in _cache.items()
+        )
+    if token > 0 and not _is_active(updated) and not still_used:
+        try:
+            live_market_data.unsubscribe([token])
+        except Exception:
+            logger.exception("Could not release quote subscription for closed trade %s", trade_id)
+    publish({"type": "trade_upsert", "trade": dict(updated), "terminal": status()})
     return dict(updated)
 
 
