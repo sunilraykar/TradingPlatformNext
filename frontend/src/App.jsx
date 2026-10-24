@@ -433,6 +433,7 @@ function InstrumentsViewer() {
   const [exchange, setExchange] = useState('ALL');
   const [expiryFilter, setExpiryFilter] = useState('ALL');
   const [optionType, setOptionType] = useState('ALL');
+  const [symbolSearch, setSymbolSearch] = useState('');
   const [page, setPage] = useState(0);
   const [payload, setPayload] = useState({ instruments: [], total: 0 });
   const [loading, setLoading] = useState(false);
@@ -450,6 +451,7 @@ function InstrumentsViewer() {
       if (expiryFilter === 'WITH_EXPIRY') params.set('expiry_filter', 'WITH_EXPIRY');
       if (expiryFilter === 'NO_EXPIRY') params.set('expiry_filter', 'NO_EXPIRY');
       if (optionType !== 'ALL') params.set('option_type', optionType);
+      if (symbolSearch.trim()) params.set('search', symbolSearch.trim());
       setPayload(await api('/instruments?' + params.toString()));
     } catch (e) {
       setError(e.message || 'Unable to load instruments from MySQL.');
@@ -457,9 +459,9 @@ function InstrumentsViewer() {
     } finally {
       setLoading(false);
     }
-  }, [category, letter, exchange, expiryFilter, optionType, page]);
+  }, [category, letter, exchange, expiryFilter, optionType, symbolSearch, page]);
 
-  useEffect(() => { setPage(0); }, [category, letter, exchange, expiryFilter, optionType]);
+  useEffect(() => { setPage(0); }, [category, letter, exchange, expiryFilter, optionType, symbolSearch]);
   useEffect(() => { load(); }, [load]);
 
   const rows = payload.instruments || [];
@@ -503,6 +505,11 @@ function InstrumentsViewer() {
         </div>
       </div>}
     </div>
+    </div>
+    <div className="instrument-symbol-search">
+      <label htmlFor="instrument-symbol-search-input">Search symbol / name</label>
+      <input id="instrument-symbol-search-input" type="search" value={symbolSearch} onChange={(event) => setSymbolSearch(event.target.value)} placeholder="Type a symbol or instrument name…" autoComplete="off" />
+      {symbolSearch.trim() && <button type="button" className="trade-filter-button" onClick={() => setSymbolSearch('')}>Clear</button>}
     </div>
     {error && <div className="error-banner"><strong>Instrument query failed</strong><span>{error}</span></div>}
     <div className="instrument-results-summary"><strong>{Number(payload.total || 0).toLocaleString('en-IN')} instruments</strong><span>{payload.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No matching records'}{loading ? ' · Loading…' : ''}</span></div>
