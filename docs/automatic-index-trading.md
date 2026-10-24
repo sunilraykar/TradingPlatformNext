@@ -107,3 +107,22 @@ Use the existing trade schema where it already satisfies these needs; migrate or
 4. Implement cache hydration, dirty tracking, durable lifecycle-event flushes, retry behavior, and end-of-day flush.
 5. Build the unified terminal and filters on the canonical API.
 6. Add tests for persistence and recovery, then connect the AutoTrender paper worker. Live order execution remains a separate, explicitly enabled scope.
+
+
+## Unified Trade Terminal implementation status
+
+The first implementation slice is on `feature/autotrender-index-auto-trading`:
+
+- Added `trade_records` and `trade_lifecycle_events` in migration `database/migrations/002_trade_terminal.sql`. Apply this after `001_initial.sql` before using the terminal.
+- Added a canonical in-process trade cache that hydrates from MySQL at backend startup. Material lifecycle changes are written immediately; quote/P&L refreshes stay in memory; a maintenance task retries dirty writes and performs a daily 15:30 IST snapshot flush.
+- Added `/api/v1/trades` APIs for listing, creating PAPER trades, updating lifecycle state, retrying persistence, end-of-day flush, and read-only Kite net-position reconciliation.
+- Added a Trade Terminal navigation tab with PAPER/LIVE labels, filters for mode/status/source/underlying/instrument/date, paper-trade creation and closing, persistence health, and manual live-position sync.
+- Trade creation accepts an idempotency key; the UI reuses the same key across retries. Live positions receive stable IDs based on broker position identity. Manual live-trade lifecycle changes and live order placement are blocked.
+- Added backend tests for cache-only market updates, paper creation, idempotency, lifecycle versioning, dirty-write retry, live-position reconciliation, and flattening. GitHub Actions checks are used to verify the backend and frontend builds.
+
+### Not yet complete
+
+- Apply the SQL migration in the configured MySQL database and verify startup hydration against the real database.
+- Run and review the latest GitHub Actions results before considering the code validated.
+- Continuous quote subscription / unrealized-P&L refresh for paper trades, automatic broker reconciliation cadence, and live order/fill-to-trade linking still need a follow-up implementation pass.
+- AutoTrender's automatic index paper-trade worker is not connected yet; it should be integrated only after this canonical lifecycle is verified.
