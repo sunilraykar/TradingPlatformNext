@@ -221,7 +221,7 @@ def test_restore_open_trade_preserves_and_applies_existing_cached_quote(monkeypa
     assert restored["instrument_token"] == 408065
     assert restored["last_price"] == 1153.80
     assert restored["quote_state"] == "LIVE"
-    assert restored["unrealized_pnl"] == 53.80
+    assert abs(restored["unrealized_pnl"] - 53.80) < 1e-9
 
     monkeypatch.undo()
     live_quotes.clear()
