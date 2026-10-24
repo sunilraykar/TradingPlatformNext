@@ -292,6 +292,7 @@ def subscribe_open_trades() -> dict[str, int]:
                 if current:
                     current["instrument_token"] = token
                     current["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
+                    current.pop("last_price", None)
             live_market_data.subscribe([token], mode="quote")
             subscribed += 1
         except Exception:
