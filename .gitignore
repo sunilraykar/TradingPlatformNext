@@ -15,3 +15,9 @@ node_modules/
 .vscode/
 *.log
 .DS_Store
+
+# Local runtime session data
+/backend/runtime/
+
+# Vite generated cache
+/frontend/.vite/
