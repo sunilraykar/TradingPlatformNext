@@ -99,7 +99,7 @@ def get_option_chain(
     selected_strikes = strikes[start:end]
     selected_rows = [row for row in options if float(row["strike"]) in selected_strikes]
     tokens = [int(row["instrument_token"]) for row in selected_rows]
-    subscription = live_market_data.subscribe(tokens, mode="quote")
+    subscription = live_market_data.subscribe(tokens, mode="full")
 
     by_strike: dict[float, dict[str, Any]] = {
         strike: {"strike": strike, "CE": None, "PE": None} for strike in selected_strikes
