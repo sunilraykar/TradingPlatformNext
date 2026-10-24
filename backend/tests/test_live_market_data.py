@@ -46,6 +46,39 @@ def test_subscribe_deduplicates_and_retains_desired_tokens_without_login():
     assert result["subscription_count"] == 2
 
 
+def test_on_connect_applies_desired_subscriptions(monkeypatch):
+    calls = []
+
+    class FakeTicker:
+        def subscribe(self, tokens, mode="quote"):
+            calls.append((list(tokens), mode))
+
+    live_market_data._ticker = FakeTicker()
+    live_market_data._subscriptions.update({101: "quote", 202: "ltp", 303: "quote"})
+    live_market_data._state = "connecting"
+
+    live_market_data._on_state("connected")
+
+    assert ([202], "ltp") in calls
+    assert ([101, 303], "quote") in calls
+
+
+def test_subscribe_does_not_send_to_socket_before_connected(monkeypatch):
+    calls = []
+
+    class FakeTicker:
+        def subscribe(self, tokens, mode="quote"):
+            calls.append((list(tokens), mode))
+
+    live_market_data._ticker = FakeTicker()
+    live_market_data._state = "connecting"
+
+    result = live_market_data.subscribe([789], mode="quote")
+
+    assert result["subscribed_tokens"] == [789]
+    assert calls == []
+
+
 def test_autotrender_indices_are_registered_as_default_subscriptions(monkeypatch):
     from app.db import session as db_session
 
