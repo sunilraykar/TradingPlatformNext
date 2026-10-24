@@ -237,6 +237,7 @@ const SETTINGS_TABS = [
   ['active-trades', 'Active Trades'],
   ['market-session', 'Market Session'],
   ['cache-viewer', 'Cache Viewer'],
+  ['instruments', 'Instruments'],
   ['live-data-cache', 'Live Data & Cache'],
 ];
 
@@ -426,6 +427,69 @@ function LiveDataCacheViewer() {
 }
 
 
+function InstrumentsViewer() {
+  const [category, setCategory] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [exchange, setExchange] = useState('ALL');
+  const [expiry, setExpiry] = useState('');
+  const [page, setPage] = useState(0);
+  const [payload, setPayload] = useState({ instruments: [], total: 0 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const pageSize = 100;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
+      if (category !== 'ALL') params.set('category', category);
+      if (search.trim()) params.set('search', search.trim());
+      if (exchange !== 'ALL') params.set('exchange', exchange);
+      if (expiry) params.set('expiry', expiry);
+      setPayload(await api('/instruments?' + params.toString()));
+    } catch (e) {
+      setError(e.message || 'Unable to load instruments from MySQL.');
+      setPayload({ instruments: [], total: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }, [category, search, exchange, expiry, page]);
+
+  useEffect(() => { setPage(0); }, [category, search, exchange, expiry]);
+  useEffect(() => { load(); }, [load]);
+
+  const rows = payload.instruments || [];
+  const format = (value) => value === null || value === undefined || value === '' ? '—' : typeof value === 'number' ? value.toLocaleString('en-IN', { maximumFractionDigits: 4 }) : String(value);
+  const first = payload.total ? page * pageSize + 1 : 0;
+  const last = Math.min((page + 1) * pageSize, payload.total || 0);
+  return <div className="instrument-viewer">
+    <div className="cache-viewer-toolbar">
+      <div><h2>Kite Instrument Master</h2><p className="settings-intro">Browse instruments stored in MySQL. Use category, exchange, expiry and text filters; results are paginated and read-only.</p></div>
+      <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh instruments'}</button>
+    </div>
+    <div className="instrument-category-filters" role="group" aria-label="Instrument category">
+      {[
+        ['ALL', 'All instruments'], ['EQUITY', 'Equity'], ['INDICES', 'Indices'],
+        ['OPTIONS', 'Option contracts'], ['FUTURES', 'Futures'],
+      ].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (category === value ? ' active' : '')} onClick={() => setCategory(value)}>{label}</button>)}
+    </div>
+    <div className="trade-terminal-filters instrument-filters">
+      <label className="settings-control instrument-search"><span>Search symbol / name</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. RELIANCE, NIFTY" /></label>
+      <label className="settings-control"><span>Exchange</span><select value={exchange} onChange={(e) => setExchange(e.target.value)}><option value="ALL">All exchanges</option><option value="NSE">NSE</option><option value="BSE">BSE</option><option value="NFO">NFO</option><option value="BFO">BFO</option><option value="CDS">CDS</option><option value="MCX">MCX</option></select></label>
+      <label className="settings-control"><span>Expiry date</span><input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></label>
+      {expiry && <button type="button" className="button secondary" onClick={() => setExpiry('')}>Clear expiry</button>}
+    </div>
+    {error && <div className="error-banner"><strong>Instrument query failed</strong><span>{error}</span></div>}
+    <div className="instrument-results-summary"><strong>{Number(payload.total || 0).toLocaleString('en-IN')} instruments</strong><span>{payload.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No matching records'}{loading ? ' · Loading…' : ''}</span></div>
+    <div className="table-scroll instrument-table-scroll"><table className="kite-data-table instrument-table"><thead><tr><th>Exchange</th><th>Trading Symbol</th><th>Name</th><th>Type</th><th>Segment</th><th>Expiry</th><th>Strike</th><th>Lot Size</th><th>Tick Size</th><th>Token</th></tr></thead>
+      <tbody>{rows.map((row) => <tr key={row.instrument_token}><td>{format(row.exchange)}</td><td><strong>{format(row.tradingsymbol)}</strong></td><td>{format(row.name)}</td><td>{format(row.instrument_type)}</td><td>{format(row.segment)}</td><td>{format(row.expiry)}</td><td>{format(row.strike)}</td><td>{format(row.lot_size)}</td><td>{format(row.tick_size)}</td><td>{format(row.instrument_token)}</td></tr>)}
+      {!rows.length && <tr><td colSpan="10" className="empty-cell">{loading ? 'Loading instruments…' : 'No instruments match these filters. Check that the Kite instrument master has been refreshed.'}</td></tr>}</tbody>
+    </table></div>
+    <div className="instrument-pagination"><span>Page {page + 1} of {Math.max(1, Math.ceil((payload.total || 0) / pageSize))}</span><div><button type="button" className="button secondary" disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))}>Previous</button><button type="button" className="button secondary" disabled={loading || (page + 1) * pageSize >= (payload.total || 0)} onClick={() => setPage((current) => current + 1)}>Next</button></div></div>
+  </div>;
+}
+
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
   const [settings, setSettings] = useState({});
@@ -536,6 +600,7 @@ function SettingsPanel() {
       {tab === 'active-trades' && <><h2>Active Trades</h2><div className="settings-grid">{SETTINGS_FIELDS['active-trades'].map(fieldControl)}</div><div className="settings-ui-only-note">Global defaults apply to new trades. Existing trades should retain their entry-time strategy snapshot.</div></>}
       {tab === 'market-session' && <><h2>Market Session</h2><div className="settings-grid">{SETTINGS_FIELDS['market-session'].map(fieldControl)}{fieldControl(['kiteAutoLoginEnabled','Automatic Kite Login','boolean',true,'Open the broker login flow when no valid session is available.'])}{fieldControl(['kiteSessionResetEnabled','Daily Kite Session Reset','boolean',true,'Expire the stored session at the configured time.'])}{fieldControl(['kiteSessionResetTime','Session Reset Time','time','23:00','Time uses the configured timezone.'])}{fieldControl(['kiteSessionResetTimezone','Session Reset Timezone','select','Asia/Kolkata','','Asia/Kolkata|Asia/Kolkata;UTC|UTC'])}</div></>}
       {tab === 'cache-viewer' && <CacheViewer />}
+      {tab === 'instruments' && <InstrumentsViewer />}
       {tab === 'live-data-cache' && <LiveDataCacheViewer />}
       <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>
     </section>}
