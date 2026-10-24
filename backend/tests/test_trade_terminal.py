@@ -170,3 +170,59 @@ def test_create_trade_is_idempotent_for_same_request_key(monkeypatch):
     assert first["trade_id"] == second["trade_id"]
     assert len([t for t in trade_terminal._cache.values() if t.get("idempotency_key") == payload["idempotency_key"]]) == 1
     assert calls == ["TRADE_CREATED"]
+
+def test_restore_open_trade_preserves_and_applies_existing_cached_quote(monkeypatch):
+    """Restoring subscriptions must not wipe a valid LTP already in memory."""
+    import app.services.trade_terminal as terminal
+    from app.services.live_quotes import live_quotes
+
+    live_quotes.clear()
+    terminal._cache.clear()
+    terminal._dirty.clear()
+    terminal._cache["trade-cached-ltp"] = {
+        "trade_id": "trade-cached-ltp",
+        "execution_mode": "PAPER",
+        "status": "OPEN",
+        "instrument_symbol": "INFY",
+        "exchange": "NSE",
+        "instrument_token": 408065,
+        "last_price": 1153.80,
+        "direction": "BUY",
+        "quantity": 1,
+        "entry_price": 1100,
+        "unrealized_pnl": 53.80,
+    }
+    live_quotes.update(408065, {"last_price": 1153.80})
+
+    class Result:
+        def first(self):
+            return (408065,)
+
+    class Connection:
+        def execute(self, *args, **kwargs):
+            return Result()
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+
+    class Engine:
+        def connect(self):
+            return Connection()
+
+    monkeypatch.setattr(terminal, "get_engine", lambda: Engine())
+    monkeypatch.setattr(terminal.live_market_data, "subscribe", lambda *args, **kwargs: {"state": "connected"})
+    monkeypatch.setattr(terminal, "publish", lambda event: None)
+
+    result = terminal.subscribe_open_trades()
+    restored = terminal.get_trade("trade-cached-ltp")
+
+    assert result == {"subscribed": 1, "unresolved": 0}
+    assert restored["instrument_token"] == 408065
+    assert restored["last_price"] == 1153.80
+    assert restored["quote_state"] == "LIVE"
+    assert restored["unrealized_pnl"] == 53.80
+
+    live_quotes.clear()
+    terminal._cache.clear()
+    terminal._dirty.clear()
