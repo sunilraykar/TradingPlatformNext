@@ -285,3 +285,26 @@
 /* Live search for Kite instrument symbol or name. */
 .instrument-symbol-search{display:flex;align-items:center;gap:10px;max-width:760px;margin:10px 0 14px}.instrument-symbol-search label{flex:0 0 auto;color:var(--muted);font-size:12px;font-weight:700;white-space:nowrap}.instrument-symbol-search input{flex:1 1 420px;min-width:180px;max-width:560px;background:var(--panel, #0b1422);color:var(--text, #e7edf7);border:1px solid var(--border, #26364d);border-radius:9px;padding:10px 12px;font:inherit;outline:none}.instrument-symbol-search input:focus{border-color:var(--accent, #5bcbd4);box-shadow:0 0 0 2px rgba(91,203,212,.12)}
 @media(max-width:640px){.instrument-symbol-search{flex-wrap:wrap}.instrument-symbol-search input{flex-basis:100%;max-width:100%}}
+
+
+/* New paper-trade symbol picker */
+.trade-modal-backdrop{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(2,6,14,.78);backdrop-filter:blur(5px)}
+.trade-create-modal{width:min(100%,1040px);max-height:92vh;overflow:auto;margin:0;padding:24px;border:1px solid var(--line);box-shadow:0 24px 90px rgba(0,0,0,.55)}
+.trade-modal-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}
+.trade-modal-heading h2{margin:0 0 6px}
+.trade-modal-heading p{margin:0;color:var(--muted);font-size:13px}
+.trade-instrument-picker{padding:16px;margin-bottom:20px;border:1px solid var(--line);border-radius:12px;background:rgba(4,10,20,.48)}
+.trade-instrument-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.trade-instrument-results{display:flex;flex-direction:column;gap:4px;max-height:260px;overflow:auto;margin-top:12px}
+.trade-instrument-option{display:flex;align-items:center;justify-content:space-between;gap:16px;width:100%;padding:10px 12px;text-align:left;color:inherit;background:rgba(255,255,255,.025);border:1px solid transparent;border-radius:8px;cursor:pointer}
+.trade-instrument-option:hover,.trade-instrument-option.selected{background:rgba(83,214,206,.09);border-color:var(--cyan)}
+.trade-instrument-main,.trade-instrument-meta{display:flex;flex-direction:column;gap:3px;min-width:0}
+.trade-instrument-main strong{font-size:13px}
+.trade-instrument-main small,.trade-instrument-meta small{color:var(--muted);font-size:11px;overflow-wrap:anywhere}
+.trade-instrument-meta{text-align:right;flex-shrink:0}
+.trade-instrument-meta strong{font-size:11px;color:var(--cyan)}
+.trade-instrument-empty{padding:18px 10px;text-align:center;color:var(--muted);font-size:13px}
+.trade-selected-instrument{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+.trade-selected-instrument strong{color:var(--cyan)}
+.trade-create-modal .settings-actions{position:sticky;bottom:-24px;margin:18px -24px -24px;padding:16px 24px;background:var(--panel);border-top:1px solid var(--line)}
+@media(max-width:640px){.trade-modal-backdrop{padding:8px;align-items:flex-end}.trade-create-modal{max-height:95vh;padding:16px}.trade-instrument-filters{grid-template-columns:1fr}.trade-create-modal .settings-actions{bottom:-16px;margin:16px -16px -16px;padding:12px 16px}.trade-instrument-results{max-height:200px}}
