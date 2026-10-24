@@ -6,8 +6,8 @@ from threading import RLock
 import requests
 from dotenv import load_dotenv
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -118,7 +118,7 @@ class AutoTrenderAuth:
 
     def get(self, endpoint: str, **kwargs):
         if not self.authenticated and (not self._restore_saved_cookie() or not self._validate_session()):
-                raise RuntimeError("AutoTrender is not authenticated.")
+            raise RuntimeError("AutoTrender is not authenticated.")
         url = endpoint if endpoint.startswith("http") else API_BASE_URL + endpoint
         return self.session.get(url, timeout=30, **kwargs)
 
