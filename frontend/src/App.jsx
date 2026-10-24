@@ -496,6 +496,7 @@ function InstrumentsViewer() {
         </div>
       </div>
     </div>
+    </div>
     {error && <div className="error-banner"><strong>Instrument query failed</strong><span>{error}</span></div>}
     <div className="instrument-results-summary"><strong>{Number(payload.total || 0).toLocaleString('en-IN')} instruments</strong><span>{payload.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No matching records'}{loading ? ' · Loading…' : ''}</span></div>
     <div className="table-scroll instrument-table-scroll"><table className="kite-data-table instrument-table"><thead><tr><th>Exchange</th><th>Trading Symbol</th><th>Name</th><th>Type</th><th>Segment</th><th>Expiry</th><th>Strike</th><th>Lot Size</th><th>Tick Size</th><th>Token</th></tr></thead>
