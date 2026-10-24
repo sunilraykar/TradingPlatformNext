@@ -176,7 +176,7 @@ async def run_daily_instrument_refresh_scheduler() -> None:
         if due and not succeeded_today:
             try:
                 await asyncio.to_thread(refresh_instrument_master)
-            except Exception:
+            except Exception:  # noqa: BLE001 - scheduler retries transient provider/database failures
                 # Retry after five minutes; the previous committed master remains intact.
                 logger.exception("Kite instrument-master refresh failed; will retry in five minutes")
         await asyncio.sleep(300)
