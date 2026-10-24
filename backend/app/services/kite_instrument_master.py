@@ -132,20 +132,27 @@ def refresh_instrument_master() -> dict[str, object]:
 
 async def run_daily_instrument_refresh_scheduler() -> None:
     """Refresh once daily at 08:00 IST; retry every five minutes after failures."""
-    last_success_date = None
     while True:
         now = datetime.now(IST)
-        next_run = now.replace(hour=REFRESH_HOUR, minute=REFRESH_MINUTE, second=0, microsecond=0)
-        if now >= next_run:
-            due = True
+        today_at_refresh = now.replace(hour=REFRESH_HOUR, minute=REFRESH_MINUTE, second=0, microsecond=0)
+        due = now >= today_at_refresh
+        last_success = instrument_master_status().get("last_success_at")
+        try:
+            succeeded_today = bool(last_success) and datetime.fromisoformat(str(last_success)).astimezone(IST).date() == now.date()
+        except (TypeError, ValueError):
+            succeeded_today = False
+
+        if succeeded_today:
+            next_run = today_at_refresh + timedelta(days=1)
+        elif due:
+            next_run = now + timedelta(minutes=5)
         else:
-            due = False
-        _set_status(next_scheduled_at=(next_run if due and last_success_date == now.date() else
-                                      (next_run + timedelta(days=1) if due else next_run)).isoformat())
-        if due and last_success_date != now.date():
+            next_run = today_at_refresh
+        _set_status(next_scheduled_at=next_run.isoformat())
+
+        if due and not succeeded_today:
             try:
                 await asyncio.to_thread(refresh_instrument_master)
-                last_success_date = now.date()
             except Exception:
                 # Retry after five minutes; the previous committed master remains intact.
                 pass
