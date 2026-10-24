@@ -27,7 +27,7 @@ class LiveQuoteCache:
         for listener in listeners:
             try:
                 listener(dict(record))
-            except Exception:
+            except Exception:  # noqa: BLE001 - isolate downstream listeners from quote ingestion
                 logger.exception("Live quote listener failed for instrument token %s", instrument_token)
 
     def add_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:
