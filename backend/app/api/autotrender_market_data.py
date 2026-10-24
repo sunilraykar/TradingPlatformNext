@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Query, Request
 import requests
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.providers.autotrender.auth import AutoTrenderAuth
 from app.services.autotrender_cache import AutoTrenderCache
@@ -42,7 +42,7 @@ def _get_json(auth: AutoTrenderAuth, endpoint: str, **params) -> dict:
             raise RuntimeError("AutoTrender returned a non-JSON response")
         payload = response.json()
         if not isinstance(payload, dict):
-            raise RuntimeError("AutoTrender returned an unexpected response")
+            raise TypeError("AutoTrender returned an unexpected response")
         return payload
     except (RuntimeError, ValueError, requests.RequestException) as exc:
         raise HTTPException(
