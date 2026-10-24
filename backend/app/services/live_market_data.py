@@ -47,6 +47,10 @@ def start() -> dict[str, Any]:
         if not token:
             _state = "login_required"
             return status()
+        # Forward each cached Kite tick into the canonical Trade Terminal cache.
+        # Import lazily to avoid a module cycle (trade_terminal imports this module).
+        from app.services import trade_terminal
+        live_quotes.add_listener(trade_terminal.apply_quote_to_open_trades)
         ticker = KiteTickerAdapter(settings.kite_api_key, token, live_quotes, _on_state)
         _ticker = ticker
         _state = "connecting"
