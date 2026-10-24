@@ -20,7 +20,7 @@ class TradeCreate(BaseModel):
     strategy: str | None = Field(default=None, max_length=120)
     underlying: str | None = Field(default=None, max_length=80)
     instrument_symbol: str = Field(min_length=1, max_length=120)
-    exchange: str | None = Field(default="NFO", max_length=30)
+    exchange: str | None = Field(default=None, max_length=30)
     direction: Literal["BUY", "SELL"]
     quantity: int = Field(gt=0, le=1000000)
     entry_price: float | None = Field(default=None, ge=0)
