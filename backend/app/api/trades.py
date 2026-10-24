@@ -50,6 +50,7 @@ def list_terminal_trades(
     source: str | None = None,
     underlying: str | None = None,
 ) -> dict[str, Any]:
+    trade_terminal.refresh_open_trade_quotes_from_cache()
     return {"trades": trade_terminal.list_trades(mode=mode, status_filter=status, source=source, underlying=underlying),
             "terminal": trade_terminal.status()}
 
@@ -156,6 +157,9 @@ async def trade_terminal_stream_socket(websocket: WebSocket) -> None:
     """Push trade lifecycle and quote updates to the terminal without polling."""
     await trade_terminal_stream.connect(websocket)
     try:
+        # Reconcile cached ticks before taking the snapshot, so stale trade rows cannot
+        # overwrite newer quote updates when a client connects or reconnects.
+        trade_terminal.refresh_open_trade_quotes_from_cache()
         await websocket.send_json({
             "type": "snapshot",
             "trades": trade_terminal.list_trades(),
