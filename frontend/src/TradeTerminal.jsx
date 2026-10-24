@@ -56,6 +56,7 @@ export default function TradeTerminal() {
         if (message.type === 'snapshot') {
           setTrades(message.trades || []);
           setTerminal(message.terminal || {});
+          if (message.terminal) setTerminal(message.terminal);
         } else if (message.type === 'trade_upsert' && message.trade) {
           setTrades((current) => {
             const index = current.findIndex((item) => item.trade_id === message.trade.trade_id);
