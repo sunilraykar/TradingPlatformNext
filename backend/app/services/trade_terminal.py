@@ -182,7 +182,8 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
         raise RuntimeError("Trade updated in cache but database persistence failed; retry is required") from exc
 
 
-@_serialized_lifecycle\ndef create_trade(payload: dict[str, Any]) -> dict[str, Any]:
+@_serialized_lifecycle
+def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     mode = str(payload.get("execution_mode", "PAPER")).upper()
     if mode not in {"PAPER", "LIVE"}:
         raise ValueError("execution_mode must be PAPER or LIVE")
@@ -232,7 +233,8 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
     return dict(trade)
 
 
-@_serialized_lifecycle\ndef update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "TRADE_UPDATED") -> dict[str, Any]:
+@_serialized_lifecycle
+def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "TRADE_UPDATED") -> dict[str, Any]:
     if not changes:
         raise ValueError("At least one trade field is required")
     if "trade_id" in changes or "created_at" in changes or "version" in changes:
@@ -326,7 +328,8 @@ async def run_maintenance_scheduler() -> None:
         await asyncio.sleep(60)
 
 
-@_serialized_lifecycle\ndef reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, Any]:
+@_serialized_lifecycle
+def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, Any]:
     """Import broker net positions as canonical LIVE records; never place or modify orders."""
     normalized: dict[str, dict[str, Any]] = {}
     for row in position_rows:
