@@ -466,6 +466,8 @@ function InstrumentsViewer() {
 
   const rows = payload.instruments || [];
   const format = (value) => value === null || value === undefined || value === '' ? '—' : typeof value === 'number' ? value.toLocaleString('en-IN', { maximumFractionDigits: 4 }) : String(value);
+  const formatStrike = (value) => value === null || value === undefined || value === '' ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const formatTickSize = (value) => value === null || value === undefined || value === '' ? '—' : Number(value).toFixed(2);
   const first = payload.total ? page * pageSize + 1 : 0;
   const last = Math.min((page + 1) * pageSize, payload.total || 0);
   return <div className="instrument-viewer">
@@ -514,7 +516,7 @@ function InstrumentsViewer() {
     {error && <div className="error-banner"><strong>Instrument query failed</strong><span>{error}</span></div>}
     <div className="instrument-results-summary"><strong>{Number(payload.total || 0).toLocaleString('en-IN')} instruments</strong><span>{payload.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No matching records'}{loading ? ' · Loading…' : ''}</span></div>
     <div className="table-scroll instrument-table-scroll"><table className="kite-data-table instrument-table"><thead><tr><th>Exchange</th><th>Trading Symbol</th><th>Name</th><th>Type</th><th>Segment</th><th>Expiry</th><th>Strike</th><th>Lot Size</th><th>Tick Size</th><th>Token</th></tr></thead>
-      <tbody>{rows.map((row) => <tr key={row.instrument_token}><td>{format(row.exchange)}</td><td><strong>{format(row.tradingsymbol)}</strong></td><td>{format(row.name)}</td><td>{format(row.instrument_type)}</td><td>{format(row.segment)}</td><td>{format(row.expiry)}</td><td>{format(row.strike)}</td><td>{format(row.lot_size)}</td><td>{format(row.tick_size)}</td><td>{format(row.instrument_token)}</td></tr>)}
+      <tbody>{rows.map((row) => <tr key={row.instrument_token}><td>{format(row.exchange)}</td><td><strong>{format(row.tradingsymbol)}</strong></td><td>{format(row.name)}</td><td>{format(row.instrument_type)}</td><td>{format(row.segment)}</td><td>{format(row.expiry)}</td><td>{formatStrike(row.strike)}</td><td>{format(row.lot_size)}</td><td>{formatTickSize(row.tick_size)}</td><td>{row.instrument_token === null || row.instrument_token === undefined || row.instrument_token === '' ? '—' : String(row.instrument_token)}</td></tr>)}
       {!rows.length && <tr><td colSpan="10" className="empty-cell">{loading ? 'Loading instruments…' : 'No instruments match these filters. Check that the Kite instrument master has been refreshed.'}</td></tr>}</tbody>
     </table></div>
     <div className="instrument-pagination"><span>Page {page + 1} of {Math.max(1, Math.ceil((payload.total || 0) / pageSize))}</span><div><button type="button" className="button secondary" disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))}>Previous</button><button type="button" className="button secondary" disabled={loading || (page + 1) * pageSize >= (payload.total || 0)} onClick={() => setPage((current) => current + 1)}>Next</button></div></div>
