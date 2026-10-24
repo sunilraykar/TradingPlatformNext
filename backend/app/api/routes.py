@@ -231,6 +231,37 @@ def market_data_status() -> dict:
     return live_market_data.status()
 
 
+@router.get("/kite/market-data/runtime", tags=["kite"])
+def market_data_runtime() -> dict:
+    """Read-only diagnostics for subscribed instruments and in-memory quote/trade caches."""
+    from app.services import trade_terminal
+    market = live_market_data.status()
+    quotes = live_quotes.snapshot()
+    trades = trade_terminal.list_trades()
+    active = [trade for trade in trades if str(trade.get("status", "OPEN")).upper() not in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}]
+    subscriptions = []
+    for item in market.get("subscriptions", []):
+        token = int(item["instrument_token"])
+        matching = [trade for trade in active if int(trade.get("instrument_token") or 0) == token]
+        subscriptions.append({
+            **item,
+            "quote": quotes.get(token),
+            "open_trade_count": len(matching),
+            "trade_symbols": [trade.get("instrument_symbol") for trade in matching],
+        })
+    return {
+        "market_data": market,
+        "cache": {
+            "quote_count": len(quotes),
+            "cached_quote_tokens": sorted(quotes),
+            "open_trade_count": len(active),
+            "trade_count": len(trades),
+        },
+        "subscriptions": subscriptions,
+        "quotes": [{"instrument_token": token, **quote} for token, quote in sorted(quotes.items())],
+    }
+
+
 @router.post("/kite/market-data/start", tags=["kite"])
 def start_market_data() -> dict:
     try:
