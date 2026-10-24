@@ -1,9 +1,12 @@
 """Thread-safe fan-out for incremental Trade Terminal WebSocket events."""
 import asyncio
 import json
+import logging
 import threading
+
 from fastapi import WebSocket
 
+logger = logging.getLogger(__name__)
 _clients: set[tuple[WebSocket, asyncio.AbstractEventLoop]] = set()
 _clients_lock = threading.RLock()
 
@@ -43,4 +46,5 @@ async def _send_on_loop(loop: asyncio.AbstractEventLoop, websocket: WebSocket, p
     try:
         await websocket.send_text(payload)
     except Exception:
+        logger.exception("Trade Terminal WebSocket send failed; disconnecting client")
         disconnect(websocket)
