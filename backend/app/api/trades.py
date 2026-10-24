@@ -1,7 +1,13 @@
+import json
+from datetime import datetime, time
 from typing import Any, Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, Field
+from sqlalchemy import text
+
+from app.db.session import get_engine
 
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
@@ -59,8 +65,51 @@ def terminal_status() -> dict[str, Any]:
     return trade_terminal.status()
 
 
+def _enforce_autotrender_entry_window(source: str) -> None:
+    """Reject new AutoTrender entries outside the configured inclusive IST window."""
+    if "AUTOTRENDER" not in source.upper().replace("-", "_"):
+        return
+    try:
+        with get_engine().connect() as connection:
+            rows = connection.execute(
+                text("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN (:start_key, :end_key)"),
+                {"start_key": "ui.autoTrenderEntryStartTime", "end_key": "ui.autoTrenderEntryEndTime"},
+            ).mappings().all()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Unable to read AutoTrender entry-window settings") from exc
+
+    settings = {"autoTrenderEntryStartTime": "10:00", "autoTrenderEntryEndTime": "14:00"}
+    for row in rows:
+        value = row["setting_value"]
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except (TypeError, ValueError):
+                pass
+        settings[str(row["setting_key"])[3:]] = value
+    start_value = settings["autoTrenderEntryStartTime"]
+    end_value = settings["autoTrenderEntryEndTime"]
+    try:
+        if not isinstance(start_value, str) or not isinstance(end_value, str):
+            raise ValueError("Entry times must be strings")
+        start = time.fromisoformat(start_value)
+        end = time.fromisoformat(end_value)
+        if len(start_value) != 5 or len(end_value) != 5 or start.strftime("%H:%M") != start_value or end.strftime("%H:%M") != end_value or end <= start:
+            raise ValueError("Invalid entry window")
+    except ValueError as exc:
+        raise HTTPException(status_code=503, detail="AutoTrender entry-window settings are invalid; correct them in Settings") from exc
+
+    current = datetime.now(ZoneInfo("Asia/Kolkata")).time().replace(tzinfo=None)
+    if current < start or current > end:
+        raise HTTPException(
+            status_code=422,
+            detail=f"New AutoTrender entries are allowed only from {start_value} to {end_value} IST (inclusive)",
+        )
+
+
 @router.post("")
 def create_terminal_trade(payload: TradeCreate) -> dict[str, Any]:
+    _enforce_autotrender_entry_window(payload.source)
     try:
         return {"trade": trade_terminal.create_trade(payload.model_dump())}
     except ValueError as exc:
