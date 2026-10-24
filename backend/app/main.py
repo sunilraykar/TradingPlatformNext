@@ -10,6 +10,8 @@ from app.api.autotrender_auth import router as autotrender_auth_router
 from app.api.autotrender_market_data import router as autotrender_market_data_router
 from app.api.routes import router
 from app.api.subscription_test import router as subscription_test_router
+from app.api.trades import router as trades_router
+from app.services import trade_terminal
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.kite.client import KiteProvider, KiteProviderError
@@ -80,6 +82,7 @@ async def _restore_kite_session() -> None:
 async def lifespan(_: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
+    trade_terminal.hydrate_cache()
     await _restore_kite_session()
     reset_task = asyncio.create_task(run_daily_reset_scheduler())
     try:
@@ -97,6 +100,7 @@ app.include_router(account_router, prefix="/api/v1")
 app.include_router(autotrender_auth_router, prefix="/api/v1")
 app.include_router(autotrender_market_data_router, prefix="/api/v1")
 app.include_router(subscription_test_router, prefix="/api/v1")
+app.include_router(trades_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])
