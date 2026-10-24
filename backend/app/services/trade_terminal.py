@@ -257,19 +257,22 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
             ), {"exchange": exchange, "symbol": symbol}).first()
         if row and int(row[0]) > 0:
             token = int(row[0])
+            # Preserve the last known price while registering the resolved token.
+            # A process-local cached tick can hydrate this trade immediately.
             with _lock:
                 current = _cache.get(trade["trade_id"])
                 if current:
                     current["instrument_token"] = token
                     current["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
-                    current.pop("last_price", None)
-            live_market_data.subscribe([token], mode="quote")
             trade["instrument_token"] = token
             trade["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
-            # Reuse the latest WebSocket tick already in cache instead of waiting for
-            # another tick or for the user to leave and reopen the terminal.
             cached_quote = live_quotes.get(token)
-            if cached_quote:
+            if cached_quote and cached_quote.get("last_price") is not None:
+                apply_quote_to_open_trades(cached_quote)
+            live_market_data.subscribe([token], mode="quote")
+            # Re-check after subscription to close the race with a newly arriving tick.
+            cached_quote = live_quotes.get(token)
+            if cached_quote and cached_quote.get("last_price") is not None:
                 apply_quote_to_open_trades(cached_quote)
         else:
             trade["quote_state"] = "INSTRUMENT_NOT_RESOLVED"
