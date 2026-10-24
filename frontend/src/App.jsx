@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import TradeTerminal from './TradeTerminal.jsx';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'];
@@ -236,6 +237,8 @@ const SETTINGS_TABS = [
   ['active-trades', 'Active Trades'],
   ['market-session', 'Market Session'],
   ['cache-viewer', 'Cache Viewer'],
+  ['instruments', 'Instruments'],
+  ['live-data-cache', 'Live Data & Cache'],
 ];
 
 const SETTINGS_FIELDS = {
@@ -335,6 +338,191 @@ function CacheViewer() {
     {snapshot?.last_refresh_error && <div className="error-banner"><strong>Last cache refresh error</strong><span>{snapshot.last_refresh_error}</span></div>}
   </div>;
 }
+function LiveDataCacheViewer() {
+  const [runtime, setRuntime] = useState(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [masterStatus, setMasterStatus] = useState(null);
+  const [masterError, setMasterError] = useState('');
+  const [masterLoading, setMasterLoading] = useState(false);
+  const [masterMessage, setMasterMessage] = useState('');
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setRuntime(await api('/kite/market-data/runtime')); setError(''); }
+    catch (e) { setError(e.message || 'Unable to load live cache.'); }
+    finally { setLoading(false); }
+  }, []);
+  const loadMasterStatus = useCallback(async () => {
+    try { setMasterStatus(await api('/kite/instruments/refresh-status')); setMasterError(''); }
+    catch (e) { setMasterError(e.message || 'Unable to load instrument-master status.'); }
+  }, []);
+  const refreshMaster = useCallback(async () => {
+    setMasterLoading(true);
+    setMasterMessage('');
+    setMasterError('');
+    try {
+      const result = await api('/kite/instruments/refresh', { method: 'POST' });
+      setMasterStatus(result);
+      setMasterMessage(`Refresh successful: ${Number(result.stored || 0).toLocaleString('en-IN')} instruments stored.`);
+    } catch (e) {
+      setMasterMessage('');
+      setMasterError(e.message || 'Instrument-master refresh failed. The previous master should remain available.');
+      loadMasterStatus();
+    } finally {
+      setMasterLoading(false);
+      loadMasterStatus();
+    }
+  }, [loadMasterStatus]);
+  useEffect(() => {
+    load();
+    loadMasterStatus();
+    const timer = window.setInterval(load, 2000);
+    const masterTimer = window.setInterval(loadMasterStatus, 30000);
+    return () => { window.clearInterval(timer); window.clearInterval(masterTimer); };
+  }, [load, loadMasterStatus]);
+  const market = runtime?.market_data || {};
+  const cache = runtime?.cache || {};
+  const master = masterStatus || {};
+  const displayTime = (value) => value ? new Date(value).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : 'Not yet recorded';
+  return <div className="cache-viewer">
+    <div className="cache-viewer-toolbar"><div><h2>Live Market Data &amp; Cache</h2><p className="settings-intro">Subscribed Kite instruments and latest in-memory quote values. This diagnostics view refreshes every 2 seconds while open; quote ticks are not written to MySQL.</p></div><button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh live data'}</button></div>
+    <div className="panel cache-entry">
+      <div className="cache-viewer-toolbar"><div><h2>Kite Instrument Master</h2><p className="settings-intro">Daily download from Kite and transactional replacement of only the KITE rows in MySQL. Scheduled for 08:00 Asia/Kolkata; failed attempts retry every five minutes.</p></div><button type="button" className="button primary" onClick={refreshMaster} disabled={masterLoading}>{masterLoading ? 'Refreshing master…' : 'Refresh instrument master'}</button></div>
+      {masterMessage && <div className="success-banner"><strong>{master.state || 'Refresh'}</strong><span>{masterMessage}</span></div>}
+      {masterError && <div className="error-banner"><strong>Instrument-master status / refresh error</strong><span>{masterError}</span></div>}
+      <div className="settings-grid">
+        <div className="panel"><span>Refresh status</span><h3>{master.state || 'Loading…'}</h3></div>
+        <div className="panel"><span>Instruments downloaded</span><h3>{master.downloaded == null ? '—' : Number(master.downloaded).toLocaleString('en-IN')}</h3></div>
+        <div className="panel"><span>Instruments stored</span><h3>{master.stored == null ? '—' : Number(master.stored).toLocaleString('en-IN')}</h3></div>
+        <div className="panel"><span>Instrument version</span><h3>{master.instrument_version ?? '—'}</h3></div>
+      </div>
+      <div className="settings-grid">
+        <div className="panel"><span>Last attempt</span><p>{displayTime(master.last_attempt_at)}</p></div>
+        <div className="panel"><span>Last successful refresh</span><p>{displayTime(master.last_success_at)}</p></div>
+        <div className="panel"><span>Next scheduled refresh</span><p>{displayTime(master.next_scheduled_at)}</p></div>
+        <div className="panel"><span>Schedule</span><p>{master.schedule_time || '08:00'} · {master.schedule_timezone || 'Asia/Kolkata'}</p></div>
+      </div>
+      {master.last_error && <div className="error-banner"><strong>Last refresh failure</strong><span>{master.last_error}</span></div>}
+      <p className="settings-ui-only-note">A failed download or validation does not replace the previously committed KITE master. Refresh status is runtime-only and resets when the backend restarts.</p>
+    </div>
+    {error && <div className="error-banner"><strong>Live cache unavailable</strong><span>{error}</span></div>}
+    <div className="settings-grid">
+      <div className="panel"><span>WebSocket</span><h3>{market.state || 'Unknown'}</h3></div>
+      <div className="panel"><span>Subscribed</span><h3>{market.subscription_count ?? 0}</h3></div>
+      <div className="panel"><span>Cached quotes</span><h3>{cache.quote_count ?? 0}</h3></div>
+      <div className="panel"><span>Open / total trades</span><h3>{cache.open_trade_count ?? 0} / {cache.trade_count ?? 0}</h3></div>
+    </div>
+    <div className="panel cache-entry"><h3>Subscriptions</h3>
+      {(runtime?.subscriptions || []).length ? <div className="table-scroll"><table><thead><tr><th>Token</th><th>Mode</th><th>Trade symbols</th><th>LTP</th><th>Received at</th><th>Details</th></tr></thead><tbody>
+        {runtime.subscriptions.map((item) => <tr key={item.instrument_token}><td>{item.instrument_token}</td><td>{item.mode}</td><td>{(item.trade_symbols || []).join(', ') || '—'}</td><td>{number(item.quote?.last_price ?? item.quote?.ltp ?? item.quote?.price)}</td><td>{item.quote?.received_at || 'Waiting for quote'}</td><td><details><summary>Inspect</summary><pre>{JSON.stringify(item.quote || {}, null, 2)}</pre></details></td></tr>)}
+      </tbody></table></div> : <p>No instruments are currently subscribed.</p>}
+    </div>
+    <div className="panel cache-entry"><h3>Quote cache records</h3>
+      {(runtime?.quotes || []).length ? <div className="table-scroll"><table><thead><tr><th>Token</th><th>LTP</th><th>Received at</th><th>Full record</th></tr></thead><tbody>
+        {runtime.quotes.map((quote) => <tr key={quote.instrument_token}><td>{quote.instrument_token}</td><td>{number(quote.last_price ?? quote.ltp ?? quote.price)}</td><td>{quote.received_at || '—'}</td><td><details><summary>Inspect</summary><pre>{JSON.stringify(quote, null, 2)}</pre></details></td></tr>)}
+      </tbody></table></div> : <p>Quote cache is empty until subscribed instruments receive market ticks.</p>}
+    </div>
+    <div className="panel cache-entry"><h3>Runtime summary</h3><pre>{JSON.stringify({ state: market.state, connected: market.connected, subscriptions: market.subscriptions, quote_count: cache.quote_count, cached_quote_tokens: cache.cached_quote_tokens, open_trade_count: cache.open_trade_count, trade_count: cache.trade_count }, null, 2)}</pre></div>
+  </div>;
+}
+
+
+function InstrumentsViewer() {
+  const [category, setCategory] = useState('ALL');
+  const [letter, setLetter] = useState('ALL');
+  const [exchange, setExchange] = useState('ALL');
+  const [expiryFilter, setExpiryFilter] = useState('ALL');
+  const [optionType, setOptionType] = useState('ALL');
+  const [symbolSearch, setSymbolSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [payload, setPayload] = useState({ instruments: [], total: 0 });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const pageSize = 100;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
+      if (category !== 'ALL') params.set('category', category);
+      if (letter !== 'ALL') params.set('symbol_prefix', letter);
+      if (exchange !== 'ALL') params.set('exchange', exchange);
+      if (expiryFilter === 'WITH_EXPIRY') params.set('expiry_filter', 'WITH_EXPIRY');
+      if (expiryFilter === 'NO_EXPIRY') params.set('expiry_filter', 'NO_EXPIRY');
+      if (optionType !== 'ALL') params.set('option_type', optionType);
+      if (symbolSearch.trim()) params.set('search', symbolSearch.trim());
+      setPayload(await api('/instruments?' + params.toString()));
+    } catch (e) {
+      setError(e.message || 'Unable to load instruments from MySQL.');
+      setPayload({ instruments: [], total: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }, [category, letter, exchange, expiryFilter, optionType, symbolSearch, page]);
+
+  useEffect(() => { setPage(0); }, [category, letter, exchange, expiryFilter, optionType, symbolSearch]);
+  useEffect(() => { load(); }, [load]);
+
+  const rows = payload.instruments || [];
+  const format = (value) => value === null || value === undefined || value === '' ? '—' : typeof value === 'number' ? value.toLocaleString('en-IN', { maximumFractionDigits: 4 }) : String(value);
+  const formatStrike = (value) => value === null || value === undefined || value === '' ? '—' : Number(value).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  const formatTickSize = (value) => value === null || value === undefined || value === '' ? '—' : Number(value).toFixed(2);
+  const first = payload.total ? page * pageSize + 1 : 0;
+  const last = Math.min((page + 1) * pageSize, payload.total || 0);
+  return <div className="instrument-viewer">
+    <div className="instrument-viewer-heading">
+      <h2>Kite Instrument Master</h2>
+    </div>
+    <div className="instrument-controls-layout">
+    <div className="instrument-category-filters" role="group" aria-label="Instrument category">
+      {[
+        ['ALL', 'All instruments'], ['EQUITY', 'Equity'], ['INDICES', 'Indices'],
+        ['OPTIONS', 'Option contracts'], ['FUTURES', 'Futures'],
+      ].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (category === value ? ' active' : '')} onClick={() => setCategory(value)}>{label}</button>)}
+    </div>
+    <div className="instrument-filter-section">
+      <div className="instrument-filter-group">
+        <div className="instrument-filter-label">Symbol starts with</div>
+        <div className="instrument-letter-buttons" role="group" aria-label="Filter symbols by first letter">
+        {['ALL', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((value) => <button key={value} type="button" className={'trade-filter-button' + (letter === value ? ' active' : '')} onClick={() => setLetter(value)}>{value === 'ALL' ? 'All letters' : value}</button>)}
+        </div>
+      </div>
+      <div className="instrument-filter-group">
+        <div className="instrument-filter-label">Exchange</div>
+        <div className="instrument-exchange-buttons" role="group" aria-label="Filter by exchange">
+        {['ALL', 'NSE', 'BSE', 'NFO', 'BFO', 'CDS', 'MCX'].map((value) => <button key={value} type="button" className={'trade-filter-button' + (exchange === value ? ' active' : '')} onClick={() => setExchange(value)}>{value === 'ALL' ? 'All exchanges' : value}</button>)}
+        </div>
+      </div>
+      <div className="instrument-filter-group">
+        <div className="instrument-filter-label">Expiry</div>
+        <div className="instrument-expiry-buttons" role="group" aria-label="Filter by expiry">
+        {[['ALL', 'All instruments'], ['WITH_EXPIRY', 'Has expiry'], ['NO_EXPIRY', 'No expiry']].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (expiryFilter === value ? ' active' : '')} onClick={() => setExpiryFilter(value)}>{label}</button>)}
+        </div>
+      </div>
+      {category === 'OPTIONS' && <div className="instrument-filter-group">
+        <div className="instrument-filter-label">Option type</div>
+        <div className="instrument-option-type-buttons" role="group" aria-label="Filter by option type">
+          {[[ 'ALL', 'All types' ], [ 'CE', 'CE' ], [ 'PE', 'PE' ]].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (optionType === value ? ' active' : '')} onClick={() => setOptionType(value)}>{label}</button>)}
+        </div>
+      </div>}
+    </div>
+    </div>
+    <div className="instrument-symbol-search">
+      <label htmlFor="instrument-symbol-search-input">Search symbol / name</label>
+      <input id="instrument-symbol-search-input" type="search" value={symbolSearch} onChange={(event) => setSymbolSearch(event.target.value)} placeholder="Type a symbol or instrument name…" autoComplete="off" />
+      {symbolSearch.trim() && <button type="button" className="trade-filter-button" onClick={() => setSymbolSearch('')}>Clear</button>}
+    </div>
+    {error && <div className="error-banner"><strong>Instrument query failed</strong><span>{error}</span></div>}
+    <div className="instrument-results-summary"><strong>{Number(payload.total || 0).toLocaleString('en-IN')} instruments</strong><span>{payload.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No matching records'}{loading ? ' · Loading…' : ''}</span></div>
+    <div className="table-scroll instrument-table-scroll"><table className="kite-data-table instrument-table"><thead><tr><th>Exchange</th><th>Trading Symbol</th><th>Name</th><th>Type</th><th>Segment</th><th>Expiry</th><th>Strike</th><th>Lot Size</th><th>Tick Size</th><th>Token</th></tr></thead>
+      <tbody>{rows.map((row) => <tr key={row.instrument_token}><td>{format(row.exchange)}</td><td><strong>{format(row.tradingsymbol)}</strong></td><td>{format(row.name)}</td><td>{format(row.instrument_type)}</td><td>{format(row.segment)}</td><td>{format(row.expiry)}</td><td>{formatStrike(row.strike)}</td><td>{format(row.lot_size)}</td><td>{formatTickSize(row.tick_size)}</td><td>{row.instrument_token === null || row.instrument_token === undefined || row.instrument_token === '' ? '—' : String(row.instrument_token)}</td></tr>)}
+      {!rows.length && <tr><td colSpan="10" className="empty-cell">{loading ? 'Loading instruments…' : 'No instruments match these filters. Check that the Kite instrument master has been refreshed.'}</td></tr>}</tbody>
+    </table></div>
+    <div className="instrument-pagination"><span>Page {page + 1} of {Math.max(1, Math.ceil((payload.total || 0) / pageSize))}</span><div><button type="button" className="button secondary" disabled={page === 0 || loading} onClick={() => setPage((current) => Math.max(0, current - 1))}>Previous</button><button type="button" className="button secondary" disabled={loading || (page + 1) * pageSize >= (payload.total || 0)} onClick={() => setPage((current) => current + 1)}>Next</button></div></div>
+  </div>;
+}
+
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
   const [settings, setSettings] = useState({});
@@ -445,6 +633,8 @@ function SettingsPanel() {
       {tab === 'active-trades' && <><h2>Active Trades</h2><div className="settings-grid">{SETTINGS_FIELDS['active-trades'].map(fieldControl)}</div><div className="settings-ui-only-note">Global defaults apply to new trades. Existing trades should retain their entry-time strategy snapshot.</div></>}
       {tab === 'market-session' && <><h2>Market Session</h2><div className="settings-grid">{SETTINGS_FIELDS['market-session'].map(fieldControl)}{fieldControl(['kiteAutoLoginEnabled','Automatic Kite Login','boolean',true,'Open the broker login flow when no valid session is available.'])}{fieldControl(['kiteSessionResetEnabled','Daily Kite Session Reset','boolean',true,'Expire the stored session at the configured time.'])}{fieldControl(['kiteSessionResetTime','Session Reset Time','time','23:00','Time uses the configured timezone.'])}{fieldControl(['kiteSessionResetTimezone','Session Reset Timezone','select','Asia/Kolkata','','Asia/Kolkata|Asia/Kolkata;UTC|UTC'])}</div></>}
       {tab === 'cache-viewer' && <CacheViewer />}
+      {tab === 'instruments' && <InstrumentsViewer />}
+      {tab === 'live-data-cache' && <LiveDataCacheViewer />}
       <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>
     </section>}
   </section>;
@@ -581,6 +771,7 @@ export default function App() {
       <nav className="application-tabs" aria-label="Application section">
         <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
+        <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>
         <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
       </nav>
         <div className="topbar-right">
@@ -590,7 +781,7 @@ export default function App() {
         </div>
       </header>
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'autotrender' ? <>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal /> : applicationTab === 'autotrender' ? <>
       
 
       <section className="control-panel">

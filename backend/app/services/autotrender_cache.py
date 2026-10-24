@@ -47,7 +47,7 @@ class AutoTrenderCache:
                     raise RuntimeError("AutoTrender Index Price returned a non-JSON response")
                 payload = response.json()
                 if not isinstance(payload, dict) or not isinstance(payload.get("data"), dict):
-                    raise RuntimeError("AutoTrender Index Price returned an unexpected JSON structure")
+                    raise TypeError("AutoTrender Index Price returned an unexpected JSON structure")
                 # Preserve the complete upstream payload; do not filter out index symbols.
                 self._payload = payload
                 self._fetched_at = time.time()
@@ -68,7 +68,7 @@ class AutoTrenderCache:
             if isinstance(value, dict):
                 cleaned = {}
                 for key, item in value.items():
-                    if re.search(r"(token|secret|password|credential|authorization|cookie|api.?key)", str(key), re.I):
+                    if re.search(r"(token|secret|password|credential|authorization|cookie|api.?key)", str(key), re.IGNORECASE):
                         cleaned[key] = "[REDACTED]"
                     else:
                         cleaned[key] = redact(item)

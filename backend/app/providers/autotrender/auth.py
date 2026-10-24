@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 from threading import RLock
@@ -12,6 +13,8 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 LOGIN_URL = "https://theautotrender.com/login"
 API_BASE_URL = "https://api.theautotrender.com:5959"
@@ -76,8 +79,8 @@ class AutoTrenderAuth:
                         terms = driver.find_element(By.NAME, "terms")
                         if not terms.is_selected():
                             driver.execute_script("arguments[0].click();", terms)
-                    except Exception:
-                        pass
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("Optional terms checkbox interaction failed: %s", exc)
                     wait.until(
                         EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))
                     ).click()
@@ -112,13 +115,12 @@ class AutoTrenderAuth:
                 if driver is not None:
                     try:
                         driver.quit()
-                    except Exception:
-                        pass
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("Browser cleanup failed: %s", exc)
 
     def get(self, endpoint: str, **kwargs):
-        if not self.authenticated:
-            if not self._restore_saved_cookie() or not self._validate_session():
-                raise RuntimeError("AutoTrender is not authenticated.")
+        if not self.authenticated and (not self._restore_saved_cookie() or not self._validate_session()):
+            raise RuntimeError("AutoTrender is not authenticated.")
         url = endpoint if endpoint.startswith("http") else API_BASE_URL + endpoint
         return self.session.get(url, timeout=30, **kwargs)
 

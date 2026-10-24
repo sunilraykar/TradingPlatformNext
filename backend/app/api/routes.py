@@ -231,6 +231,37 @@ def market_data_status() -> dict:
     return live_market_data.status()
 
 
+@router.get("/kite/market-data/runtime", tags=["kite"])
+def market_data_runtime() -> dict:
+    """Read-only diagnostics for subscribed instruments and in-memory quote/trade caches."""
+    from app.services import trade_terminal
+    market = live_market_data.status()
+    quotes = live_quotes.snapshot()
+    trades = trade_terminal.list_trades()
+    active = [trade for trade in trades if str(trade.get("status", "OPEN")).upper() not in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}]
+    subscriptions = []
+    for item in market.get("subscriptions", []):
+        token = int(item["instrument_token"])
+        matching = [trade for trade in active if int(trade.get("instrument_token") or 0) == token]
+        subscriptions.append({
+            **item,
+            "quote": quotes.get(token),
+            "open_trade_count": len(matching),
+            "trade_symbols": [trade.get("instrument_symbol") for trade in matching],
+        })
+    return {
+        "market_data": market,
+        "cache": {
+            "quote_count": len(quotes),
+            "cached_quote_tokens": sorted(quotes),
+            "open_trade_count": len(active),
+            "trade_count": len(trades),
+        },
+        "subscriptions": subscriptions,
+        "quotes": [{"instrument_token": token, **quote} for token, quote in sorted(quotes.items())],
+    }
+
+
 @router.post("/kite/market-data/start", tags=["kite"])
 def start_market_data() -> dict:
     try:
@@ -411,9 +442,13 @@ def kite_funds() -> dict:
 @router.get("/instruments", tags=["instruments"])
 def list_instruments(
     search: str | None = Query(default=None, min_length=1, max_length=100),
+    symbol_prefix: str | None = Query(default=None, min_length=1, max_length=1, pattern="^[A-Z]$"),
+    expiry_filter: str | None = Query(default=None, pattern="^(WITH_EXPIRY|NO_EXPIRY)$"),
     exchange: str | None = Query(default=None, max_length=30),
     segment: str | None = Query(default=None, max_length=40),
     instrument_type: str | None = Query(default=None, max_length=30),
+    option_type: str | None = Query(default=None, pattern="^(CE|PE)$"),
+    category: str | None = Query(default=None, pattern="^(EQUITY|INDICES|OPTIONS|FUTURES)$"),
     expiry: str | None = Query(default=None, max_length=10),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -424,6 +459,13 @@ def list_instruments(
     if search:
         clauses.append("(tradingsymbol LIKE :search OR name LIKE :search)")
         params["search"] = f"%{search.strip()}%"
+    if symbol_prefix:
+        clauses.append("UPPER(tradingsymbol) LIKE :symbol_prefix")
+        params["symbol_prefix"] = f"{symbol_prefix.upper()}%"
+    if expiry_filter == "WITH_EXPIRY":
+        clauses.append("expiry IS NOT NULL")
+    elif expiry_filter == "NO_EXPIRY":
+        clauses.append("expiry IS NULL")
     if exchange:
         clauses.append("exchange = :exchange")
         params["exchange"] = exchange.upper()
@@ -431,8 +473,21 @@ def list_instruments(
         clauses.append("segment = :segment")
         params["segment"] = segment.upper()
     if instrument_type:
-        clauses.append("instrument_type = :instrument_type")
+        clauses.append("UPPER(instrument_type) = :instrument_type")
         params["instrument_type"] = instrument_type.upper()
+    if option_type:
+        clauses.append("UPPER(instrument_type) = :option_type")
+        params["option_type"] = option_type.upper()
+    if category:
+        # Categorize from Kite's canonical segment and instrument type fields.
+        # Use parentheses so the category predicate composes safely with other filters.
+        category_predicates = {
+            "EQUITY": "(UPPER(COALESCE(segment, '')) IN ('NSE', 'BSE', 'NSE-CM', 'BSE-CM') AND UPPER(COALESCE(instrument_type, '')) IN ('EQ', 'EQUITY'))",
+            "INDICES": "(UPPER(COALESCE(segment, '')) = 'INDICES' OR UPPER(COALESCE(instrument_type, '')) = 'INDEX')",
+            "OPTIONS": "(UPPER(COALESCE(segment, '')) LIKE '%OPT%' OR UPPER(COALESCE(instrument_type, '')) IN ('CE', 'PE'))",
+            "FUTURES": "(UPPER(COALESCE(segment, '')) LIKE '%FUT%' OR UPPER(COALESCE(instrument_type, '')) = 'FUT')",
+        }
+        clauses.append(category_predicates[category])
     if expiry:
         try:
             from datetime import date
