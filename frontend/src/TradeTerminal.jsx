@@ -63,9 +63,20 @@ export default function TradeTerminal() {
   };
 
   const updateStatus = async (trade, nextStatus) => {
-    const realized = nextStatus === 'CLOSED' ? Number(trade.realized_pnl || 0) : trade.realized_pnl;
+    let changes = { status: nextStatus };
+    if (nextStatus === 'CLOSED') {
+      const rawExit = window.prompt('Enter the paper-trade exit price to record:');
+      if (rawExit === null) return;
+      const exitPrice = Number(rawExit);
+      if (!Number.isFinite(exitPrice) || exitPrice < 0) { setError('Enter a valid non-negative exit price.'); return; }
+      const entryPrice = Number(trade.average_entry_price ?? trade.entry_price);
+      const qty = Number(trade.open_quantity ?? trade.quantity ?? 0);
+      const directionFactor = String(trade.direction).toUpperCase() === 'SELL' ? -1 : 1;
+      changes = { ...changes, exit_price: exitPrice, average_exit_price: exitPrice, open_quantity: 0 };
+      if (Number.isFinite(entryPrice)) changes.realized_pnl = (exitPrice - entryPrice) * qty * directionFactor;
+    }
     try {
-      await request(`/trades/${encodeURIComponent(trade.trade_id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: nextStatus, open_quantity: nextStatus === 'CLOSED' ? 0 : trade.open_quantity, realized_pnl: realized }) });
+      await request(`/trades/${encodeURIComponent(trade.trade_id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) });
       await refresh();
     } catch (e) { setError(e.message || 'Trade update failed.'); }
   };
