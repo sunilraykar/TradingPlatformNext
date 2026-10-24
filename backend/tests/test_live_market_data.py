@@ -73,6 +73,9 @@ def test_subscribe_does_not_send_to_socket_before_connected(monkeypatch):
         def subscribe(self, tokens, mode="quote"):
             calls.append((list(tokens), mode))
 
+        def close(self):
+            pass
+
     live_market_data._ticker = FakeTicker()
     live_market_data._state = "connecting"
 
