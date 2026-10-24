@@ -45,6 +45,6 @@ def publish(event: dict) -> None:
 async def _send_on_loop(loop: asyncio.AbstractEventLoop, websocket: WebSocket, payload: str) -> None:
     try:
         await websocket.send_text(payload)
-    except Exception:
+    except Exception:  # noqa: BLE001 - failed client sockets must not disrupt other clients
         logger.exception("Trade Terminal WebSocket send failed; disconnecting client")
         disconnect(websocket)
