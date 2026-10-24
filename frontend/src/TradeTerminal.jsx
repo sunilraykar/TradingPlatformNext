@@ -28,7 +28,7 @@ export default function TradeTerminal() {
   const [showCreate, setShowCreate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
-  const [form, setForm] = useState({ instrument_symbol: '', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
+  const [form, setForm] = useState({ instrument_symbol: '', exchange: 'NFO', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
 
   const refresh = useCallback(async () => {
     setLoading(true); setError('');
@@ -167,6 +167,7 @@ export default function TradeTerminal() {
     {showCreate && <form className="panel trade-create-form" onSubmit={create}>
       <h2>Create paper trade</h2><div className="settings-grid">
         <label className="settings-control"><span>Instrument symbol *</span><input required value={form.instrument_symbol} onChange={(e) => setForm({ ...form, instrument_symbol: e.target.value.toUpperCase() })} placeholder="NIFTY26OCT25000CE" /></label>
+        <label className="settings-control"><span>Exchange</span><select value={form.exchange} onChange={(e) => setForm({ ...form, exchange: e.target.value })}>{[['NSE','NSE · Stocks'],['NFO','NFO · Options'],['BSE','BSE · Stocks'],['BFO','BFO · Options']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label className="settings-control"><span>Underlying / index</span><select value={form.underlying} onChange={(e) => setForm({ ...form, underlying: e.target.value })}>{['NIFTY','BANKNIFTY','FINNIFTY','SENSEX','OTHER'].map((x) => <option key={x}>{x}</option>)}</select></label>
         <label className="settings-control"><span>Direction</span><select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })}><option>BUY</option><option>SELL</option></select></label>
         <label className="settings-control"><span>Quantity *</span><input type="number" min="1" required value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} /></label>
