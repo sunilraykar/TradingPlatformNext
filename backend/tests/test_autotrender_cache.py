@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, ClassVar
 
 from app.services.autotrender_cache import AutoTrenderCache
 
 
 class FakeResponse:
     status_code = 200
-    headers = {"Content-Type": "application/json"}
+    headers: ClassVar[dict[str, str]] = {"Content-Type": "application/json"}
 
     def __init__(self, payload: dict[str, Any]) -> None:
         self._payload = payload
