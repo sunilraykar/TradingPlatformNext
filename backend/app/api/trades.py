@@ -7,6 +7,8 @@ from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import trade_terminal
 from app.services import trade_terminal_stream
+from app.services import live_market_data
+from app.services.live_quotes import live_quotes
 
 router = APIRouter(prefix="/trades", tags=["trade terminal"])
 
