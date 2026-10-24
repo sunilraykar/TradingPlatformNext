@@ -19,7 +19,7 @@ export default function TradeTerminal() {
   const [status, setStatus] = useState('ALL');
   const [sourceFilter, setSourceFilter] = useState('ALL');
   const [underlyingFilter, setUnderlyingFilter] = useState('ALL');
-  const [instrumentSearch, setInstrumentSearch] = useState('');
+  const [symbolLetter, setSymbolLetter] = useState('ALL');
   const [tradeDate, setTradeDate] = useState('');
   const [dateFilter, setDateFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,7 @@ export default function TradeTerminal() {
 
   const sources = [...new Set(trades.map((trade) => trade.source).filter(Boolean))].sort();
   const underlyings = [...new Set(trades.map((trade) => trade.underlying).filter(Boolean))].sort();
+  const symbolLetters = [...new Set(trades.map((trade) => String(trade.instrument_symbol || '').trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
   const visibleTrades = trades.filter((trade) => {
     const created = new Date(trade.created_at || trade.updated_at || 0);
     const now = new Date();
@@ -66,7 +67,7 @@ export default function TradeTerminal() {
       (dateFilter === 'MONTH' && created >= startOfMonth) ||
       (dateFilter === 'CUSTOM' && !!tradeDate && String(trade.created_at || '').slice(0, 10) === tradeDate);
     return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches &&
-      underlyingMatches && (!instrumentSearch || String(trade.instrument_symbol || '').toLowerCase().includes(instrumentSearch.toLowerCase())) && dateMatches;
+      underlyingMatches && (symbolLetter === 'ALL' || String(trade.instrument_symbol || '').trim().toUpperCase().startsWith(symbolLetter)) && dateMatches;
   });
 
   const create = async (event) => {
@@ -142,7 +143,7 @@ export default function TradeTerminal() {
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Source</span><div className="trade-filter-buttons">{[['ALL','All'],...['AUTOTRENDER','MANUAL','KITE'].map(value => [value, value === 'AUTOTRENDER' ? 'AutoTrender' : value.charAt(0)+value.slice(1).toLowerCase()])].map(([value,label]) => <button key={value} type="button" className={sourceFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSourceFilter(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Underlying</span><div className="trade-filter-buttons">{[['ALL','All'],['INDICES','Indices'],...underlyings.filter(x => !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(x)).map(x => [x,x])].map(([value,label]) => <button key={value} type="button" className={underlyingFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setUnderlyingFilter(value)}>{label}</button>)}</div></div>
-      <label className="trade-filter-group trade-filter-search"><span className="trade-filter-label">Instrument search</span><input value={instrumentSearch} onChange={(e) => setInstrumentSearch(e.target.value)} placeholder="Symbol contains…" /></label>
+      <div className="trade-filter-group trade-symbol-letter-filter"><span className="trade-filter-label">Symbol</span><div className="trade-filter-buttons">{[['ALL','All'],...symbolLetters.map((letter) => [letter,letter])].map(([value,label]) => <button key={value} type="button" className={symbolLetter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSymbolLetter(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Trade date</span><div className="trade-filter-buttons">{[['ALL','All'],['TODAY','Today'],['WEEK','This Week'],['MONTH','This Month'],['CUSTOM','Custom']].map(([value,label]) => <button key={value} type="button" className={(dateFilter === value ? 'trade-filter-button active' : 'trade-filter-button')} onClick={() => setDateFilter(value)}>{label}</button>)}</div>{dateFilter === 'CUSTOM' && <input className="trade-date-custom" type="date" value={tradeDate} onChange={(e) => setTradeDate(e.target.value)} />}</div>
       <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · auto-refresh every 5 seconds</span>
     </div>
