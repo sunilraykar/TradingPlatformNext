@@ -337,6 +337,47 @@ function CacheViewer() {
     {snapshot?.last_refresh_error && <div className="error-banner"><strong>Last cache refresh error</strong><span>{snapshot.last_refresh_error}</span></div>}
   </div>;
 }
+function LiveDataCacheViewer() {
+  const [runtime, setRuntime] = useState(null);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try { setRuntime(await api('/kite/market-data/runtime')); setError(''); }
+    catch (e) { setError(e.message || 'Unable to load live cache.'); }
+    finally { setLoading(false); }
+  }, []);
+  useEffect(() => {
+    load();
+    const timer = window.setInterval(load, 2000);
+    return () => window.clearInterval(timer);
+  }, [load]);
+  const market = runtime?.market_data || {};
+  const cache = runtime?.cache || {};
+  return <div className="cache-viewer">
+    <div className="cache-viewer-toolbar"><div><h2>Live Market Data &amp; Cache</h2><p className="settings-intro">Subscribed Kite instruments and latest in-memory quote values. This diagnostics view refreshes every 2 seconds while open; quote ticks are not written to MySQL.</p></div><button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : 'Refresh now'}</button></div>
+    {error && <div className="error-banner"><strong>Live cache unavailable</strong><span>{error}</span></div>}
+    <div className="settings-grid">
+      <div className="panel"><span>WebSocket</span><h3>{market.state || 'Unknown'}</h3></div>
+      <div className="panel"><span>Subscribed</span><h3>{market.subscription_count ?? 0}</h3></div>
+      <div className="panel"><span>Cached quotes</span><h3>{cache.quote_count ?? 0}</h3></div>
+      <div className="panel"><span>Open / total trades</span><h3>{cache.open_trade_count ?? 0} / {cache.trade_count ?? 0}</h3></div>
+    </div>
+    <div className="panel cache-entry"><h3>Subscriptions</h3>
+      {(runtime?.subscriptions || []).length ? <div className="table-scroll"><table><thead><tr><th>Token</th><th>Mode</th><th>Trade symbols</th><th>LTP</th><th>Received at</th><th>Details</th></tr></thead><tbody>
+        {runtime.subscriptions.map((item) => <tr key={item.instrument_token}><td>{item.instrument_token}</td><td>{item.mode}</td><td>{(item.trade_symbols || []).join(', ') || '—'}</td><td>{number(item.quote?.last_price ?? item.quote?.ltp ?? item.quote?.price)}</td><td>{item.quote?.received_at || 'Waiting for quote'}</td><td><details><summary>Inspect</summary><pre>{JSON.stringify(item.quote || {}, null, 2)}</pre></details></td></tr>)}
+      </tbody></table></div> : <p>No instruments are currently subscribed.</p>}
+    </div>
+    <div className="panel cache-entry"><h3>Quote cache records</h3>
+      {(runtime?.quotes || []).length ? <div className="table-scroll"><table><thead><tr><th>Token</th><th>LTP</th><th>Received at</th><th>Full record</th></tr></thead><tbody>
+        {runtime.quotes.map((quote) => <tr key={quote.instrument_token}><td>{quote.instrument_token}</td><td>{number(quote.last_price ?? quote.ltp ?? quote.price)}</td><td>{quote.received_at || '—'}</td><td><details><summary>Inspect</summary><pre>{JSON.stringify(quote, null, 2)}</pre></details></td></tr>)}
+      </tbody></table></div> : <p>Quote cache is empty until subscribed instruments receive market ticks.</p>}
+    </div>
+    <div className="panel cache-entry"><h3>Runtime summary</h3><pre>{JSON.stringify({ state: market.state, connected: market.connected, subscriptions: market.subscriptions, quote_count: cache.quote_count, cached_quote_tokens: cache.cached_quote_tokens, open_trade_count: cache.open_trade_count, trade_count: cache.trade_count }, null, 2)}</pre></div>
+  </div>;
+}
+
+
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
   const [settings, setSettings] = useState({});
