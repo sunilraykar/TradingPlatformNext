@@ -1,36 +1,40 @@
 """Thread-safe fan-out for incremental Trade Terminal WebSocket events."""
 import asyncio
 import json
-import logging
+import threading
 from fastapi import WebSocket
 
-logger = logging.getLogger(__name__)
 _clients: set[tuple[WebSocket, asyncio.AbstractEventLoop]] = set()
+_clients_lock = threading.RLock()
 
 
 async def connect(websocket: WebSocket) -> None:
     await websocket.accept()
-    _clients.add((websocket, asyncio.get_running_loop()))
+    with _clients_lock:
+        _clients.add((websocket, asyncio.get_running_loop()))
 
 
 def disconnect(websocket: WebSocket) -> None:
-    _clients.difference_update(client for client in _clients if client[0] is websocket)
+    with _clients_lock:
+        for client in tuple(_clients):
+            if client[0] is websocket:
+                _clients.discard(client)
 
 
 def publish(event: dict) -> None:
-    """Schedule a small incremental event for each connected UI without blocking quote ingestion."""
+    """Schedule incremental events without blocking the Kite ticker thread."""
     payload = json.dumps(event, separators=(",", ":"), default=str)
-    for websocket, loop in tuple(_clients):
+    with _clients_lock:
+        clients = tuple(_clients)
+    for websocket, loop in clients:
         if loop.is_closed():
             disconnect(websocket)
             continue
-        async def send(ws=websocket, data=payload):
-            try:
-                await ws.send_text(data)
-            except Exception:
-                disconnect(ws)
         try:
-            loop.call_soon_threadsafe(lambda ws=websocket, data=payload, lp=loop: asyncio.create_task(_send_on_loop(lp, ws, data)))
+            loop.call_soon_threadsafe(
+                lambda ws=websocket, lp=loop, data=payload:
+                    asyncio.create_task(_send_on_loop(lp, ws, data))
+            )
         except RuntimeError:
             disconnect(websocket)
 
