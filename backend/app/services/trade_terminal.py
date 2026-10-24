@@ -248,7 +248,7 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
         _cache[trade["trade_id"]] = trade
     # Resolve and subscribe immediately after acceptance. The quote path remains cache-only.
     try:
-        exchange = str(trade.get("exchange") or "NFO").strip().upper()
+        exchange = str(trade.get("exchange") or "NSE").strip().upper()
         with get_engine().connect() as conn:
             row = conn.execute(text(
                 "SELECT instrument_token FROM instruments WHERE source = 'KITE' AND exchange = :exchange "
@@ -294,7 +294,7 @@ def subscribe_open_trades() -> dict[str, int]:
                     row = conn.execute(text(
                         "SELECT instrument_token FROM instruments WHERE source = 'KITE' AND exchange = :exchange "
                         "AND tradingsymbol = :symbol AND is_active = TRUE ORDER BY instrument_version DESC LIMIT 1"
-                    ), {"exchange": str(trade.get("exchange") or "NFO").upper(),
+                    ), {"exchange": str(trade.get("exchange") or "NSE").upper(),
                         "symbol": trade.get("instrument_symbol")}).first()
                 token = int(row[0]) if row else 0
             if token <= 0:
