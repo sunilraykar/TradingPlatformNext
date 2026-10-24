@@ -20,6 +20,30 @@ def test_market_updates_do_not_persist(monkeypatch):
     assert calls == []
 
 
+def test_quote_updates_matching_open_trade_in_memory_and_publishes(monkeypatch):
+    trade_terminal._cache["trade-quote"] = {
+        "trade_id": "trade-quote", "execution_mode": "PAPER", "status": "OPEN",
+        "instrument_token": 123, "direction": "BUY", "quantity": 10,
+        "entry_price": 100, "unrealized_pnl": 0,
+    }
+    persisted = []
+    published = []
+    monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: persisted.append(args))
+    monkeypatch.setattr(trade_terminal, "publish", lambda event: published.append(event))
+
+    count = trade_terminal.apply_quote_to_open_trades({
+        "instrument_token": 123, "last_price": 105, "received_at": "2026-10-24T09:00:00+00:00",
+    })
+
+    trade = trade_terminal.get_trade("trade-quote")
+    assert count == 1
+    assert trade["last_price"] == 105
+    assert trade["unrealized_pnl"] == 50
+    assert trade["quote_state"] == "LIVE"
+    assert persisted == []
+    assert published[-1]["type"] == "trade_quote"
+
+
 def test_create_trade_is_paper_only_and_persists(monkeypatch):
     calls = []
     monkeypatch.setattr(trade_terminal, "_persist", lambda trade, event, payload: calls.append((trade.copy(), event, payload)))
