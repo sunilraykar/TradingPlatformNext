@@ -325,6 +325,19 @@ def subscribe_open_trades() -> dict[str, int]:
     return {"subscribed": subscribed, "unresolved": unresolved}
 
 
+def refresh_open_trade_quotes_from_cache() -> int:
+    """Reconcile active trade rows with every quote already present in the Kite cache.
+
+    This is intentionally safe to call before REST snapshots and WebSocket snapshots:
+    a cached tick can arrive before a trade's subscription is restored, or before the
+    client snapshot is sent.
+    """
+    refreshed = 0
+    for quote in live_quotes.snapshot().values():
+        refreshed += apply_quote_to_open_trades(quote)
+    return refreshed
+
+
 def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
     """Update matching open trades in memory and push changed rows; never touches MySQL."""
     token = quote.get("instrument_token")
