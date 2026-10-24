@@ -85,12 +85,16 @@ async def lifespan(_: FastAPI):
     trade_terminal.hydrate_cache()
     await _restore_kite_session()
     reset_task = asyncio.create_task(run_daily_reset_scheduler())
+    trade_task = asyncio.create_task(trade_terminal.run_maintenance_scheduler())
     try:
         yield
     finally:
         reset_task.cancel()
+        trade_task.cancel()
         with suppress(asyncio.CancelledError):
             await reset_task
+        with suppress(asyncio.CancelledError):
+            await trade_task
 
 
 settings = get_settings()
