@@ -3,9 +3,9 @@ from typing import Any, Literal
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from app.services import trade_terminal
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
+from app.services import trade_terminal
 
 router = APIRouter(prefix="/trades", tags=["trade terminal"])
 
