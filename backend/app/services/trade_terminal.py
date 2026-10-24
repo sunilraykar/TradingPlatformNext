@@ -248,6 +248,7 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
                 if current:
                     current["instrument_token"] = token
                     current["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
+                    current.pop("last_price", None)
             live_market_data.subscribe([token], mode="quote")
             trade["instrument_token"] = token
             trade["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
