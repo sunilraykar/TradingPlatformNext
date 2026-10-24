@@ -7,6 +7,35 @@ def setup_function():
     trade_terminal._persistence_error = None
 
 
+def test_database_payload_excludes_live_quote_and_subscription_cache_fields():
+    trade = {
+        "trade_id": "trade-cache-only",
+        "execution_mode": "PAPER",
+        "instrument_symbol": "NIFTY26OCT25000CE",
+        "status": "OPEN",
+        "version": 1,
+        "created_at": "2026-10-24T09:00:00+00:00",
+        "updated_at": "2026-10-24T09:00:00+00:00",
+        "last_price": 105.0,
+        "unrealized_pnl": 250.0,
+        "last_market_data_at": "2026-10-24T09:00:01+00:00",
+        "quote_state": "LIVE",
+        "subscription_mode": "quote",
+        "subscribed": True,
+    }
+
+    row = trade_terminal._db_row(trade)
+    payload = row["payload"]
+
+    assert '"last_price"' not in payload
+    assert '"unrealized_pnl"' not in payload
+    assert '"last_market_data_at"' not in payload
+    assert '"quote_state"' not in payload
+    assert '"subscription_mode"' not in payload
+    assert '"subscribed"' not in payload
+    assert '"instrument_symbol"' in payload
+
+
 def test_market_updates_do_not_persist(monkeypatch):
     trade_terminal._cache["trade-1"] = {
         "trade_id": "trade-1", "execution_mode": "PAPER", "status": "OPEN",
