@@ -447,6 +447,7 @@ def list_instruments(
     exchange: str | None = Query(default=None, max_length=30),
     segment: str | None = Query(default=None, max_length=40),
     instrument_type: str | None = Query(default=None, max_length=30),
+    option_type: str | None = Query(default=None, pattern="^(CE|PE)$"),
     category: str | None = Query(default=None, pattern="^(EQUITY|INDICES|OPTIONS|FUTURES)$"),
     expiry: str | None = Query(default=None, max_length=10),
     limit: int = Query(default=100, ge=1, le=500),
@@ -472,8 +473,11 @@ def list_instruments(
         clauses.append("segment = :segment")
         params["segment"] = segment.upper()
     if instrument_type:
-        clauses.append("instrument_type = :instrument_type")
+        clauses.append("UPPER(instrument_type) = :instrument_type")
         params["instrument_type"] = instrument_type.upper()
+    if option_type:
+        clauses.append("UPPER(instrument_type) = :option_type")
+        params["option_type"] = option_type.upper()
     if category:
         # Categorize from Kite's canonical segment and instrument type fields.
         # Use parentheses so the category predicate composes safely with other filters.
