@@ -46,6 +46,58 @@ def test_subscribe_deduplicates_and_retains_desired_tokens_without_login():
     assert result["subscription_count"] == 2
 
 
+def test_autotrender_indices_are_registered_as_default_subscriptions(monkeypatch):
+    from app.db import session as db_session
+
+    symbols = {
+        ("NSE", "NIFTY 50"): 101,
+        ("NSE", "NIFTY BANK"): 102,
+        ("NSE", "NIFTY FIN SERVICE"): 103,
+        ("NSE", "NIFTY MID SELECT"): 104,
+        ("BSE", "SENSEX"): 105,
+        ("BSE", "BANKEX"): 106,
+    }
+
+    class Result:
+        def __init__(self, row):
+            self.row = row
+
+        def mappings(self):
+            return self
+
+        def first(self):
+            return self.row
+
+    class Connection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def execute(self, statement, params):
+            token = symbols.get((params["exchange"], params["symbol"]))
+            row = None if token is None else {
+                "instrument_token": token,
+                "exchange": params["exchange"],
+                "tradingsymbol": params["symbol"],
+            }
+            return Result(row)
+
+    class Engine:
+        def connect(self):
+            return Connection()
+
+    monkeypatch.setattr(db_session, "get_engine", lambda: Engine())
+
+    result = live_market_data.subscribe_autotrender_indices()
+
+    assert result["registered"] == 6
+    assert result["missing_symbols"] == []
+    assert live_market_data.status()["subscribed_tokens"] == [101, 102, 103, 104, 105, 106]
+    assert all(item["mode"] == "quote" for item in live_market_data.status()["subscriptions"])
+
+
 def test_reset_stops_ticker_clears_subscriptions_and_quote_cache(monkeypatch):
     live_market_data.live_quotes.update(123, {"last_price": 42.0})
     live_market_data._subscriptions[123] = "quote"
