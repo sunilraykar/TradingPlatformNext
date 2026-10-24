@@ -226,6 +226,8 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
         current = _cache.get(trade_id)
         if not current:
             raise KeyError(trade_id)
+        if current.get("execution_mode") == "LIVE" and not event_type.startswith("BROKER_"):
+            raise ValueError("Live trade lifecycle is controlled by broker reconciliation; manual updates are blocked.")
         updated = dict(current)
         updated.update(changes)
         updated["version"] = int(current.get("version", 1)) + 1
