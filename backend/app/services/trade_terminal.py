@@ -147,13 +147,14 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
         with get_engine().begin() as conn:
             conn.execute(text("""
                 INSERT INTO trade_records
-                  (trade_id, execution_mode, source, strategy, underlying, instrument_symbol,
+                  (trade_id, idempotency_key, execution_mode, source, strategy, underlying, instrument_symbol,
                    status, version, is_dirty, payload, created_at, updated_at, persisted_at)
                 VALUES
-                  (:trade_id, :execution_mode, :source, :strategy, :underlying, :instrument_symbol,
+                  (:trade_id, :idempotency_key, :execution_mode, :source, :strategy, :underlying, :instrument_symbol,
                    :status, :version, FALSE, CAST(:payload AS JSON), :created_at, :updated_at, CURRENT_TIMESTAMP(6))
                 ON DUPLICATE KEY UPDATE
-                  idempotency_key=COALESCE(idempotency_key, VALUES(idempotency_key)),\n                  execution_mode=VALUES(execution_mode), source=VALUES(source),
+                  idempotency_key=COALESCE(idempotency_key, VALUES(idempotency_key)),
+                  execution_mode=VALUES(execution_mode), source=VALUES(source),
                   strategy=VALUES(strategy), underlying=VALUES(underlying),
                   instrument_symbol=VALUES(instrument_symbol), status=VALUES(status),
                   version=VALUES(version), is_dirty=FALSE, payload=VALUES(payload),
@@ -167,7 +168,7 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
             """), {
                 "event_id": event_id, "trade_id": trade["trade_id"],
                 "event_type": event_type, "event_version": event_version,
-                "event_at": datetime.fromisoformat(trade["updated_at"].replace("Z", "+00:00")).replace(tzinfo=None),
+                "event_at": _naive_datetime(trade["updated_at"]),
                 "payload": _dump(event_payload),
             })
         with _lock:
