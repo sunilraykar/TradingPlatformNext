@@ -292,8 +292,6 @@ def end_of_day_flush() -> dict[str, Any]:
 
 async def run_maintenance_scheduler() -> None:
     """Retry dirty writes periodically and flush a daily terminal snapshot after 15:30 IST."""
-    from datetime import timedelta
-
     timezone_ist = ZoneInfo("Asia/Kolkata")
     last_eod_date: str | None = None
     while True:
@@ -307,3 +305,86 @@ async def run_maintenance_scheduler() -> None:
         except Exception:
             logger.exception("Trade terminal maintenance cycle failed")
         await asyncio.sleep(60)
+
+
+def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Import broker net positions as canonical LIVE records; never place or modify orders."""
+    normalized: dict[str, dict[str, Any]] = {}
+    for row in position_rows:
+        quantity = int(row.get("quantity") or row.get("net_quantity") or 0)
+        exchange = str(row.get("exchange") or "").strip().upper()
+        symbol = str(row.get("tradingsymbol") or row.get("trading_symbol") or "").strip()
+        product = str(row.get("product") or "").strip().upper()
+        if not symbol or not exchange or quantity == 0:
+            continue
+        key = f"{exchange}:{symbol}:{product}"
+        trade_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "trading-platform-next:kite-position:" + key))
+        normalized[key] = {
+            "trade_id": trade_id, "broker_position_key": key,
+            "execution_mode": "LIVE", "source": "KITE_POSITION",
+            "strategy": "Broker Position Reconciliation",
+            "underlying": row.get("name") or row.get("underlying") or symbol,
+            "instrument_symbol": symbol, "exchange": exchange, "product": product,
+            "direction": "BUY" if quantity > 0 else "SELL",
+            "quantity": abs(quantity), "open_quantity": abs(quantity),
+            "average_entry_price": row.get("average_price"),
+            "last_price": row.get("last_price"), "broker_pnl": row.get("pnl"),
+            "status": "OPEN",
+        }
+
+    with _lock:
+        existing = {
+            str(t.get("broker_position_key")): dict(t)
+            for t in _cache.values()
+            if t.get("execution_mode") == "LIVE" and t.get("source") == "KITE_POSITION"
+            and t.get("broker_position_key")
+        }
+    created = updated = closed = 0
+    for key, incoming in normalized.items():
+        old = existing.get(key)
+        if old is None:
+            now = _now()
+            trade = {
+                **incoming, "created_at": now, "updated_at": now,
+                "version": 1, "realized_pnl": None, "unrealized_pnl": None,
+                "persistence_state": "PENDING",
+            }
+            with _lock:
+                _cache[trade["trade_id"]] = trade
+                _dirty.add(trade["trade_id"])
+            _persist(trade, "BROKER_POSITION_DISCOVERED", {"broker_position_key": key, "quantity": trade["quantity"]})
+            trade["persistence_state"] = "PERSISTED"
+            with _lock:
+                _cache[trade["trade_id"]] = trade
+            created += 1
+            continue
+
+        material = any(old.get(field) != incoming.get(field) for field in ("quantity", "open_quantity", "status", "direction", "average_entry_price"))
+        # Quote/P&L fields are refreshed in cache but are not durable per-poll writes.
+        with _lock:
+            current = dict(_cache[old["trade_id"]])
+            current["last_price"] = incoming.get("last_price")
+            current["broker_pnl"] = incoming.get("broker_pnl")
+            current["last_market_data_at"] = _now()
+            if material:
+                current.update({k: incoming[k] for k in ("quantity", "open_quantity", "status", "direction", "average_entry_price")})
+                current["version"] = int(current.get("version", 1)) + 1
+                current["updated_at"] = _now()
+                current["persistence_state"] = "PENDING"
+                _dirty.add(current["trade_id"])
+            _cache[current["trade_id"]] = current
+        if material:
+            _persist(current, "BROKER_POSITION_CHANGED", {"broker_position_key": key, "quantity": current["quantity"], "status": current["status"]})
+            current["persistence_state"] = "PERSISTED"
+            with _lock:
+                _cache[current["trade_id"]] = current
+            updated += 1
+
+    live_keys = set(normalized)
+    for key, old in existing.items():
+        if key in live_keys or not _is_active(old):
+            continue
+        current = update_trade(old["trade_id"], {"status": "CLOSED", "open_quantity": 0}, event_type="BROKER_POSITION_FLATTENED")
+        current["persistence_state"] = "PERSISTED"
+        closed += 1
+    return {"created": created, "updated": updated, "closed": closed, "active_positions": len(normalized)}
