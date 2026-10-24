@@ -109,7 +109,7 @@ def refresh_instrument_master() -> dict[str, object]:
             rows = [{key: row.get(key) for key in insert_columns} for row in rows]
             table = Table("instruments", MetaData(), autoload_with=connection)
             connection.execute(text("DELETE FROM instruments WHERE source = 'KITE'"))
-            connection.execute(table.insert().values(rows))
+            connection.execute(table.insert(), rows)
 
         result = {
             "state": "Success",
