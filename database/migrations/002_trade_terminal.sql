@@ -1,6 +1,7 @@
 -- Unified canonical trade records. Apply after 001_initial.sql.
 CREATE TABLE IF NOT EXISTS trade_records (
     trade_id CHAR(36) NOT NULL PRIMARY KEY,
+    idempotency_key VARCHAR(100) NULL UNIQUE,
     execution_mode ENUM('PAPER','LIVE') NOT NULL,
     source VARCHAR(80) NOT NULL,
     strategy VARCHAR(120) NULL,
