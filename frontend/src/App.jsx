@@ -432,6 +432,7 @@ function InstrumentsViewer() {
   const [letter, setLetter] = useState('ALL');
   const [exchange, setExchange] = useState('ALL');
   const [expiryFilter, setExpiryFilter] = useState('ALL');
+  const [optionType, setOptionType] = useState('ALL');
   const [page, setPage] = useState(0);
   const [payload, setPayload] = useState({ instruments: [], total: 0 });
   const [loading, setLoading] = useState(false);
@@ -448,6 +449,7 @@ function InstrumentsViewer() {
       if (exchange !== 'ALL') params.set('exchange', exchange);
       if (expiryFilter === 'WITH_EXPIRY') params.set('expiry_filter', 'WITH_EXPIRY');
       if (expiryFilter === 'NO_EXPIRY') params.set('expiry_filter', 'NO_EXPIRY');
+      if (optionType !== 'ALL') params.set('option_type', optionType);
       setPayload(await api('/instruments?' + params.toString()));
     } catch (e) {
       setError(e.message || 'Unable to load instruments from MySQL.');
@@ -455,9 +457,9 @@ function InstrumentsViewer() {
     } finally {
       setLoading(false);
     }
-  }, [category, letter, exchange, expiryFilter, page]);
+  }, [category, letter, exchange, expiryFilter, optionType, page]);
 
-  useEffect(() => { setPage(0); }, [category, letter, exchange, expiryFilter]);
+  useEffect(() => { setPage(0); }, [category, letter, exchange, expiryFilter, optionType]);
   useEffect(() => { load(); }, [load]);
 
   const rows = payload.instruments || [];
@@ -494,6 +496,12 @@ function InstrumentsViewer() {
         {[['ALL', 'All instruments'], ['WITH_EXPIRY', 'Has expiry'], ['NO_EXPIRY', 'No expiry']].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (expiryFilter === value ? ' active' : '')} onClick={() => setExpiryFilter(value)}>{label}</button>)}
         </div>
       </div>
+      {category === 'OPTIONS' && <div className="instrument-filter-group">
+        <div className="instrument-filter-label">Option type</div>
+        <div className="instrument-option-type-buttons" role="group" aria-label="Filter by option type">
+          {[[ 'ALL', 'All types' ], [ 'CE', 'CE' ], [ 'PE', 'PE' ]].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (optionType === value ? ' active' : '')} onClick={() => setOptionType(value)}>{label}</button>)}
+        </div>
+      </div>}
     </div>
     </div>
     {error && <div className="error-banner"><strong>Instrument query failed</strong><span>{error}</span></div>}
