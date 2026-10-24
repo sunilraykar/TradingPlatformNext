@@ -237,6 +237,7 @@ const SETTINGS_TABS = [
   ['active-trades', 'Active Trades'],
   ['market-session', 'Market Session'],
   ['cache-viewer', 'Cache Viewer'],
+  ['live-data-cache', 'Live Data & Cache'],
 ];
 
 const SETTINGS_FIELDS = {
