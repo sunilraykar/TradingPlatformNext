@@ -4,7 +4,6 @@ from datetime import UTC, datetime
 from threading import RLock
 from typing import Any
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +26,7 @@ class LiveQuoteCache:
         for listener in listeners:
             try:
                 listener(dict(record))
-            except Exception:  # noqa: BLE001 - one listener must not block tick ingestion
+            except Exception
                 logger.exception("Live quote listener failed; continuing quote ingestion")
 
     def add_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:
