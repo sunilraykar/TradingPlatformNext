@@ -429,9 +429,9 @@ function LiveDataCacheViewer() {
 
 function InstrumentsViewer() {
   const [category, setCategory] = useState('ALL');
-  const [search, setSearch] = useState('');
+  const [letter, setLetter] = useState('ALL');
   const [exchange, setExchange] = useState('ALL');
-  const [expiry, setExpiry] = useState('');
+  const [expiryFilter, setExpiryFilter] = useState('ALL');
   const [page, setPage] = useState(0);
   const [payload, setPayload] = useState({ instruments: [], total: 0 });
   const [loading, setLoading] = useState(false);
@@ -444,9 +444,10 @@ function InstrumentsViewer() {
     try {
       const params = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
       if (category !== 'ALL') params.set('category', category);
-      if (search.trim()) params.set('search', search.trim());
+      if (letter !== 'ALL') params.set('search', letter);
       if (exchange !== 'ALL') params.set('exchange', exchange);
-      if (expiry) params.set('expiry', expiry);
+      if (expiryFilter === 'WITH_EXPIRY') params.set('expiry_filter', 'WITH_EXPIRY');
+      if (expiryFilter === 'NO_EXPIRY') params.set('expiry_filter', 'NO_EXPIRY');
       setPayload(await api('/instruments?' + params.toString()));
     } catch (e) {
       setError(e.message || 'Unable to load instruments from MySQL.');
@@ -454,9 +455,9 @@ function InstrumentsViewer() {
     } finally {
       setLoading(false);
     }
-  }, [category, search, exchange, expiry, page]);
+  }, [category, letter, exchange, expiryFilter, page]);
 
-  useEffect(() => { setPage(0); }, [category, search, exchange, expiry]);
+  useEffect(() => { setPage(0); }, [category, letter, exchange, expiryFilter]);
   useEffect(() => { load(); }, [load]);
 
   const rows = payload.instruments || [];
@@ -474,11 +475,19 @@ function InstrumentsViewer() {
         ['OPTIONS', 'Option contracts'], ['FUTURES', 'Futures'],
       ].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (category === value ? ' active' : '')} onClick={() => setCategory(value)}>{label}</button>)}
     </div>
-    <div className="trade-terminal-filters instrument-filters">
-      <label className="settings-control instrument-search"><span>Search symbol / name</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="e.g. RELIANCE, NIFTY" /></label>
-      <label className="settings-control"><span>Exchange</span><select value={exchange} onChange={(e) => setExchange(e.target.value)}><option value="ALL">All exchanges</option><option value="NSE">NSE</option><option value="BSE">BSE</option><option value="NFO">NFO</option><option value="BFO">BFO</option><option value="CDS">CDS</option><option value="MCX">MCX</option></select></label>
-      <label className="settings-control"><span>Expiry date</span><input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></label>
-      {expiry && <button type="button" className="button secondary" onClick={() => setExpiry('')}>Clear expiry</button>}
+    <div className="instrument-filter-section">
+      <div className="instrument-filter-label">Symbol starts with</div>
+      <div className="instrument-letter-buttons" role="group" aria-label="Filter symbols by first letter">
+        {['ALL', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((value) => <button key={value} type="button" className={'trade-filter-button' + (letter === value ? ' active' : '')} onClick={() => setLetter(value)}>{value === 'ALL' ? 'All letters' : value}</button>)}
+      </div>
+      <div className="instrument-filter-label">Exchange</div>
+      <div className="instrument-exchange-buttons" role="group" aria-label="Filter by exchange">
+        {['ALL', 'NSE', 'BSE', 'NFO', 'BFO', 'CDS', 'MCX'].map((value) => <button key={value} type="button" className={'trade-filter-button' + (exchange === value ? ' active' : '')} onClick={() => setExchange(value)}>{value === 'ALL' ? 'All exchanges' : value}</button>)}
+      </div>
+      <div className="instrument-filter-label">Expiry</div>
+      <div className="instrument-expiry-buttons" role="group" aria-label="Filter by expiry">
+        {[['ALL', 'All instruments'], ['WITH_EXPIRY', 'Has expiry'], ['NO_EXPIRY', 'No expiry']].map(([value, label]) => <button key={value} type="button" className={'trade-filter-button' + (expiryFilter === value ? ' active' : '')} onClick={() => setExpiryFilter(value)}>{label}</button>)}
+      </div>
     </div>
     {error && <div className="error-banner"><strong>Instrument query failed</strong><span>{error}</span></div>}
     <div className="instrument-results-summary"><strong>{Number(payload.total || 0).toLocaleString('en-IN')} instruments</strong><span>{payload.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No matching records'}{loading ? ' · Loading…' : ''}</span></div>
