@@ -102,3 +102,18 @@ def test_flattened_live_position_is_durably_closed(monkeypatch):
     assert trade["status"] == "CLOSED"
     assert trade["open_quantity"] == 0
     assert calls[-1][1] == "BROKER_POSITION_FLATTENED"
+
+
+def test_create_trade_is_idempotent_for_same_request_key(monkeypatch):
+    calls = []
+    monkeypatch.setattr(trade_terminal, "_persist", lambda trade, event, payload: calls.append(event))
+    payload = {
+        "idempotency_key": "manual-trade-request-001",
+        "execution_mode": "PAPER", "source": "MANUAL",
+        "instrument_symbol": "NIFTY26OCT25000CE", "direction": "BUY", "quantity": 50,
+    }
+    first = trade_terminal.create_trade(payload)
+    second = trade_terminal.create_trade(payload)
+    assert first["trade_id"] == second["trade_id"]
+    assert len([t for t in trade_terminal._cache.values() if t.get("idempotency_key") == payload["idempotency_key"]]) == 1
+    assert calls == ["TRADE_CREATED"]
