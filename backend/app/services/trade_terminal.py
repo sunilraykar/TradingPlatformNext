@@ -285,6 +285,7 @@ def update_market_state(trade_id: str, *, last_price: float | None = None,
         return dict(updated)
 
 
+@_serialized_lifecycle
 def retry_dirty() -> dict[str, Any]:
     with _lock:
         trades = [dict(_cache[trade_id]) for trade_id in list(_dirty) if trade_id in _cache]
@@ -298,6 +299,7 @@ def retry_dirty() -> dict[str, Any]:
     return {"persisted": persisted, "failed": failed}
 
 
+@_serialized_lifecycle
 def end_of_day_flush() -> dict[str, Any]:
     with _lock:
         trades = [dict(t) for t in _cache.values()]
