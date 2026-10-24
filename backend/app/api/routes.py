@@ -442,6 +442,8 @@ def kite_funds() -> dict:
 @router.get("/instruments", tags=["instruments"])
 def list_instruments(
     search: str | None = Query(default=None, min_length=1, max_length=100),
+    symbol_prefix: str | None = Query(default=None, min_length=1, max_length=1, pattern="^[A-Z]$"),
+    expiry_filter: str | None = Query(default=None, pattern="^(WITH_EXPIRY|NO_EXPIRY)$"),
     exchange: str | None = Query(default=None, max_length=30),
     segment: str | None = Query(default=None, max_length=40),
     instrument_type: str | None = Query(default=None, max_length=30),
@@ -456,6 +458,13 @@ def list_instruments(
     if search:
         clauses.append("(tradingsymbol LIKE :search OR name LIKE :search)")
         params["search"] = f"%{search.strip()}%"
+    if symbol_prefix:
+        clauses.append("UPPER(tradingsymbol) LIKE :symbol_prefix")
+        params["symbol_prefix"] = f"{symbol_prefix.upper()}%"
+    if expiry_filter == "WITH_EXPIRY":
+        clauses.append("expiry IS NOT NULL")
+    elif expiry_filter == "NO_EXPIRY":
+        clauses.append("expiry IS NULL")
     if exchange:
         clauses.append("exchange = :exchange")
         params["exchange"] = exchange.upper()
