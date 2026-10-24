@@ -405,7 +405,6 @@ function LiveDataCacheViewer() {
       {master.last_error && <div className="error-banner"><strong>Last refresh failure</strong><span>{master.last_error}</span></div>}
       <p className="settings-ui-only-note">A failed download or validation does not replace the previously committed KITE master. Refresh status is runtime-only and resets when the backend restarts.</p>
     </div>
-    </div>
     {error && <div className="error-banner"><strong>Live cache unavailable</strong><span>{error}</span></div>}
     <div className="settings-grid">
       <div className="panel"><span>WebSocket</span><h3>{market.state || 'Unknown'}</h3></div>
