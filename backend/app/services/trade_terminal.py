@@ -66,7 +66,19 @@ def _naive_datetime(value: str) -> datetime:
     return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo is not None else parsed
 
 
+_CACHE_ONLY_FIELDS = {
+    "last_price", "unrealized_pnl", "last_market_data_at",
+    "quote_state", "quote_received_at", "market_quote", "cached_quote",
+    "subscription_state", "subscription_mode", "subscribed",
+}
+
+
+def _persistent_trade_payload(trade: dict[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in trade.items() if key not in _CACHE_ONLY_FIELDS}
+
+
 def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
+    persistent_payload = _persistent_trade_payload(trade)
     return {
         "trade_id": trade["trade_id"],
         "idempotency_key": trade.get("idempotency_key"),
@@ -77,7 +89,7 @@ def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
         "instrument_symbol": trade.get("instrument_symbol"),
         "status": trade.get("status", "OPEN"),
         "version": int(trade.get("version", 1)),
-        "payload": _dump({**trade, "persistence_state": "PERSISTED"}),
+        "payload": _dump({**persistent_payload, "persistence_state": "PERSISTED"}),
         "created_at": _naive_datetime(trade["created_at"]),
         "updated_at": _naive_datetime(trade["updated_at"]),
     }
