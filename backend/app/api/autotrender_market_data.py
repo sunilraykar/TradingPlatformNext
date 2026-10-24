@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, Query, Request
 import requests
+
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.providers.autotrender.auth import AutoTrenderAuth
 from app.services.autotrender_cache import AutoTrenderCache
@@ -39,12 +40,12 @@ def _get_json(auth: AutoTrenderAuth, endpoint: str, **params) -> dict:
         response.raise_for_status()
         content_type = response.headers.get("Content-Type", "").lower()
         if "json" not in content_type:
-            raise RuntimeError("AutoTrender returned a non-JSON response")
+            raise TypeError("AutoTrender returned a non-JSON response")
         payload = response.json()
         if not isinstance(payload, dict):
-            raise RuntimeError("AutoTrender returned an unexpected response")
+            raise TypeError("AutoTrender returned an unexpected response")
         return payload
-    except (RuntimeError, ValueError, requests.RequestException) as exc:
+    except (RuntimeError, TypeError, ValueError, requests.RequestException) as exc:
         raise HTTPException(
             status_code=502,
             detail="AutoTrender market data is unavailable or invalid",
