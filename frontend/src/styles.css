@@ -185,3 +185,32 @@
 .chart-enter-card>span{font-size:10px;color:var(--muted,#8da2bf)}
 .chart-enter-card .latest-enter{align-self:flex-start}
 @media(max-width:700px){.chart-header-right{gap:7px}.chart-enter-card{min-width:100px;min-height:52px;padding:7px}.chart-enter-card>span{font-size:9px}}
+
+
+/* Unified Trade Terminal */
+.trade-terminal-page{width:100%;padding-bottom:24px}
+.trade-terminal-page .page-heading{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.trade-terminal-page .page-heading h1{font-size:28px;margin:5px 0 8px}
+.trade-terminal-page .page-heading p{max-width:800px;margin:0;color:var(--muted);font-size:12px;line-height:1.6}
+.trade-terminal-actions{display:flex;gap:8px;flex-shrink:0}
+.trade-terminal-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.trade-terminal-metrics .metric{background:var(--panel)}
+.trade-terminal-filters{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin:16px 0}
+.trade-terminal-filters .settings-control{min-width:160px}
+.trade-terminal-count{margin-left:auto;color:var(--muted);font-size:11px;padding-bottom:11px}
+.trade-terminal-table-panel{min-width:0}
+.trade-terminal-table-scroll{max-height:calc(100vh - 350px);min-height:220px;overflow:auto}
+.trade-terminal-table{min-width:1500px;font-size:11px}
+.trade-terminal-table td{white-space:nowrap;max-width:260px}
+.trade-terminal-table td:nth-child(4),.trade-terminal-table td:nth-child(14){max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.trade-mode-pill{display:inline-block;padding:4px 7px;border-radius:5px;font-size:10px;font-weight:800}
+.trade-mode-pill.paper{background:#173c34;color:#8be0bc}
+.trade-mode-pill.live{background:#47272d;color:#ffb4bd}
+.trade-create-form{padding:20px;margin:18px 0}
+.trade-create-form h2{margin:0 0 15px;font-size:18px}
+.trade-notes-field{grid-column:1/-1}
+.trade-create-form .settings-actions{justify-content:space-between}
+.trade-paper-label{font-size:11px;color:#8be0bc}
+.trade-close-button{padding:6px 9px;font-size:10px}
+.trade-persistence-warning{padding:12px 15px;margin:12px 0;border:1px solid #7a5c2a;background:#352b1b;color:#f2d7a1;border-radius:8px;font-size:12px;overflow-wrap:anywhere}
+@media(max-width:760px){.trade-terminal-page .page-heading{align-items:flex-start;flex-direction:column}.trade-terminal-actions{width:100%}.trade-terminal-metrics{grid-template-columns:1fr}.trade-terminal-count{margin-left:0;width:100%}.trade-terminal-filters .settings-control{flex:1}.trade-create-form{padding:14px}.trade-terminal-table-scroll{max-height:65vh}}
