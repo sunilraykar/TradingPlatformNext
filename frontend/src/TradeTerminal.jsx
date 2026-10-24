@@ -26,6 +26,12 @@ export default function TradeTerminal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [symbolQuery, setSymbolQuery] = useState('');
+  const [symbolExchange, setSymbolExchange] = useState('ALL');
+  const [symbolType, setSymbolType] = useState('ALL');
+  const [instrumentOptions, setInstrumentOptions] = useState([]);
+  const [loadingInstruments, setLoadingInstruments] = useState(false);
+  const [instrumentSearchError, setInstrumentSearchError] = useState('');
   const [saving, setSaving] = useState(false);
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [form, setForm] = useState({ instrument_symbol: '', exchange: 'NFO', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
@@ -81,6 +87,44 @@ export default function TradeTerminal() {
       if (socket) socket.close();
     };
   }, [refresh]);
+
+  useEffect(() => {
+    if (!showCreate || symbolQuery.trim().length < 2) {
+      setInstrumentOptions([]);
+      setInstrumentSearchError('');
+      setLoadingInstruments(false);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setLoadingInstruments(true);
+      setInstrumentSearchError('');
+      try {
+        const params = new URLSearchParams({ q: symbolQuery.trim(), limit: '100' });
+        if (symbolExchange !== 'ALL') params.set('exchange', symbolExchange);
+        if (symbolType !== 'ALL') params.set('instrument_type', symbolType);
+        const result = await request('/trades/instruments?' + params.toString());
+        if (!cancelled) setInstrumentOptions(result.instruments || []);
+      } catch (e) {
+        if (!cancelled) {
+          setInstrumentOptions([]);
+          setInstrumentSearchError(e.message || 'Unable to search instruments.');
+        }
+      } finally {
+        if (!cancelled) setLoadingInstruments(false);
+      }
+    }, 250);
+    return () => { cancelled = true; window.clearTimeout(timer); };
+  }, [showCreate, symbolQuery, symbolExchange, symbolType]);
+
+  const selectInstrument = (instrument) => {
+    const symbol = instrument.tradingsymbol;
+    const underlying = ['NIFTY','BANKNIFTY','FINNIFTY','MIDCPNIFTY','SENSEX','BANKEX'].find((index) => symbol.toUpperCase().startsWith(index)) ||
+      (instrument.instrument_type === 'EQ' ? 'OTHER' : form.underlying);
+    setForm((current) => ({ ...current, instrument_symbol: symbol, exchange: instrument.exchange, underlying }));
+    setSymbolQuery(symbol);
+    setInstrumentOptions([]);
+  };
 
   const sources = [...new Set(trades.map((trade) => trade.source).filter(Boolean))].sort();
   const underlyings = [...new Set(trades.map((trade) => trade.underlying).filter(Boolean))].sort();
@@ -156,7 +200,7 @@ export default function TradeTerminal() {
   };
 
   return <section className="trade-terminal-page">
-    <div className="page-heading trade-terminal-heading"><div className="trade-terminal-actions"><button className="button secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button><button className="button secondary" onClick={reconcileLive} disabled={loading}>{loading ? 'Syncing…' : 'Sync Live Positions'}</button><button className="button primary" onClick={() => setShowCreate((v) => !v)}>{showCreate ? 'Cancel' : '+ New Paper Trade'}</button></div></div>
+    <div className="page-heading trade-terminal-heading"><div className="trade-terminal-actions"><button className="button secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button><button className="button secondary" onClick={reconcileLive} disabled={loading}>{loading ? 'Syncing…' : 'Sync Live Positions'}</button><button className="button primary" onClick={() => { setShowCreate(true); setSymbolQuery(''); setSymbolExchange('ALL'); setSymbolType('ALL'); }}>+ New Paper Trade</button></div></div>
     {error && <div className="error-banner"><strong>Trade terminal issue</strong><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
     <div className="trade-terminal-metrics">
       <div className="metric"><span>Cached trades</span><strong>{fmt(terminal.cached_trades ?? 0)}</strong></div>
@@ -164,9 +208,29 @@ export default function TradeTerminal() {
       <div className="metric"><span>Pending persistence</span><strong className={terminal.persistence_degraded ? 'negative' : 'positive'}>{fmt(terminal.dirty_trades ?? 0)}</strong></div>
     </div>
     {terminal.persistence_degraded && <div className="trade-persistence-warning">Database persistence is degraded. Do not assume cache-only changes are durable. {terminal.persistence_error || ''}</div>}
-    {showCreate && <form className="panel trade-create-form" onSubmit={create}>
-      <h2>Create paper trade</h2><div className="settings-grid">
-        <label className="settings-control"><span>Instrument symbol *</span><input required value={form.instrument_symbol} onChange={(e) => setForm({ ...form, instrument_symbol: e.target.value.toUpperCase() })} placeholder="NIFTY26OCT25000CE" /></label>
+    {showCreate && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setShowCreate(false); }}>
+      <form className="panel trade-create-form trade-create-modal" onSubmit={create}>
+      <div className="trade-modal-heading"><div><h2>New paper trade</h2><p>Search the Kite instrument master and select a symbol.</p></div><button className="button secondary" type="button" onClick={() => setShowCreate(false)} disabled={saving}>✕</button></div>
+      <div className="trade-instrument-picker">
+        <label className="settings-control"><span>Search symbols</span><input autoFocus value={symbolQuery} onChange={(e) => setSymbolQuery(e.target.value)} placeholder="Type a symbol or company name (e.g. RELIANCE, NIFTY)" /></label>
+        <div className="trade-instrument-filters">
+          <label className="settings-control"><span>Exchange</span><select value={symbolExchange} onChange={(e) => setSymbolExchange(e.target.value)}><option value="ALL">All exchanges</option><option value="NSE">NSE</option><option value="NFO">NFO</option><option value="BSE">BSE</option><option value="BFO">BFO</option><option value="CDS">CDS</option><option value="MCX">MCX</option></select></label>
+          <label className="settings-control"><span>Instrument type</span><select value={symbolType} onChange={(e) => setSymbolType(e.target.value)}><option value="ALL">All types</option><option value="EQ">Equity (EQ)</option><option value="CE">Call option (CE)</option><option value="PE">Put option (PE)</option><option value="FUT">Futures (FUT)</option></select></label>
+        </div>
+        <div className="trade-instrument-results" aria-live="polite">
+          {loadingInstruments && <div className="trade-instrument-empty">Searching Kite instruments…</div>}
+          {!loadingInstruments && instrumentSearchError && <div className="trade-instrument-empty negative">{instrumentSearchError}</div>}
+          {!loadingInstruments && !instrumentSearchError && symbolQuery.trim().length < 2 && <div className="trade-instrument-empty">Enter at least two characters to search.</div>}
+          {!loadingInstruments && !instrumentSearchError && symbolQuery.trim().length >= 2 && !instrumentOptions.length && <div className="trade-instrument-empty">No matching instruments. Try another symbol or filter.</div>}
+          {instrumentOptions.map((instrument) => <button key={instrument.instrument_token} type="button" className={'trade-instrument-option' + (form.instrument_symbol === instrument.tradingsymbol && form.exchange === instrument.exchange ? ' selected' : '')} onClick={() => selectInstrument(instrument)}>
+            <span className="trade-instrument-main"><strong>{instrument.tradingsymbol}</strong><small>{instrument.name || instrument.segment || instrument.instrument_type || 'Kite instrument'}</small></span>
+            <span className="trade-instrument-meta"><strong>{instrument.exchange}</strong><small>{instrument.instrument_type || instrument.segment || '—'}{instrument.expiry ? ' · ' + instrument.expiry : ''}</small></span>
+          </button>)}
+        </div>
+        <div className="trade-selected-instrument">{form.instrument_symbol ? <>Selected: <strong>{form.exchange}:{form.instrument_symbol}</strong></> : 'Select a symbol from the search results to continue.'}</div>
+      </div>
+      <div className="settings-grid">
+        <label className="settings-control"><span>Instrument symbol *</span><input required readOnly value={form.instrument_symbol} placeholder="Select a symbol above" /></label>
         <label className="settings-control"><span>Exchange</span><select value={form.exchange} onChange={(e) => setForm({ ...form, exchange: e.target.value })}>{[['NSE','NSE · Stocks'],['NFO','NFO · Options'],['BSE','BSE · Stocks'],['BFO','BFO · Options']].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label className="settings-control"><span>Underlying / index</span><select value={form.underlying} onChange={(e) => setForm({ ...form, underlying: e.target.value })}>{['NIFTY','BANKNIFTY','FINNIFTY','SENSEX','OTHER'].map((x) => <option key={x}>{x}</option>)}</select></label>
         <label className="settings-control"><span>Direction</span><select value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })}><option>BUY</option><option>SELL</option></select></label>
@@ -177,7 +241,7 @@ export default function TradeTerminal() {
         <label className="settings-control"><span>Strategy / source label</span><input value={form.strategy} onChange={(e) => setForm({ ...form, strategy: e.target.value })} /></label>
         <label className="settings-control trade-notes-field"><span>Notes</span><input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength="2000" /></label>
       </div><div className="settings-actions"><span className="trade-paper-label">PAPER MODE · no broker order will be placed</span><button className="button primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Create paper trade'}</button></div>
-    </form>}
+    </form></div>}
     <div className="trade-terminal-filters">
       <div className="trade-filter-group"><span className="trade-filter-label">Mode</span><div className="trade-filter-buttons">{[['ALL','All'],['PAPER','Paper'],['LIVE','Live']].map(([value,label]) => <button key={value} type="button" className={mode === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setMode(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
