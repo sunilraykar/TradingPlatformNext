@@ -194,7 +194,7 @@ def modify_live_order(
 
 @router.delete("/kite/orders/{variety}/{order_id}", tags=["trading account"])
 def cancel_live_order(
-    variety: Literal["regular", " amo", "co", "iceberg", "auction"],
+    variety: Literal["regular", "amo", "co", "iceberg", "auction"],
     order_id: str = Path(min_length=1, max_length=64),
     payload: LiveActionConfirmation = ...,
 ) -> dict[str, Any]:
