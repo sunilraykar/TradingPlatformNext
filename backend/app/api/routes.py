@@ -445,6 +445,7 @@ def list_instruments(
     exchange: str | None = Query(default=None, max_length=30),
     segment: str | None = Query(default=None, max_length=40),
     instrument_type: str | None = Query(default=None, max_length=30),
+    category: str | None = Query(default=None, pattern="^(EQUITY|INDICES|OPTIONS|FUTURES)$"),
     expiry: str | None = Query(default=None, max_length=10),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
@@ -464,6 +465,16 @@ def list_instruments(
     if instrument_type:
         clauses.append("instrument_type = :instrument_type")
         params["instrument_type"] = instrument_type.upper()
+    if category:
+        # Categorize from Kite's canonical segment and instrument type fields.
+        # Use parentheses so the category predicate composes safely with other filters.
+        category_predicates = {
+            "EQUITY": "(UPPER(COALESCE(segment, '')) IN ('NSE', 'BSE', 'NSE-CM', 'BSE-CM') AND UPPER(COALESCE(instrument_type, '')) IN ('EQ', 'EQUITY'))",
+            "INDICES": "(UPPER(COALESCE(segment, '')) = 'INDICES' OR UPPER(COALESCE(instrument_type, '')) = 'INDEX')",
+            "OPTIONS": "(UPPER(COALESCE(segment, '')) LIKE '%OPT%' OR UPPER(COALESCE(instrument_type, '')) IN ('CE', 'PE'))",
+            "FUTURES": "(UPPER(COALESCE(segment, '')) LIKE '%FUT%' OR UPPER(COALESCE(instrument_type, '')) = 'FUT')",
+        }
+        clauses.append(category_predicates[category])
     if expiry:
         try:
             from datetime import date
