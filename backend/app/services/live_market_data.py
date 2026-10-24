@@ -108,6 +108,68 @@ def status() -> dict[str, Any]:
         }
 
 
+
+# AutoTrender's supported underlying indices and their Kite instrument-master names.
+# These are index spot instruments, not every option contract in the derivative chain.
+_AUTOTRENDER_INDEX_SYMBOLS = {
+    "NIFTY": ("NSE", "NIFTY 50"),
+    "BANKNIFTY": ("NSE", "NIFTY BANK"),
+    "FINNIFTY": ("NSE", "NIFTY FIN SERVICE"),
+    "MIDCPNIFTY": ("NSE", "NIFTY MID SELECT"),
+    "SENSEX": ("BSE", "SENSEX"),
+    "BANKEX": ("BSE", "BANKEX"),
+}
+
+
+def subscribe_autotrender_indices() -> dict[str, Any]:
+    """Register default in-memory Kite subscriptions for all AutoTrender indices."""
+    from sqlalchemy import text
+    from app.db.session import get_engine
+
+    desired = list(_AUTOTRENDER_INDEX_SYMBOLS.values())
+    rows = []
+    try:
+        with get_engine().connect() as connection:
+            for exchange, symbol in desired:
+                row = connection.execute(
+                    text("""
+                        SELECT instrument_token, exchange, tradingsymbol
+                        FROM instruments
+                        WHERE source = 'KITE' AND is_active = TRUE
+                          AND exchange = :exchange AND tradingsymbol = :symbol
+                        ORDER BY instrument_version DESC
+                        LIMIT 1
+                    """),
+                    {"exchange": exchange, "symbol": symbol},
+                ).mappings().first()
+                if row:
+                    rows.append(dict(row))
+    except Exception:
+        logger.exception("Could not resolve AutoTrender index tokens from instrument master")
+        return {
+            "registered": 0,
+            "missing_symbols": [symbol for _, symbol in desired],
+            "error": "instrument_master_unavailable",
+            "subscriptions": status(),
+        }
+
+    tokens = [int(row["instrument_token"]) for row in rows]
+    if tokens:
+        subscribe(tokens, mode="quote")
+    resolved = {(row["exchange"], row["tradingsymbol"]) for row in rows}
+    missing = [symbol for exchange, symbol in desired if (exchange, symbol) not in resolved]
+    logger.info(
+        "AutoTrender default index subscriptions registered: %s; missing: %s",
+        [row["tradingsymbol"] for row in rows], missing,
+    )
+    return {
+        "registered": len(tokens),
+        "resolved_symbols": [row["tradingsymbol"] for row in rows],
+        "missing_symbols": missing,
+        "subscriptions": status(),
+    }
+
+
 def reset() -> None:
     stop()
     with _lock:
