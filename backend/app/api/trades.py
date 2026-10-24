@@ -99,8 +99,9 @@ def _enforce_autotrender_entry_window(source: str) -> None:
     except ValueError as exc:
         raise HTTPException(status_code=503, detail="AutoTrender entry-window settings are invalid; correct them in Settings") from exc
 
-    current = datetime.now(ZoneInfo("Asia/Kolkata")).time().replace(tzinfo=None)
-    if current < start or current > end:
+    # Compare at minute precision so 14:00:59 remains inside the inclusive 14:00 minute.
+    current = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M")
+    if current < start_value or current > end_value:
         raise HTTPException(
             status_code=422,
             detail=f"New AutoTrender entries are allowed only from {start_value} to {end_value} IST (inclusive)",
