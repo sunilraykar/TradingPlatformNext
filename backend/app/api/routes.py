@@ -190,7 +190,7 @@ def write_application_settings(request: SettingsUpdateRequest) -> dict[str, Any]
             if any(key in request.settings for key in time_keys):
                 for key, label in (("autoTrenderEntryStartTime", "start"), ("autoTrenderEntryEndTime", "end")):
                     candidate = merged_times[key]
-                    if not isinstance(candidate, str) or not re.fullmatch(r"(?:[01]\\d|2[0-3]):[0-5]\\d", candidate):
+                    if not isinstance(candidate, str) or not re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", candidate):
                         raise HTTPException(status_code=422, detail=f"AutoTrender entry {label} time must use valid 24-hour HH:MM format")
                 if time.fromisoformat(merged_times["autoTrenderEntryEndTime"]) <= time.fromisoformat(merged_times["autoTrenderEntryStartTime"]):
                     raise HTTPException(status_code=422, detail="AutoTrender entry end time must be later than the start time")
