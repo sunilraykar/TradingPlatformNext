@@ -465,9 +465,8 @@ function InstrumentsViewer() {
   const first = payload.total ? page * pageSize + 1 : 0;
   const last = Math.min((page + 1) * pageSize, payload.total || 0);
   return <div className="instrument-viewer">
-    <div className="cache-viewer-toolbar">
-      <div><h2>Kite Instrument Master</h2><p className="settings-intro">Browse instruments stored in MySQL. Use category, exchange, expiry and text filters; results are paginated and read-only.</p></div>
-      <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh instruments'}</button>
+    <div className="instrument-viewer-heading">
+      <h2>Kite Instrument Master</h2>
     </div>
     <div className="instrument-controls-layout">
     <div className="instrument-category-filters" role="group" aria-label="Instrument category">
