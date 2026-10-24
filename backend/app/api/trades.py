@@ -5,9 +5,7 @@ from pydantic import BaseModel, Field
 
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
-from app.services import trade_terminal
-from app.services import trade_terminal_stream
-from app.services import live_market_data
+from app.services import live_market_data, trade_terminal, trade_terminal_stream
 from app.services.live_quotes import live_quotes
 
 router = APIRouter(prefix="/trades", tags=["trade terminal"])
@@ -64,6 +62,7 @@ def search_trade_instruments(
 ) -> dict[str, Any]:
     """Search the active Kite instrument master for the paper-trade symbol picker."""
     from sqlalchemy import text
+
     from app.db.session import get_engine
 
     search = q.strip().upper()
@@ -170,7 +169,7 @@ async def trade_terminal_stream_socket(websocket: WebSocket) -> None:
             await websocket.receive_text()
     except WebSocketDisconnect:
         trade_terminal_stream.disconnect(websocket)
-    except Exception:
+    except Exception:  # noqa: BLE001 - disconnect on any socket/send failure
         trade_terminal_stream.disconnect(websocket)
 
 

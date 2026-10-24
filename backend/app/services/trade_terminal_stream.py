@@ -2,6 +2,7 @@
 import asyncio
 import json
 import threading
+
 from fastapi import WebSocket
 
 _clients: set[tuple[WebSocket, asyncio.AbstractEventLoop]] = set()
@@ -42,5 +43,5 @@ def publish(event: dict) -> None:
 async def _send_on_loop(loop: asyncio.AbstractEventLoop, websocket: WebSocket, payload: str) -> None:
     try:
         await websocket.send_text(payload)
-    except Exception:
+    except Exception:  # noqa: BLE001 - disconnect after any socket send failure
         disconnect(websocket)

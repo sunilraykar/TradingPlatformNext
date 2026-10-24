@@ -147,6 +147,7 @@ _AUTOTRENDER_INDEX_SYMBOLS = {
 def subscribe_autotrender_indices() -> dict[str, Any]:
     """Register default in-memory Kite subscriptions for all AutoTrender indices."""
     from sqlalchemy import text
+
     from app.db.session import get_engine
 
     desired = list(_AUTOTRENDER_INDEX_SYMBOLS.values())

@@ -1,6 +1,11 @@
+import logging
+from collections.abc import Callable
 from datetime import UTC, datetime
 from threading import RLock
-from typing import Any, Callable
+from typing import Any
+
+
+logger = logging.getLogger(__name__)
 
 
 class LiveQuoteCache:
@@ -22,8 +27,8 @@ class LiveQuoteCache:
         for listener in listeners:
             try:
                 listener(dict(record))
-            except Exception:
-                continue
+            except Exception:  # noqa: BLE001 - one listener must not block tick ingestion
+                logger.exception("Live quote listener failed; continuing quote ingestion")
 
     def add_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:
         with self._lock:
