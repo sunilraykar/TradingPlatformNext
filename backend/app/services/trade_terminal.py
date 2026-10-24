@@ -306,17 +306,22 @@ def subscribe_open_trades() -> dict[str, int]:
             if token <= 0:
                 unresolved += 1
                 continue
+            # Register the token before subscribing, but do not erase a valid quote
+            # already attached to this restored trade. Cached ticks are authoritative
+            # for the current process and should be shown immediately on reconnect.
             with _lock:
                 current = _cache.get(trade["trade_id"])
                 if current:
                     current["instrument_token"] = token
                     current["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
-                    current.pop("last_price", None)
-            live_market_data.subscribe([token], mode="quote")
-            # A quote may have arrived before this trade was restored/subscribed.
-            # Seed every active trade sharing the token from the current cache.
             cached_quote = live_quotes.get(token)
-            if cached_quote:
+            if cached_quote and cached_quote.get("last_price") is not None:
+                apply_quote_to_open_trades(cached_quote)
+            live_market_data.subscribe([token], mode="quote")
+            # A tick can arrive between the cache check and subscription setup.
+            # Re-read after subscribing to close that race without database writes.
+            cached_quote = live_quotes.get(token)
+            if cached_quote and cached_quote.get("last_price") is not None:
                 apply_quote_to_open_trades(cached_quote)
             subscribed += 1
         except Exception:
