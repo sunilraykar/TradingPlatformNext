@@ -17,6 +17,10 @@ export default function TradeTerminal() {
   const [terminal, setTerminal] = useState({});
   const [mode, setMode] = useState('ALL');
   const [status, setStatus] = useState('ALL');
+  const [sourceFilter, setSourceFilter] = useState('ALL');
+  const [underlyingFilter, setUnderlyingFilter] = useState('ALL');
+  const [instrumentSearch, setInstrumentSearch] = useState('');
+  const [tradeDate, setTradeDate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -37,6 +41,15 @@ export default function TradeTerminal() {
   }, [mode, status]);
 
   useEffect(() => { refresh(); const timer = window.setInterval(refresh, 5000); return () => window.clearInterval(timer); }, [refresh]);
+
+  const sources = [...new Set(trades.map((trade) => trade.source).filter(Boolean))].sort();
+  const underlyings = [...new Set(trades.map((trade) => trade.underlying).filter(Boolean))].sort();
+  const visibleTrades = trades.filter((trade) =>
+    (sourceFilter === 'ALL' || trade.source === sourceFilter) &&
+    (underlyingFilter === 'ALL' || trade.underlying === underlyingFilter) &&
+    (!instrumentSearch || String(trade.instrument_symbol || '').toLowerCase().includes(instrumentSearch.toLowerCase())) &&
+    (!tradeDate || String(trade.created_at || '').slice(0, 10) === tradeDate)
+  );
 
   const create = async (event) => {
     event.preventDefault(); setSaving(true); setError('');
@@ -109,11 +122,15 @@ export default function TradeTerminal() {
     <div className="trade-terminal-filters">
       <label className="settings-control"><span>Mode</span><select value={mode} onChange={(e) => setMode(e.target.value)}><option value="ALL">All modes</option><option value="PAPER">Paper</option><option value="LIVE">Live</option></select></label>
       <label className="settings-control"><span>Status</span><select value={status} onChange={(e) => setStatus(e.target.value)}><option value="ALL">All statuses</option>{['OPEN','PENDING','PARTIALLY_FILLED','CLOSED','CANCELLED','REJECTED','EXPIRED'].map((x) => <option key={x}>{x}</option>)}</select></label>
-      <span className="trade-terminal-count">{trades.length} trades · auto-refresh every 5 seconds</span>
+      <label className="settings-control"><span>Source</span><select value={sourceFilter} onChange={(e) => setSourceFilter(e.target.value)}><option value="ALL">All sources</option>{sources.map((item) => <option key={item}>{item}</option>)}</select></label>
+      <label className="settings-control"><span>Underlying</span><select value={underlyingFilter} onChange={(e) => setUnderlyingFilter(e.target.value)}><option value="ALL">All indices</option>{underlyings.map((item) => <option key={item}>{item}</option>)}</select></label>
+      <label className="settings-control"><span>Instrument search</span><input value={instrumentSearch} onChange={(e) => setInstrumentSearch(e.target.value)} placeholder="Symbol contains…" /></label>
+      <label className="settings-control"><span>Trade date</span><input type="date" value={tradeDate} onChange={(e) => setTradeDate(e.target.value)} /></label>
+      <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · auto-refresh every 5 seconds</span>
     </div>
     <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr><th>Mode</th><th>Trade ID</th><th>Underlying</th><th>Instrument</th><th>Side</th><th>Qty</th><th>Entry</th><th>Last price</th><th>SL</th><th>Target</th><th>Realized P&amp;L</th><th>Unrealized P&amp;L</th><th>Status</th><th>Source / Strategy</th><th>Updated</th><th>Action</th></tr></thead><tbody>
-      {trades.map((trade) => <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td title={trade.trade_id}>{String(trade.trade_id).slice(0, 8)}</td><td>{fmt(trade.underlying)}</td><td>{fmt(trade.instrument_symbol)}</td><td>{fmt(trade.direction)}</td><td>{fmt(trade.open_quantity ?? trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td>{fmt(trade.last_price)}</td><td>{fmt(trade.stop_loss)}</td><td>{fmt(trade.target)}</td><td className={Number(trade.realized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.realized_pnl || 0))}</td><td className={Number(trade.unrealized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.unrealized_pnl || 0))}</td><td>{fmt(trade.status)}</td><td>{fmt(trade.source)}{trade.strategy ? ` · ${trade.strategy}` : ''}</td><td>{trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'}{trade.persistence_state === 'DEGRADED' && <div className="negative">Persistence issue</div>}</td><td>{trade.execution_mode === 'PAPER' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(String(trade.status).toUpperCase()) && <button className="button secondary trade-close-button" onClick={() => updateStatus(trade, 'CLOSED')}>Close</button>}</td></tr>)}
-      {!trades.length && <tr><td colSpan="16" className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or connect an existing trade source.'}</td></tr>}
+      {visibleTrades.map((trade) => <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td title={trade.trade_id}>{String(trade.trade_id).slice(0, 8)}</td><td>{fmt(trade.underlying)}</td><td>{fmt(trade.instrument_symbol)}</td><td>{fmt(trade.direction)}</td><td>{fmt(trade.open_quantity ?? trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td>{fmt(trade.last_price)}</td><td>{fmt(trade.stop_loss)}</td><td>{fmt(trade.target)}</td><td className={Number(trade.realized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.realized_pnl || 0))}</td><td className={Number(trade.unrealized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.unrealized_pnl || 0))}</td><td>{fmt(trade.status)}</td><td>{fmt(trade.source)}{trade.strategy ? ` · ${trade.strategy}` : ''}</td><td>{trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'}{trade.persistence_state === 'DEGRADED' && <div className="negative">Persistence issue</div>}</td><td>{trade.execution_mode === 'PAPER' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(String(trade.status).toUpperCase()) && <button className="button secondary trade-close-button" onClick={() => updateStatus(trade, 'CLOSED')}>Close</button>}</td></tr>)}
+      {!visibleTrades.length && <tr><td colSpan="16" className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or sync live positions.'}</td></tr>}
     </tbody></table></div><div className="panel-footer">Durable lifecycle events are saved immediately. Quote and unrealized P&amp;L updates are cache-only. Live broker reconciliation is read-only and remains a separate integration step.</div></section>
   </section>;
 }
