@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const WS_API = API ? API.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:') : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 async function request(path, options = {}) {
   const response = await fetch(`${API}/api/v1${path}`, {
     ...options, headers: { Accept: 'application/json', ...(options.headers || {}) },
@@ -41,7 +42,44 @@ export default function TradeTerminal() {
     finally { setLoading(false); }
   }, [mode, status]);
 
-  useEffect(() => { refresh(); const timer = window.setInterval(refresh, 5000); return () => window.clearInterval(timer); }, [refresh]);
+  useEffect(() => {
+    refresh();
+    let socket;
+    let reconnectTimer;
+    let disposed = false;
+    const connect = () => {
+      if (disposed) return;
+      socket = new WebSocket(`${WS_API}/api/v1/trades/stream`);
+      socket.onmessage = (event) => {
+        let message;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (message.type === 'snapshot') {
+          setTrades(message.trades || []);
+          setTerminal(message.terminal || {});
+        } else if (message.type === 'trade_upsert' && message.trade) {
+          setTrades((current) => {
+            const index = current.findIndex((item) => item.trade_id === message.trade.trade_id);
+            if (index < 0) return [message.trade, ...current];
+            return current.map((item) => item.trade_id === message.trade.trade_id ? { ...item, ...message.trade } : item);
+          });
+        } else if (message.type === 'trade_quote' && message.trade) {
+          setTrades((current) => current.map((item) => item.trade_id === message.trade_id ? { ...item, ...message.trade } : item));
+        } else if (message.type === 'trade_status') {
+          setTerminal(message.terminal || {});
+        }
+      };
+      socket.onclose = () => {
+        if (!disposed) reconnectTimer = window.setTimeout(connect, 1500);
+      };
+      socket.onerror = () => socket.close();
+    };
+    connect();
+    return () => {
+      disposed = true;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      if (socket) socket.close();
+    };
+  }, [refresh]);
 
   const sources = [...new Set(trades.map((trade) => trade.source).filter(Boolean))].sort();
   const underlyings = [...new Set(trades.map((trade) => trade.underlying).filter(Boolean))].sort();
@@ -145,7 +183,7 @@ export default function TradeTerminal() {
       <div className="trade-filter-group"><span className="trade-filter-label">Underlying</span><div className="trade-filter-buttons">{[['ALL','All'],['INDICES','Indices'],...underlyings.filter(x => !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(x)).map(x => [x,x])].map(([value,label]) => <button key={value} type="button" className={underlyingFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setUnderlyingFilter(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group trade-symbol-letter-filter"><span className="trade-filter-label">Symbol</span><div className="trade-filter-buttons">{[['ALL','All'],...symbolLetters.map((letter) => [letter,letter])].map(([value,label]) => <button key={value} type="button" className={symbolLetter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSymbolLetter(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Trade date</span><div className="trade-filter-buttons">{[['ALL','All'],['TODAY','Today'],['WEEK','This Week'],['MONTH','This Month'],['CUSTOM','Custom']].map(([value,label]) => <button key={value} type="button" className={(dateFilter === value ? 'trade-filter-button active' : 'trade-filter-button')} onClick={() => setDateFilter(value)}>{label}</button>)}</div>{dateFilter === 'CUSTOM' && <input className="trade-date-custom" type="date" value={tradeDate} onChange={(e) => setTradeDate(e.target.value)} />}</div>
-      <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · auto-refresh every 5 seconds</span>
+      <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · live updates</span>
     </div>
     <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr><th>Mode</th><th>Trade ID</th><th>Underlying</th><th>Instrument</th><th>Side</th><th>Qty</th><th>Entry</th><th>Last price</th><th>SL</th><th>Target</th><th>Realized P&amp;L</th><th>Unrealized P&amp;L</th><th>Status</th><th>Source / Strategy</th><th>Updated</th><th>Action</th></tr></thead><tbody>
       {visibleTrades.map((trade) => <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td title={trade.trade_id}>{String(trade.trade_id).slice(0, 8)}</td><td>{fmt(trade.underlying)}</td><td>{fmt(trade.instrument_symbol)}</td><td>{fmt(trade.direction)}</td><td>{fmt(trade.open_quantity ?? trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td>{fmt(trade.last_price)}</td><td>{fmt(trade.stop_loss)}</td><td>{fmt(trade.target)}</td><td className={Number(trade.realized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.realized_pnl || 0))}</td><td className={Number(trade.unrealized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.unrealized_pnl || 0))}</td><td>{fmt(trade.status)}</td><td>{fmt(trade.source)}{trade.strategy ? ` · ${trade.strategy}` : ''}</td><td>{trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'}{trade.persistence_state === 'DEGRADED' && <div className="negative">Persistence issue</div>}</td><td>{trade.execution_mode === 'PAPER' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(String(trade.status).toUpperCase()) && <button className="button secondary trade-close-button" onClick={() => updateStatus(trade, 'CLOSED')}>Close</button>}</td></tr>)}
