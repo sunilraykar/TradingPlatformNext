@@ -253,3 +253,10 @@
 .instrument-pagination{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:14px;color:var(--muted);font-size:12px}
 .instrument-pagination>div{display:flex;gap:8px}
 @media(max-width:700px){.instrument-filters .settings-control{flex:1 1 100%;min-width:0}.instrument-results-summary{align-items:flex-start;flex-direction:column}.instrument-pagination{align-items:flex-start;flex-direction:column}.instrument-table-scroll{max-height:65vh}}
+
+
+.instrument-filter-section{display:flex;flex-direction:column;gap:9px;margin:14px 0 18px}
+.instrument-filter-label{font-size:12px;font-weight:700;color:var(--muted);margin-top:4px}
+.instrument-letter-buttons,.instrument-exchange-buttons,.instrument-expiry-buttons{display:flex;flex-wrap:wrap;gap:7px}
+.instrument-letter-buttons .trade-filter-button{min-width:36px;padding:8px 10px}
+.instrument-exchange-buttons .trade-filter-button,.instrument-expiry-buttons .trade-filter-button{padding:8px 13px}
