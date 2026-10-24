@@ -67,7 +67,7 @@ def terminal_status() -> dict[str, Any]:
 
 def _enforce_autotrender_entry_window(source: str) -> None:
     """Reject new AutoTrender entries outside the configured inclusive IST window."""
-    if "AUTOTRENDER" not in source.upper().replace("-", "_"):
+    if "AUTOTRENDER" not in source.upper().replace("-", "").replace("_", ""):
         return
     try:
         with get_engine().connect() as connection:
