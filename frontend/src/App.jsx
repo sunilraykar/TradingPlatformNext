@@ -592,7 +592,7 @@ function SettingsPanel() {
     setSaving(true); setMessage(''); setError('');
     const start = String(value('autoTrenderEntryStartTime') || '');
     const end = String(value('autoTrenderEntryEndTime') || '');
-    const validTime = (candidate) => /^([01]\\d|2[0-3]):[0-5]\\d$/.test(candidate);
+    const validTime = (candidate) => /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(candidate);
     if (!validTime(start) || !validTime(end)) {
       setError('AutoTrender entry times must use valid 24-hour HH:MM values.');
       setSaving(false);
