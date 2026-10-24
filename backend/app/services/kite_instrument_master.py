@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import MetaData, Table, inspect, text
@@ -73,7 +73,30 @@ def refresh_instrument_master() -> dict[str, object]:
                 continue
             if token <= 0 or not symbol or not exchange:
                 continue
-            valid.append({**item, "instrument_token": token, "tradingsymbol": symbol, "exchange": exchange})
+
+            # Kite sends empty expiry strings for cash instruments; MySQL DATE
+            # columns require NULL instead of ''. Normalize every record before
+            # opening the replacement transaction.
+            normalized = dict(item)
+            raw_expiry = normalized.get("expiry")
+            if raw_expiry is None or raw_expiry == "":
+                normalized["expiry"] = None
+            elif isinstance(raw_expiry, datetime):
+                normalized["expiry"] = raw_expiry.date()
+            elif isinstance(raw_expiry, date):
+                normalized["expiry"] = raw_expiry
+            elif isinstance(raw_expiry, str):
+                try:
+                    normalized["expiry"] = date.fromisoformat(raw_expiry.strip()) if raw_expiry.strip() else None
+                except ValueError:
+                    continue
+
+            valid.append({
+                **normalized,
+                "instrument_token": token,
+                "tradingsymbol": symbol,
+                "exchange": exchange,
+            })
 
         if len(valid) < 1000:
             raise RuntimeError(f"Instrument master validation failed: only {len(valid)} usable rows")
