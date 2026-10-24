@@ -231,3 +231,9 @@
 .trade-terminal-count{margin-left:auto;align-self:center;color:var(--muted);font-size:11px;white-space:nowrap}
 @media(max-width:1100px){.trade-terminal-filters{align-items:stretch}.trade-terminal-count{width:100%;margin-left:0}.trade-filter-search input{width:100%}}
 @media(max-width:700px){.trade-terminal-heading{min-height:0}.trade-terminal-actions{flex-wrap:wrap}.trade-filter-group{width:100%}.trade-filter-buttons{flex-wrap:wrap}.trade-filter-search input{width:100%}}
+
+
+/* Alphabet buttons are derived from symbols currently present in the terminal */
+.trade-symbol-letter-filter{flex:1 1 280px}
+.trade-symbol-letter-filter .trade-filter-buttons{gap:5px}
+.trade-symbol-letter-filter .trade-filter-button{min-width:36px;padding-left:11px;padding-right:11px}
