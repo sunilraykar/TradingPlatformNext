@@ -70,3 +70,35 @@ def test_dirty_trade_retries(monkeypatch):
     result = trade_terminal.retry_dirty()
     assert result["persisted"] == 1
     assert calls == ["trade-1"]
+
+
+def test_live_position_reconciliation_is_idempotent(monkeypatch):
+    calls = []
+    monkeypatch.setattr(trade_terminal, "_persist", lambda trade, event, payload: calls.append((trade["trade_id"], event)))
+    position = {
+        "exchange": "NFO", "tradingsymbol": "NIFTY26OCT25000CE",
+        "product": "MIS", "quantity": 50, "average_price": 100, "last_price": 105,
+        "pnl": 250,
+    }
+    first = trade_terminal.reconcile_live_positions([position])
+    second = trade_terminal.reconcile_live_positions([position])
+    assert first["created"] == 1
+    assert second["created"] == 0
+    assert len([t for t in trade_terminal._cache.values() if t.get("source") == "KITE_POSITION"]) == 1
+    assert len(calls) == 1
+    trade = next(t for t in trade_terminal._cache.values() if t.get("source") == "KITE_POSITION")
+    assert trade["execution_mode"] == "LIVE"
+    assert trade["broker_pnl"] == 250
+
+
+def test_flattened_live_position_is_durably_closed(monkeypatch):
+    calls = []
+    monkeypatch.setattr(trade_terminal, "_persist", lambda trade, event, payload: calls.append((trade.copy(), event)))
+    position = {"exchange": "NFO", "tradingsymbol": "NIFTY26OCT25000CE", "product": "MIS", "quantity": 50}
+    trade_terminal.reconcile_live_positions([position])
+    result = trade_terminal.reconcile_live_positions([])
+    trade = next(t for t in trade_terminal._cache.values() if t.get("source") == "KITE_POSITION")
+    assert result["closed"] == 1
+    assert trade["status"] == "CLOSED"
+    assert trade["open_quantity"] == 0
+    assert calls[-1][1] == "BROKER_POSITION_FLATTENED"
