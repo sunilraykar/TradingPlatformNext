@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import TradeTerminal from './TradeTerminal.jsx';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'];
@@ -581,6 +582,7 @@ export default function App() {
       <nav className="application-tabs" aria-label="Application section">
         <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
+        <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>
         <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
       </nav>
         <div className="topbar-right">
@@ -590,7 +592,7 @@ export default function App() {
         </div>
       </header>
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'autotrender' ? <>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal /> : applicationTab === 'autotrender' ? <>
       
 
       <section className="control-panel">
