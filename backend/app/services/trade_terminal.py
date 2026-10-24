@@ -20,6 +20,8 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
+from app.services import live_market_data
+from app.services.trade_terminal_stream import publish
 
 logger = logging.getLogger(__name__)
 _lock = threading.RLock()
@@ -231,7 +233,75 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     trade["persistence_state"] = "PERSISTED"
     with _lock:
         _cache[trade["trade_id"]] = trade
-    return dict(trade)
+    # Resolve and subscribe immediately after acceptance. The quote path remains cache-only.
+    try:
+        exchange = str(trade.get("exchange") or "NFO").strip().upper()
+        with get_engine().connect() as conn:
+            row = conn.execute(text(
+                "SELECT instrument_token FROM instruments WHERE exchange = :exchange "
+                "AND tradingsymbol = :symbol AND is_active = TRUE LIMIT 1"
+            ), {"exchange": exchange, "symbol": symbol}).first()
+        if row and int(row[0]) > 0:
+            token = int(row[0])
+            with _lock:
+                current = _cache.get(trade["trade_id"])
+                if current:
+                    current["instrument_token"] = token
+                    current["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
+            live_market_data.subscribe([token], mode="quote")
+            trade["instrument_token"] = token
+            trade["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
+        else:
+            trade["quote_state"] = "INSTRUMENT_NOT_RESOLVED"
+            with _lock:
+                if trade["trade_id"] in _cache:
+                    _cache[trade["trade_id"]]["quote_state"] = "INSTRUMENT_NOT_RESOLVED"
+    except Exception:
+        logger.exception("Trade %s saved but immediate market-data subscription failed", trade["trade_id"])
+        trade["quote_state"] = "SUBSCRIPTION_PENDING"
+        with _lock:
+            if trade["trade_id"] in _cache:
+                _cache[trade["trade_id"]]["quote_state"] = "SUBSCRIPTION_PENDING"
+    publish({"type": "trade_upsert", "trade": dict(_cache.get(trade["trade_id"], trade))})
+    return dict(_cache.get(trade["trade_id"], trade))
+
+
+def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
+    """Update matching open trades in memory and push changed rows; never touches MySQL."""
+    token = quote.get("instrument_token")
+    price = quote.get("last_price")
+    if token is None or price is None:
+        return 0
+    try:
+        price = float(price)
+        token = int(token)
+    except (TypeError, ValueError):
+        return 0
+    if price < 0:
+        return 0
+    timestamp = quote.get("received_at") or _now()
+    changed = []
+    with _lock:
+        for trade_id, current in _cache.items():
+            if int(current.get("instrument_token") or 0) != token or not _is_active(current):
+                continue
+            updated = dict(current)
+            updated["last_price"] = price
+            entry = updated.get("average_entry_price", updated.get("entry_price"))
+            quantity = int(updated.get("open_quantity", updated.get("quantity", 0)) or 0)
+            try:
+                entry = float(entry)
+                direction = -1 if str(updated.get("direction", "BUY")).upper() == "SELL" else 1
+                updated["unrealized_pnl"] = (price - entry) * quantity * direction
+            except (TypeError, ValueError):
+                pass
+            updated["last_market_data_at"] = timestamp
+            updated["quote_state"] = "LIVE"
+            _cache[trade_id] = updated
+            changed.append(updated)
+    for trade in changed:
+        publish({"type": "trade_quote", "trade_id": trade["trade_id"], "trade": trade})
+    return len(changed)
 
 
 @_serialized_lifecycle
