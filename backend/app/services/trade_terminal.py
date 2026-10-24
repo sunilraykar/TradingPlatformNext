@@ -266,6 +266,39 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     return dict(_cache.get(trade["trade_id"], trade))
 
 
+def subscribe_open_trades() -> dict[str, int]:
+    """Resolve and subscribe every active trade after startup/session restoration."""
+    subscribed = 0
+    unresolved = 0
+    with _lock:
+        trades = [dict(t) for t in _cache.values() if _is_active(t)]
+    for trade in trades:
+        try:
+            token = int(trade.get("instrument_token") or 0)
+            if token <= 0:
+                with get_engine().connect() as conn:
+                    row = conn.execute(text(
+                        "SELECT instrument_token FROM instruments WHERE exchange = :exchange "
+                        "AND tradingsymbol = :symbol AND is_active = TRUE LIMIT 1"
+                    ), {"exchange": str(trade.get("exchange") or "NFO").upper(),
+                        "symbol": trade.get("instrument_symbol")}).first()
+                token = int(row[0]) if row else 0
+            if token <= 0:
+                unresolved += 1
+                continue
+            with _lock:
+                current = _cache.get(trade["trade_id"])
+                if current:
+                    current["instrument_token"] = token
+                    current["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
+            live_market_data.subscribe([token], mode="quote")
+            subscribed += 1
+        except Exception:
+            logger.exception("Could not restore subscription for trade %s", trade.get("trade_id"))
+            unresolved += 1
+    return {"subscribed": subscribed, "unresolved": unresolved}
+
+
 def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
     """Update matching open trades in memory and push changed rows; never touches MySQL."""
     token = quote.get("instrument_token")
