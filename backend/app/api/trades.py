@@ -125,3 +125,40 @@ async def trade_terminal_stream_socket(websocket: WebSocket) -> None:
         trade_terminal_stream.disconnect(websocket)
     except Exception:
         trade_terminal_stream.disconnect(websocket)
+
+
+@router.get("/market-data-status")
+def terminal_market_data_status() -> dict[str, Any]:
+    """Diagnose live subscriptions for active Terminal trades; no database writes."""
+    market = live_market_data.status()
+    subscribed = set(market.get("subscribed_tokens", []))
+    quotes = live_quotes.snapshot()
+    rows = []
+    for trade in trade_terminal.list_trades():
+        if str(trade.get("status", "OPEN")).upper() in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}:
+            continue
+        token_value = trade.get("instrument_token")
+        token = int(token_value) if token_value else None
+        quote = quotes.get(token) if token else None
+        rows.append({
+            "trade_id": trade.get("trade_id"),
+            "symbol": trade.get("instrument_symbol"),
+            "exchange": trade.get("exchange") or "NFO",
+            "status": trade.get("status", "OPEN"),
+            "instrument_token": token,
+            "subscription_registered": token in subscribed if token else False,
+            "subscription_mode": next(
+                (item.get("mode") for item in market.get("subscriptions", [])
+                 if token and item.get("instrument_token") == token), None
+            ),
+            "quote_available": bool(quote),
+            "last_price": quote.get("last_price") if quote else None,
+            "quote_received_at": quote.get("received_at") if quote else None,
+            "diagnostic": (
+                "INSTRUMENT_NOT_RESOLVED" if not token else
+                "SUBSCRIBED_WAITING_FOR_QUOTE" if token in subscribed and not quote else
+                "LIVE_QUOTE_AVAILABLE" if quote else
+                "TOKEN_NOT_REGISTERED"
+            ),
+        })
+    return {"websocket": market, "active_terminal_trades": rows, "active_count": len(rows)}
