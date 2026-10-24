@@ -10,6 +10,7 @@ from app.api.autotrender_auth import router as autotrender_auth_router
 from app.api.autotrender_market_data import router as autotrender_market_data_router
 from app.api.routes import router
 from app.api.subscription_test import router as subscription_test_router
+from app.api.trades import router as trades_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.kite.client import KiteProvider, KiteProviderError
