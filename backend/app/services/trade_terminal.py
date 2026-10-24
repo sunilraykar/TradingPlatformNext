@@ -67,8 +67,9 @@ def _naive_datetime(value: str) -> datetime:
 
 
 _CACHE_ONLY_FIELDS = {
-    "last_price", "unrealized_pnl", "last_market_data_at",
-    "quote_state", "quote_received_at", "market_quote", "cached_quote",
+    "last_price", "ltp", "price", "unrealized_pnl", "last_market_data_at",
+    "quote_state", "quote_received_at", "quote_timestamp", "last_quote_at", "received_at",
+    "market_quote", "cached_quote", "quote", "quote_data", "instrument_token",
     "subscription_state", "subscription_mode", "subscribed",
 }
 
