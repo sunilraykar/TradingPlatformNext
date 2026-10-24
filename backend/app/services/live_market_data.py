@@ -19,6 +19,18 @@ def _on_state(value: str) -> None:
     global _state
     with _lock:
         _state = value
+        ticker = _ticker if value == "connected" else None
+        subscriptions = dict(_subscriptions) if ticker is not None else {}
+    # KiteTicker.connect(threaded=True) returns before the socket is ready.
+    # Apply all desired subscriptions only from the actual on_connect callback.
+    if ticker is not None:
+        for mode in ("ltp", "quote", "full"):
+            tokens = [token for token, wanted_mode in subscriptions.items() if wanted_mode == mode]
+            if tokens:
+                try:
+                    ticker.subscribe(tokens, mode=mode)
+                except Exception:
+                    logger.exception("Could not apply Kite %s subscriptions after connect", mode)
 
 
 def start() -> dict[str, Any]:
@@ -39,11 +51,9 @@ def start() -> dict[str, Any]:
         _ticker = ticker
         _state = "connecting"
         try:
+            # Subscriptions are applied by _on_state("connected"), not here:
+            # connect(threaded=True) is asynchronous and the socket may not be ready.
             ticker.connect(threaded=True)
-            for mode in ("ltp", "quote", "full"):
-                tokens = [t for t, m in _subscriptions.items() if m == mode]
-                if tokens:
-                    ticker.subscribe(tokens, mode=mode)
         except Exception:
             _ticker = None
             _state = "error"
@@ -79,10 +89,19 @@ def subscribe(instrument_tokens: list[int], mode: str = "quote") -> dict[str, An
         for token in unique_tokens:
             _subscriptions[token] = mode
         ticker = _ticker
+        connected = _state == "connected"
     if ticker is None:
-        start()
-    else:
-        ticker.subscribe(unique_tokens, mode=mode)
+        try:
+            start()
+        except Exception:
+            # Desired subscriptions remain registered; startup/reconnect can retry.
+            logger.exception("Kite ticker start failed; desired subscriptions retained in memory")
+    elif connected:
+        try:
+            ticker.subscribe(unique_tokens, mode=mode)
+        except Exception:
+            # Keep the desired set; the next successful on_connect reapplies it.
+            logger.exception("Kite subscription deferred; desired tokens retained in memory")
     return status()
 
 
