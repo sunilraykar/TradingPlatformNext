@@ -258,6 +258,8 @@ const SETTINGS_FIELDS = {
     ['putPcr', 'Put PCR Threshold', 'number', '1', 'Put PCR threshold used by the signal filter.', '0'],
     ['callPcr', 'Call PCR Threshold', 'number', '1', 'Call PCR threshold used by the signal filter.', '0'],
     ['callPutStrengthDiff', 'Call-Put Strength Difference', 'number', '10', 'Minimum call/put strength difference for a signal.', '0'],
+    ['autoTrenderEntryStartTime', 'AutoTrender Entry Start Time (IST)', 'time', '10:00', 'New AutoTrender entries are blocked before this time. The start time is inclusive.'],
+    ['autoTrenderEntryEndTime', 'AutoTrender Entry End Time (IST)', 'time', '14:00', 'New AutoTrender entries are blocked after this time. The end time is inclusive.'],
   ],
   'active-trades': [
     ['autoExitProfitableTrades', 'Auto Exit Profitable Trades at Market Close', 'boolean', false, 'Enable AutoExitProfitableTradesWorker. When disabled, the worker must not auto-exit profitable trades.'],
@@ -588,6 +590,19 @@ function SettingsPanel() {
 
   const save = async () => {
     setSaving(true); setMessage(''); setError('');
+    const start = String(value('autoTrenderEntryStartTime') || '');
+    const end = String(value('autoTrenderEntryEndTime') || '');
+    const validTime = (candidate) => /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(candidate);
+    if (!validTime(start) || !validTime(end)) {
+      setError('AutoTrender entry times must use valid 24-hour HH:MM values.');
+      setSaving(false);
+      return;
+    }
+    if (start >= end) {
+      setError('AutoTrender Entry End Time must be later than the start time.');
+      setSaving(false);
+      return;
+    }
     try {
       const result = await api('/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings }) });
       // Save silently; do not display a success banner.
