@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from app.services import trade_terminal
+from app.providers.kite.client import KiteProviderError
+from app.providers.kite.registry import get_kite_provider
 
 router = APIRouter(prefix="/trades", tags=["trade terminal"])
 
@@ -84,3 +86,18 @@ def retry_terminal_persistence() -> dict[str, Any]:
 @router.post("/end-of-day-flush")
 def flush_terminal_end_of_day() -> dict[str, Any]:
     return trade_terminal.end_of_day_flush()
+
+
+@router.post("/reconcile-live")
+def reconcile_live_terminal_positions() -> dict[str, Any]:
+    """Read Kite net positions and upsert them into the canonical trade terminal."""
+    try:
+        positions = get_kite_provider().positions()
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail="Unable to reconcile live positions from Kite") from exc
+    net = positions.get("net", []) if isinstance(positions, dict) else []
+    try:
+        result = trade_terminal.reconcile_live_positions(net)
+        return {"reconciliation": result, "terminal": trade_terminal.status()}
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
