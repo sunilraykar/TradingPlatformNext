@@ -85,6 +85,9 @@ async def lifespan(_: FastAPI):
     trade_terminal.hydrate_cache()
     live_quotes.add_listener(trade_terminal.apply_quote_to_open_trades)
     await _restore_kite_session()
+    # Default AutoTrender index feeds are registered on every backend start.
+    # Desired tokens remain in memory and will be applied when Kite is authenticated.
+    live_market_data.subscribe_autotrender_indices()
     trade_terminal.subscribe_open_trades()
     reset_task = asyncio.create_task(run_daily_reset_scheduler())
     trade_task = asyncio.create_task(trade_terminal.run_maintenance_scheduler())
