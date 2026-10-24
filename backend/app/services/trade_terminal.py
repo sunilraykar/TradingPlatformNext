@@ -21,6 +21,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
 from app.services import live_market_data
+from app.services.live_quotes import live_quotes
 from app.services.trade_terminal_stream import publish
 
 logger = logging.getLogger(__name__)
@@ -265,6 +266,11 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
             live_market_data.subscribe([token], mode="quote")
             trade["instrument_token"] = token
             trade["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
+            # Reuse the latest WebSocket tick already in cache instead of waiting for
+            # another tick or for the user to leave and reopen the terminal.
+            cached_quote = live_quotes.get(token)
+            if cached_quote:
+                apply_quote_to_open_trades(cached_quote)
         else:
             trade["quote_state"] = "INSTRUMENT_NOT_RESOLVED"
             with _lock:
@@ -307,6 +313,11 @@ def subscribe_open_trades() -> dict[str, int]:
                     current["quote_state"] = "WAITING_FOR_FIRST_QUOTE"
                     current.pop("last_price", None)
             live_market_data.subscribe([token], mode="quote")
+            # A quote may have arrived before this trade was restored/subscribed.
+            # Seed every active trade sharing the token from the current cache.
+            cached_quote = live_quotes.get(token)
+            if cached_quote:
+                apply_quote_to_open_trades(cached_quote)
             subscribed += 1
         except Exception:
             logger.exception("Could not restore subscription for trade %s", trade.get("trade_id"))
