@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 from threading import RLock
-from typing import Any
+from typing import Any, Callable
 
 
 class LiveQuoteCache:
@@ -9,6 +9,7 @@ class LiveQuoteCache:
     def __init__(self) -> None:
         self._lock = RLock()
         self._quotes: dict[int, dict[str, Any]] = {}
+        self._listeners: list[Callable[[dict[str, Any]], None]] = []
 
     def update(self, instrument_token: int, payload: dict[str, Any]) -> None:
         record = dict(payload)
@@ -17,7 +18,7 @@ class LiveQuoteCache:
         with self._lock:
             self._quotes[instrument_token] = record
 
-    def get(self, instrument_token: int) -> dict[str, Any] | None:
+    def add_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:\n        with self._lock:\n            if listener not in self._listeners:\n                self._listeners.append(listener)\n\n    def remove_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:\n        with self._lock:\n            if listener in self._listeners:\n                self._listeners.remove(listener)\n\n    def get(self, instrument_token: int) -> dict[str, Any] | None:
         with self._lock:
             value = self._quotes.get(instrument_token)
             return dict(value) if value else None
