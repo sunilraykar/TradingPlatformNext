@@ -126,3 +126,16 @@ The first implementation slice is on `feature/autotrender-index-auto-trading`:
 - Run and review the latest GitHub Actions results before considering the code validated.
 - Continuous quote subscription / unrealized-P&L refresh for paper trades, automatic broker reconciliation cadence, and live order/fill-to-trade linking still need a follow-up implementation pass.
 - AutoTrender's automatic index paper-trade worker is not connected yet; it should be integrated only after this canonical lifecycle is verified.
+
+
+## 60-second worker implementation status
+
+The branch `feature/autotrender-60s-worker` adds the first scheduler slice:
+
+- FastAPI lifespan starts and cleanly cancels the 60-second AutoTrender evaluator task.
+- The worker reads the existing dashboard-index and signal-threshold settings from `app_settings`, fetches each enabled index's latest AutoTrender intraday response, extracts the latest row, and calls the unit-tested evaluator.
+- Each index is isolated: malformed or unavailable data is logged for that index without preventing the other enabled indices from being evaluated.
+- `GET /api/v1/autotrender/worker/status` reports the most recent process-local cycle and per-index outcomes.
+- Unit tests cover response extraction, configured enabled indices, and entry-window boundaries.
+
+**Scope boundary:** this slice evaluates and logs eligible signal candidates only. It deliberately does not create PAPER trades yet. Option-contract expiry preference, fresh positive option-premium validation, target fallback, atomic one-active-trade-per-index protection, canonical Trade Terminal creation, and end-to-end tests must be completed before entries are enabled. No broker order placement is called.
