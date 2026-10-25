@@ -16,7 +16,7 @@ Reuse the existing strategy from the legacy repository `sunilraykar/TradingPlatf
 
 ## Existing automatic-entry behavior to preserve
 
-- Evaluate at the configurable `AutoTrender Signal Evaluation Interval (seconds)` from Settings → AutoTrender (default 5 seconds; allowed range 1–3600 seconds). The setting controls background signal-evaluation cadence, not the separate UI data refresh interval.
+- Evaluate at the configurable `AutoTrender Signal Evaluation Interval (seconds)` from Settings → AutoTrender (default 5 seconds; allowed range 1–3600 seconds). The setting controls background signal-evaluation cadence, not the separate UI data refresh interval. Entry evaluation is blocked on weekends, before the configured start time, and at or after the configured end/cutoff (default 15:25 IST). Signals must contain a recognized source timestamp and be no older than the configurable `AutoTrender Maximum Signal Age (seconds)` (default 300 seconds; allowed range 1–3600); missing, invalid, stale, or future-dated timestamps fail closed. Repeated eligible rows with the same timestamp are suppressed per index in-process.
 - Automatic option entries are blocked before 10:00 IST and at/after 15:25 IST. This does not disable processing/exits for existing trades.
 - Use the configured enabled index list (`autoTrender.dashboardIndices`) and the existing per-index expiry preference (`callPutExpiry`).
 - Resolve the nearest-strike eligible CE for bullish signals and PE for bearish signals from Kite's instrument master; require a valid expiry and positive live option premium.
