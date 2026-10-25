@@ -363,7 +363,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                 outcomes[index] = {
                     "state": "rejected",
                     "reason": freshness_reason,
-                    "source_fields": sorted(str(key) for key in row.keys()),
+                    "source_fields": sorted(str(key) for key in row),
                     "recognized_timestamp_fields": [key for key in SIGNAL_TIMESTAMP_FIELDS if row.get(key) not in (None, "")],
                 }
                 continue
