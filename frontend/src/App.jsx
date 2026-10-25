@@ -801,7 +801,11 @@ export default function App() {
   }), [calculatedRows]);
   const latest = intradayRows[intradayRows.length - 1] || {};
 
-  const contractSignal = [signalValue(latest.optionSignal), signalValue(trend.signal)].find((value) => value === 'BUY' || value === 'SELL') || '';
+  // Contract direction must come from the final configured Intraday Price & VWAP entry decision,
+  // not the upstream Option Signal alone. WAIT must never select a directional contract.
+  const contractSignal = calculatedRowsDescending[0]?.enter === 'BUY' || calculatedRowsDescending[0]?.enter === 'SELL'
+    ? calculatedRowsDescending[0].enter
+    : '';
 
   useEffect(() => {
     let active = true;
