@@ -183,7 +183,7 @@ def _enforce_autotrender_entry_window(source: str, signal_timestamp: str | None)
     if parsed_signal_time.tzinfo is None:
         parsed_signal_time = parsed_signal_time.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
     age_seconds = (now - parsed_signal_time.astimezone(ZoneInfo("Asia/Kolkata"))).total_seconds()
-    if age_seconds < -30:
+    if age_seconds < 0:
         raise HTTPException(status_code=422, detail="AutoTrender signal timestamp is in the future")
     try:
         max_age_seconds = int(float(settings["autoTrenderMaxSignalAgeSeconds"]))
