@@ -6,6 +6,7 @@ from app.services.autotrender_paper_trade_worker import (
     _entry_window,
     _max_signal_age_seconds,
     _poll_interval_seconds,
+    _quote_timestamp_is_fresh,
     enabled_indices,
     latest_intraday_row,
     signal_freshness,
@@ -137,3 +138,21 @@ def test_max_signal_age_is_validated_independently_from_poll_interval():
     assert _max_signal_age_seconds(0) == 1
     assert _max_signal_age_seconds(99999) == 3600
     assert _max_signal_age_seconds("invalid") == 300
+
+
+
+def test_live_quote_timestamp_must_be_present_recent_and_not_future():
+    now = datetime(2026, 10, 26, 10, 0, tzinfo=IST)
+    assert _quote_timestamp_is_fresh("2026-10-26T09:59:00+05:30", now)
+    assert not _quote_timestamp_is_fresh(None, now)
+    assert not _quote_timestamp_is_fresh("not-a-timestamp", now)
+    assert not _quote_timestamp_is_fresh("2026-10-26T09:57:59+05:30", now)
+    assert not _quote_timestamp_is_fresh("2026-10-26T10:00:01+05:30", now)
+
+
+def test_spot_price_accepts_nested_and_formatted_values():
+    from app.services.autotrender_paper_trade_worker import _spot_price
+
+    assert _spot_price({"price": {"value": "25,100"}}) == 25100
+    assert _spot_price({"price": "0", "ltp": "24,900"}) == 24900
+    assert _spot_price({"price": -1}) is None
