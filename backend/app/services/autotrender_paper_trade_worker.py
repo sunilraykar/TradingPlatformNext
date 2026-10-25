@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime, time, timezone
+from datetime import UTC, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -168,13 +168,13 @@ def parse_signal_timestamp(row: dict[str, Any]) -> datetime | None:
             epoch = float(raw)
             if epoch > 10_000_000_000:
                 epoch /= 1000
-            parsed = datetime.fromtimestamp(epoch, tz=timezone.utc)
+            parsed = datetime.fromtimestamp(epoch, tz=UTC)
         except (ValueError, OverflowError, OSError):
             return None
     elif isinstance(raw, str):
         candidate = raw.strip()
         try:
-            parsed = datetime.fromisoformat(candidate.replace("Z", "+00:00"))
+            parsed = datetime.fromisoformat(candidate)
         except ValueError:
             for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%H:%M:%S", "%H:%M"):
                 try:
