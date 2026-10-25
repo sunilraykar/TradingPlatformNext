@@ -164,7 +164,9 @@ export default function TradeTerminal() {
     const statusMatches = status === 'ALL' || (status === 'OPEN' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(statusValue)) || statusValue === status;
     const underlyingMatches = underlyingFilter === 'ALL' ||
       (underlyingFilter === 'INDICES' && ['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(String(trade.underlying || '').toUpperCase())) ||
-      String(trade.underlying || '') === underlyingFilter;
+      (underlyingFilter === 'OTHER'
+        ? !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(String(trade.underlying || '').toUpperCase())
+        : String(trade.underlying || '') === underlyingFilter);
     const dateMatches = dateFilter === 'ALL' ||
       (dateFilter === 'TODAY' && created >= startOfToday) ||
       (dateFilter === 'WEEK' && created >= startOfWeek) ||
