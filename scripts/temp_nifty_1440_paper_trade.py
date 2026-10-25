@@ -154,6 +154,27 @@ def main() -> int:
         print("Decision is WAIT; refusing to insert a terminal trade.")
         return 2
 
+    terminal_response = get("/trades?underlying=NIFTY")
+    existing_trades = terminal_response.get("trades")
+    if not isinstance(existing_trades, list):
+        raise RuntimeError("Trade Terminal response does not contain a trades array; refusing to create a trade.")
+    terminal_statuses = {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
+    open_nifty_trades = [
+        trade for trade in existing_trades
+        if isinstance(trade, dict)
+        and str(trade.get("status") or "OPEN").upper() not in terminal_statuses
+    ]
+    if open_nifty_trades:
+        print("An active NIFTY trade already exists; no new trade created.")
+        print(json.dumps([{
+            "trade_id": trade.get("trade_id"),
+            "instrument_symbol": trade.get("instrument_symbol"),
+            "status": trade.get("status", "OPEN"),
+            "execution_mode": trade.get("execution_mode"),
+            "source": trade.get("source"),
+        } for trade in open_nifty_trades], indent=2))
+        return 0
+
     # Direction decides which option side to buy: bullish -> CE, bearish -> PE.
     contract = get(f"/kite/instruments/select-atm?index={INDEX}&signal={decision['enter']}")
     if contract.get("status") != "SELECTED":
@@ -163,10 +184,7 @@ def main() -> int:
     if lot_size <= 0:
         raise RuntimeError("Selected contract has no valid lot size; no terminal record was created.")
 
-    # Idempotency prevents duplicate records if the script is rerun.
-    idempotency_key = f"temp-nifty-1440-{today}-{decision['enter']}-{contract['tradingsymbol']}"
     payload = {
-        "idempotency_key": idempotency_key,
         "execution_mode": "PAPER",
         "source": "TEMP_NIFTY_1440",
         "strategy": "NIFTY AutoTrender 14:40 temporary evaluation",
@@ -188,7 +206,7 @@ def main() -> int:
     result = post("/trades", payload)
     trade = result.get("trade", result)
     print(json.dumps({
-        "result": "terminal paper record created or already exists (idempotent)",
+        "result": "terminal paper record created",
         "trade_id": trade.get("trade_id"),
         "status": trade.get("status"),
         "execution_mode": trade.get("execution_mode"),
