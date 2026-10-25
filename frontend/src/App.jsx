@@ -197,6 +197,7 @@ function PriceVwapChart({ rows }) {
         <div><span>Price</span><strong>{formatHoverNumber(hoveredRow.price, 2)}</strong></div>
         <div><span>VWAP</span><strong>{formatHoverNumber(hoveredRow.vwap, 2)}</strong></div>
         <div><span>PCR</span><strong>{formatHoverNumber(hoveredRow.pcr, 2)}</strong></div>
+        <div><span>Entry Signal</span><strong style={{ color: hoveredRow.enter === 'BUY' ? '#22c55e' : hoveredRow.enter === 'SELL' ? '#f87171' : '#fbbf24' }}>{hoveredRow.enter || '—'}</strong></div>
         <div><span>Price − VWAP</span><strong className={hoveredGap === null ? '' : hoveredGap >= 0 ? 'positive' : 'negative'}>{formatHoverNumber(hoveredGap, 2)}</strong></div>
         <div><span>Buffer</span><strong className={hoveredBuffer === null ? '' : hoveredBuffer >= 0 ? 'positive' : 'negative'}>{hoveredBuffer === null ? '—' : `${formatHoverNumber(hoveredBuffer, 3)}%`}</strong></div>
       </div>}
