@@ -30,6 +30,7 @@ class TradeCreate(BaseModel):
     stop_loss: float | None = Field(default=None, ge=0)
     target: float | None = Field(default=None, ge=0)
     notes: str | None = Field(default=None, max_length=2000)
+    signal_timestamp: str | None = Field(default=None, max_length=80)
 
 
 class TradeUpdate(BaseModel):
@@ -107,8 +108,8 @@ def terminal_status() -> dict[str, Any]:
     return trade_terminal.status()
 
 
-def _enforce_autotrender_entry_window(source: str) -> None:
-    """Reject new AutoTrender entries outside the configured inclusive IST window."""
+def _enforce_autotrender_entry_window(source: str, signal_timestamp: str | None) -> None:
+    """Fail closed on AutoTrender entries outside the cutoff or with stale signals."""
     normalized_source = source.upper().replace("-", "").replace("_", "")
     if "AUTOTRENDER" not in normalized_source:
         return
@@ -116,13 +117,13 @@ def _enforce_autotrender_entry_window(source: str) -> None:
     try:
         with get_engine().connect() as connection:
             rows = connection.execute(
-                text("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN (:start_key, :end_key)"),
-                {"start_key": "ui.autoTrenderEntryStartTime", "end_key": "ui.autoTrenderEntryEndTime"},
+                text("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN (:start_key, :end_key, :age_key)"),
+                {"start_key": "ui.autoTrenderEntryStartTime", "end_key": "ui.autoTrenderEntryEndTime", "age_key": "ui.autoTrenderMaxSignalAgeSeconds"},
             ).mappings().all()
     except Exception as exc:
         raise HTTPException(status_code=503, detail="Unable to read AutoTrender entry-window settings") from exc
 
-    settings = {"autoTrenderEntryStartTime": "10:00", "autoTrenderEntryEndTime": "14:00"}
+    settings = {"autoTrenderEntryStartTime": "10:00", "autoTrenderEntryEndTime": "15:25", "autoTrenderMaxSignalAgeSeconds": 300}
     for row in rows:
         value = row["setting_value"]
         if isinstance(value, str):
@@ -152,17 +153,39 @@ def _enforce_autotrender_entry_window(source: str) -> None:
             detail="AutoTrender entry-window settings are invalid; correct them in Settings",
         ) from exc
 
-    current = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%H:%M")
-    if current < start_value or current > end_value:
+    now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    start_time = time.fromisoformat(start_value)
+    end_time = time.fromisoformat(end_value)
+    if now.time().replace(tzinfo=None) < start_time or now.time().replace(tzinfo=None) >= end_time:
         raise HTTPException(
             status_code=422,
-            detail=f"New AutoTrender entries are allowed only from {start_value} to {end_value} IST (inclusive)",
+            detail=f"New AutoTrender entries are allowed from {start_value} IST (inclusive) until {end_value} IST (exclusive)",
         )
+
+    if not signal_timestamp:
+        raise HTTPException(status_code=422, detail="AutoTrender entries require a source signal timestamp")
+    try:
+        parsed_signal_time = datetime.fromisoformat(signal_timestamp.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="AutoTrender signal timestamp is invalid") from exc
+    if parsed_signal_time.tzinfo is None:
+        parsed_signal_time = parsed_signal_time.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+    age_seconds = (now - parsed_signal_time.astimezone(ZoneInfo("Asia/Kolkata"))).total_seconds()
+    try:
+        max_age_seconds = int(float(settings["autoTrenderMaxSignalAgeSeconds"]))
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise HTTPException(status_code=503, detail="AutoTrender maximum signal age setting is invalid") from exc
+    if max_age_seconds < 1 or max_age_seconds > 3600:
+        raise HTTPException(status_code=503, detail="AutoTrender maximum signal age must be between 1 and 3600 seconds")
+    if age_seconds < -30:
+        raise HTTPException(status_code=422, detail="AutoTrender signal timestamp is in the future")
+    if age_seconds > max_age_seconds:
+        raise HTTPException(status_code=422, detail="AutoTrender signal is stale; a fresh signal is required")
 
 
 @router.post("")
 def create_terminal_trade(payload: TradeCreate) -> dict[str, Any]:
-    _enforce_autotrender_entry_window(payload.source)
+    _enforce_autotrender_entry_window(payload.source, payload.signal_timestamp)
     try:
         return {"trade": trade_terminal.create_trade(payload.model_dump())}
     except ValueError as exc:
