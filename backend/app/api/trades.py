@@ -154,6 +154,8 @@ def _enforce_autotrender_entry_window(source: str, signal_timestamp: str | None)
         ) from exc
 
     now = datetime.now(ZoneInfo("Asia/Kolkata"))
+    if now.weekday() >= 5:
+        raise HTTPException(status_code=422, detail="New AutoTrender entries are blocked on weekends")
     start_time = time.fromisoformat(start_value)
     end_time = time.fromisoformat(end_value)
     if now.time().replace(tzinfo=None) < start_time or now.time().replace(tzinfo=None) >= end_time:
