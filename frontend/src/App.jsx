@@ -269,6 +269,7 @@ const SETTINGS_FIELDS = {
   ],
   autotrend: [
     ['autoTrenderRefreshSeconds', 'AutoTrender Refresh Interval (seconds)', 'number', '5', 'Refresh interval for AutoTrender data.', '1'],
+    ['autoTrenderWorkerIntervalSeconds', 'AutoTrender Signal Evaluation Interval (seconds)', 'number', '5', 'How often the backend evaluates AutoTrender signals. Applies to the background worker.', '1'],
     ['vwapPriceDifferenceBuffer', 'VWAP-Price Difference Buffer (%)', 'number', '0.3', 'Maximum absolute VWAP/price buffer used by the entry filter.', '0'],
     ['putPcr', 'Put PCR Threshold', 'number', '1', 'Put PCR threshold used by the signal filter.', '0'],
     ['callPcr', 'Call PCR Threshold', 'number', '1', 'Call PCR threshold used by the signal filter.', '0'],
