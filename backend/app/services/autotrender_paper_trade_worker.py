@@ -1,8 +1,7 @@
-"""Configurable-interval AutoTrender signal-monitoring worker.
+"""Configurable AutoTrender worker for fresh PAPER option entries.
 
-This first scheduler slice deliberately evaluates and logs signals only. It does not
-create trades until option-contract, live-premium, target, and duplicate-entry wiring
-has been integrated and validated.
+Creates only PAPER trades through the canonical Trade Terminal. It never places
+broker orders; the existing exit workers remain responsible for exits.
 """
 from __future__ import annotations
 
@@ -18,6 +17,9 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
 from app.providers.autotrender.auth import AutoTrenderAuth
+from app.providers.kite.client import KiteProviderError
+from app.providers.kite.registry import get_kite_provider
+from app.services import trade_terminal
 from app.services.autotrender_signal_evaluator import Evaluation, evaluate_signal
 
 logger = logging.getLogger(__name__)
@@ -71,6 +73,7 @@ def _read_settings() -> dict[str, Any]:
         "autoTrenderEntryEndTime",
         "autoTrenderWorkerIntervalSeconds",
         "autoTrenderMaxSignalAgeSeconds",
+        "targetFallbackPercent",
     )
     defaults: dict[str, Any] = {
         "autoTrenderDashboardIndices": {
@@ -86,6 +89,7 @@ def _read_settings() -> dict[str, Any]:
         "autoTrenderEntryStartTime": "10:00",
         "autoTrenderEntryEndTime": "15:25",
         "autoTrenderMaxSignalAgeSeconds": DEFAULT_MAX_SIGNAL_AGE_SECONDS,
+        "targetFallbackPercent": 1.0,
         "autoTrenderWorkerIntervalSeconds": DEFAULT_POLL_SECONDS,
     }
     try:
@@ -240,8 +244,78 @@ def _fetch_intraday(index: str) -> dict[str, Any]:
     return payload
 
 
+def _spot_price(row: dict[str, Any]) -> float | None:
+    for key in ("price", "close", "ltp", "spot", "spotPrice", "indexPrice", "lastPrice"):
+        try:
+            parsed = float(row.get(key))
+        except (TypeError, ValueError):
+            continue
+        if parsed > 0:
+            return parsed
+    return None
+
+
+def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float) -> dict[str, Any]:
+    """Resolve nearest-strike option and create one-lot PAPER trade from live Kite premium."""
+    today = datetime.now(IST).date()
+    spot = _spot_price(row)
+    if spot is None:
+        raise ValueError("missing_positive_spot_price")
+    option_type = "CE" if direction == "BUY" else "PE"
+    exchange = "BFO" if index in {"SENSEX", "BANKEX"} else "NFO"
+    with get_engine().connect() as connection:
+        candidates = connection.execute(text(
+            "SELECT instrument_token, exchange, tradingsymbol, name, instrument_type, expiry, strike, lot_size "
+            "FROM instruments WHERE source = 'KITE' AND is_active = TRUE AND exchange = :exchange "
+            "AND instrument_type = :option_type AND expiry >= :today "
+            "AND (UPPER(name) LIKE :underlying OR UPPER(tradingsymbol) LIKE :symbol_prefix) "
+            "ORDER BY expiry ASC, ABS(strike - :spot) ASC, instrument_version DESC"
+        ), {"exchange": exchange, "option_type": option_type, "today": today,
+            "underlying": "%" + index + "%", "symbol_prefix": index + "%", "spot": spot}).mappings().all()
+    if not candidates:
+        raise ValueError("no_eligible_option_contract")
+    chosen = candidates[0]
+    quote = get_kite_provider().quote(int(chosen["instrument_token"]))
+    try:
+        premium = float(quote.get("last_price"))
+    except (TypeError, ValueError):
+        premium = 0
+    if premium <= 0:
+        raise ValueError("missing_positive_live_option_premium")
+    quote_time = quote.get("timestamp") or quote.get("last_trade_time")
+    if quote_time:
+        if isinstance(quote_time, str):
+            try:
+                quote_time = datetime.fromisoformat(quote_time.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ValueError("invalid_live_option_quote_timestamp") from exc
+        if isinstance(quote_time, datetime):
+            if quote_time.tzinfo is None:
+                quote_time = quote_time.replace(tzinfo=IST)
+            if (datetime.now(IST) - quote_time.astimezone(IST)).total_seconds() > 120:
+                raise ValueError("stale_live_option_premium")
+    quantity = int(chosen.get("lot_size") or 0)
+    if quantity <= 0:
+        raise ValueError("invalid_option_lot_size")
+    target = round(premium * (1 + max(0.01, target_fallback_percent) / 100), 2)
+    idempotency_key = "AUTOTRENDER:" + index + ":" + signal_timestamp.isoformat()
+    active = [trade for trade in trade_terminal.list_trades(mode="PAPER", underlying=index)
+              if str(trade.get("status", "OPEN")).upper() not in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
+              and str(trade.get("source", "")).upper().replace("_", "") == "AUTOTRENDER"]
+    if active:
+        raise ValueError("active_autotrender_trade_exists_for_underlying")
+    return trade_terminal.create_trade({
+        "idempotency_key": idempotency_key, "execution_mode": "PAPER", "source": "AUTOTRENDER",
+        "strategy": "AutoTrender " + direction + " " + option_type, "underlying": index,
+        "instrument_symbol": str(chosen["tradingsymbol"]), "exchange": exchange,
+        "direction": "BUY", "quantity": quantity, "entry_price": premium, "target": target,
+        "notes": "AutoTrender signal=" + direction + "; signal_timestamp=" + signal_timestamp.isoformat()
+            + "; spot=" + str(spot) + "; option=" + option_type + "; expiry=" + str(chosen["expiry"])
+            + "; strike=" + str(chosen["strike"]),
+    })
+
 def run_cycle(now: datetime | None = None) -> dict[str, Any]:
-    """Evaluate each enabled index once; never creates or modifies trades."""
+    """Evaluate each enabled index and create a paper trade for each fresh eligible signal."""
     global _LAST_CYCLE
     current = now or datetime.now(IST)
     if current.tzinfo is None:
@@ -299,13 +373,27 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                 put_pcr=float(settings["putPcr"]),
                 vwap_price_difference_buffer=float(settings["vwapPriceDifferenceBuffer"]),
             )
+            state = "rejected"
+            reason = evaluation.reason
+            trade_id = None
             if evaluation.eligible:
-                _LAST_SIGNAL_BY_INDEX[index] = signal_id
+                try:
+                    trade = _create_paper_trade(index, evaluation.direction or "", row, signal_timestamp,
+                                                float(settings.get("targetFallbackPercent", 1.0)))
+                    _LAST_SIGNAL_BY_INDEX[index] = signal_id
+                    state = "paper_trade_created"
+                    reason = "paper_trade_created"
+                    trade_id = trade.get("trade_id")
+                except (ValueError, RuntimeError, KiteProviderError, SQLAlchemyError) as exc:
+                    state = "entry_blocked"
+                    reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
+                    logger.warning("AutoTrender paper entry blocked index=%s reason=%s", index, reason)
             outcomes[index] = {
-                "state": "eligible_candidate" if evaluation.eligible else "rejected",
+                "state": state,
                 "signal_timestamp": signal_id,
                 "direction": evaluation.direction,
-                "reason": evaluation.reason,
+                "reason": reason,
+                "trade_id": trade_id,
                 "strength_difference": evaluation.strength_difference,
                 "vwap_difference_percent": evaluation.vwap_difference_percent,
             }
