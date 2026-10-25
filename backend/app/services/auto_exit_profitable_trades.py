@@ -22,8 +22,8 @@ from app.services import trade_terminal
 logger = logging.getLogger(__name__)
 _IST = ZoneInfo("Asia/Kolkata")
 # A close is only attempted during the final minutes, while the quote is still fresh.
-_WINDOW_START = time(15, 25)
-_WINDOW_END = time(15, 30, 30)
+_WINDOW_START = time(15, 30)
+_WINDOW_END = time(15, 32)
 _MAX_QUOTE_AGE_SECONDS = 120
 
 
