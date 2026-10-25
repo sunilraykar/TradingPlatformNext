@@ -73,10 +73,10 @@ def test_nested_autotrend_values_and_formatted_numbers_are_supported():
         call={"value": "1,000"},
         put={"value": "200"},
         price={"value": "1,49,640"},
-        vwap={"value": "149,500"},
+        vwap={"value": "149,000"},
         pcr={"value": "1.4"},
         vWapSignal={"type": "BUY"},
         optionSignal={"type": "BUY"},
     ))
-    assert not result.eligible  # price/VWAP gap is too large, even though fields parse
+    assert not result.eligible  # price/VWAP gap exceeds the 0.3% threshold
     assert result.reason == "VWAP_GAP_NOT_BELOW_THRESHOLD"
