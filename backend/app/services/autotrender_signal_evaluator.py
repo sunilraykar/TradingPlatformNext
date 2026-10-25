@@ -5,6 +5,7 @@ thresholds can be tested independently of the worker and trade lifecycle.
 """
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any
 
@@ -80,8 +81,15 @@ def evaluate_signal(
     put_pct = put / total * 100
     strength_difference = abs(call_pct - put_pct)
     vwap_difference = abs((price - vwap) / price * 100)
+    strength_threshold = abs(call_put_strength_diff)
 
-    if strength_difference <= abs(call_put_strength_diff):
+    # Floating-point arithmetic can represent an exact boundary (e.g. 55/45 = 10)
+    # as a value infinitesimally above it. Treat numerically equal values as equal,
+    # preserving the strict "greater than" rule.
+    at_strength_threshold = math.isclose(
+        strength_difference, strength_threshold, rel_tol=0.0, abs_tol=1e-9
+    )
+    if strength_difference < strength_threshold or at_strength_threshold:
         return Evaluation(False, None, "STRENGTH_DIFFERENCE_NOT_ABOVE_THRESHOLD", strength_difference, vwap_difference)
     if vwap_difference >= abs(vwap_price_difference_buffer):
         return Evaluation(False, None, "VWAP_GAP_NOT_BELOW_THRESHOLD", strength_difference, vwap_difference)
