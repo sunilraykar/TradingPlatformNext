@@ -16,7 +16,7 @@ Reuse the existing strategy from the legacy repository `sunilraykar/TradingPlatf
 
 ## Existing automatic-entry behavior to preserve
 
-- Evaluate every 60 seconds during market hours.
+- Evaluate at the configurable `AutoTrender Signal Evaluation Interval (seconds)` from Settings → AutoTrender (default 5 seconds; allowed range 1–3600 seconds). The setting controls background signal-evaluation cadence, not the separate UI data refresh interval.
 - Automatic option entries are blocked before 10:00 IST and at/after 15:25 IST. This does not disable processing/exits for existing trades.
 - Use the configured enabled index list (`autoTrender.dashboardIndices`) and the existing per-index expiry preference (`callPutExpiry`).
 - Resolve the nearest-strike eligible CE for bullish signals and PE for bearish signals from Kite's instrument master; require a valid expiry and positive live option premium.
@@ -128,11 +128,11 @@ The first implementation slice is on `feature/autotrender-index-auto-trading`:
 - AutoTrender's automatic index paper-trade worker is not connected yet; it should be integrated only after this canonical lifecycle is verified.
 
 
-## 60-second worker implementation status
+## Configurable AutoTrender worker implementation status
 
 The branch `feature/autotrender-60s-worker` adds the first scheduler slice:
 
-- FastAPI lifespan starts and cleanly cancels the 60-second AutoTrender evaluator task.
+- FastAPI lifespan starts and cleanly cancels the AutoTrender evaluator task. Its polling interval is configurable from Settings → AutoTrender via `AutoTrender Signal Evaluation Interval (seconds)` (default 5 seconds; allowed range 1–3600 seconds). The status endpoint reports the active interval.
 - The worker reads the existing dashboard-index and signal-threshold settings from `app_settings`, fetches each enabled index's latest AutoTrender intraday response, extracts the latest row, and calls the unit-tested evaluator.
 - Each index is isolated: malformed or unavailable data is logged for that index without preventing the other enabled indices from being evaluated.
 - `GET /api/v1/autotrender/worker/status` reports the most recent process-local cycle and per-index outcomes.
