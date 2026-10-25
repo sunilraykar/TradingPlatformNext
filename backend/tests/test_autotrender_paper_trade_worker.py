@@ -8,6 +8,7 @@ from app.services.autotrender_paper_trade_worker import (
     latest_intraday_row,
     signal_freshness,
 )
+import app.services.autotrender_paper_trade_worker as worker
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -70,3 +71,58 @@ def test_signal_freshness_accepts_recent_timestamp():
     assert fresh is True
     assert reason == "fresh_signal"
     assert timestamp == datetime(2026, 10, 26, 9, 59, tzinfo=IST)
+
+ 
+def test_run_cycle_creates_paper_trade_for_fresh_eligible_signal(monkeypatch):
+    now = datetime(2026, 10, 26, 10, 1, tzinfo=IST)
+    row = {
+        "timestamp": now.isoformat(),
+        "call": 80, "put": 20, "price": 25000, "vwap": 24990,
+        "pcr": 1.2, "vWapSignal": "BUY", "optionSignal": "BUY",
+    }
+    settings = {
+        "autoTrenderDashboardIndices": {"Nifty": True},
+        "callPutStrengthDiff": 10, "callPcr": 1, "putPcr": 1,
+        "vwapPriceDifferenceBuffer": 0.3,
+        "autoTrenderEntryStartTime": "10:00", "autoTrenderEntryEndTime": "15:25",
+        "autoTrenderWorkerIntervalSeconds": 5, "autoTrenderMaxSignalAgeSeconds": 300,
+        "targetFallbackPercent": 1,
+    }
+    monkeypatch.setattr(worker, "_read_settings", lambda: settings)
+    monkeypatch.setattr(worker, "_fetch_intraday", lambda index: {"data": [row]})
+    monkeypatch.setattr(worker, "_create_paper_trade", lambda *args: {"trade_id": "paper-123"})
+    worker._LAST_SIGNAL_BY_INDEX.clear()
+
+    result = worker.run_cycle(now)
+
+    assert result["indices"]["NIFTY"]["state"] == "paper_trade_created"
+    assert result["indices"]["NIFTY"]["trade_id"] == "paper-123"
+
+
+def test_run_cycle_fails_closed_for_unknown_live_timestamp_field(monkeypatch):
+    now = datetime(2026, 10, 26, 10, 1, tzinfo=IST)
+    row = {
+        "createdOn": now.isoformat(),
+        "call": 80, "put": 20, "price": 25000, "vwap": 24990,
+        "pcr": 1.2, "vWapSignal": "BUY", "optionSignal": "BUY",
+    }
+    settings = {
+        "autoTrenderDashboardIndices": {"Nifty": True},
+        "callPutStrengthDiff": 10, "callPcr": 1, "putPcr": 1,
+        "vwapPriceDifferenceBuffer": 0.3,
+        "autoTrenderEntryStartTime": "10:00", "autoTrenderEntryEndTime": "15:25",
+        "autoTrenderWorkerIntervalSeconds": 5, "autoTrenderMaxSignalAgeSeconds": 300,
+        "targetFallbackPercent": 1,
+    }
+    monkeypatch.setattr(worker, "_read_settings", lambda: settings)
+    monkeypatch.setattr(worker, "_fetch_intraday", lambda index: {"data": [row]})
+    monkeypatch.setattr(worker, "_create_paper_trade", lambda *args: (_ for _ in ()).throw(AssertionError("must not create trade")))
+    worker._LAST_SIGNAL_BY_INDEX.clear()
+
+    result = worker.run_cycle(now)
+
+    outcome = result["indices"]["NIFTY"]
+    assert outcome["state"] == "rejected"
+    assert outcome["reason"] == "signal_timestamp_missing_or_invalid"
+    assert "createdOn" in outcome["source_fields"]
+    assert outcome["recognized_timestamp_fields"] == []
