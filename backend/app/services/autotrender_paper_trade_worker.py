@@ -1,0 +1,263 @@
+"""60-second AutoTrender signal-monitoring worker.
+
+This first scheduler slice deliberately evaluates and logs signals only. It does not
+create trades until option-contract, live-premium, target, and duplicate-entry wiring
+has been integrated and validated.
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+from datetime import datetime, time
+from typing import Any
+from zoneinfo import ZoneInfo
+
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.db.session import get_engine
+from app.providers.autotrender.auth import AutoTrenderAuth
+from app.services.autotrender_signal_evaluator import Evaluation, evaluate_signal
+
+logger = logging.getLogger(__name__)
+IST = ZoneInfo("Asia/Kolkata")
+POLL_SECONDS = 60
+DEFAULT_INDICES = ("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX")
+INDEX_CATEGORIES = {
+    "NIFTY": "Nifty",
+    "BANKNIFTY": "BankNifty",
+    "FINNIFTY": "FinNifty",
+    "MIDCPNIFTY": "MidcpNifty",
+    "SENSEX": "Sensex",
+    "BANKEX": "Bankex",
+}
+_INDEX_SETTING_NAMES = {
+    "NIFTY": ("NIFTY", "Nifty"),
+    "BANKNIFTY": ("BANKNIFTY", "BankNifty"),
+    "FINNIFTY": ("FINNIFTY", "FinNifty"),
+    "MIDCPNIFTY": ("MIDCPNIFTY", "MidcpNifty"),
+    "SENSEX": ("SENSEX", "Sensex"),
+    "BANKEX": ("BANKEX", "Bankex"),
+}
+_AUTH: AutoTrenderAuth | None = None
+_LAST_CYCLE: dict[str, Any] = {"state": "not_started", "last_cycle_at": None, "indices": {}}
+
+
+def _decode(value: Any) -> Any:
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            return value
+    return value
+
+
+def _read_settings() -> dict[str, Any]:
+    """Read the existing UI settings; retain documented defaults for unset keys."""
+    keys = (
+        "autoTrenderDashboardIndices",
+        "callPutStrengthDiff",
+        "callPcr",
+        "putPcr",
+        "vwapPriceDifferenceBuffer",
+        "autoTrenderEntryStartTime",
+        "autoTrenderEntryEndTime",
+    )
+    defaults: dict[str, Any] = {
+        "autoTrenderDashboardIndices": {
+            "Nifty": True,
+            "BankNifty": True,
+            "FinNifty": True,
+            "Sensex": True,
+        },
+        "callPutStrengthDiff": 10.0,
+        "callPcr": 1.0,
+        "putPcr": 1.0,
+        "vwapPriceDifferenceBuffer": 0.3,
+        "autoTrenderEntryStartTime": "10:00",
+        "autoTrenderEntryEndTime": "14:00",
+    }
+    try:
+        with get_engine().connect() as connection:
+            rows = connection.execute(
+                text(
+                    "SELECT setting_key, setting_value FROM app_settings "
+                    "WHERE setting_key IN (" + ",".join(f":key{i}" for i in range(len(keys))) + ")"
+                ),
+                {f"key{i}": "ui." + key for i, key in enumerate(keys)},
+            ).mappings().all()
+    except SQLAlchemyError:
+        logger.exception("AutoTrender worker cannot read app settings; skipping this cycle")
+        raise
+
+    settings = dict(defaults)
+    for row in rows:
+        key = str(row["setting_key"])[3:]
+        settings[key] = _decode(row["setting_value"])
+    return settings
+
+
+def enabled_indices(value: Any) -> list[str]:
+    """Normalize the saved AutoTrender dashboard index map/list."""
+    if isinstance(value, dict):
+        enabled = []
+        for index, aliases in _INDEX_SETTING_NAMES.items():
+            if any(alias in value and value[alias] is True for alias in aliases):
+                enabled.append(index)
+        return enabled
+    if isinstance(value, (list, tuple, set)):
+        allowed = set(INDEX_CATEGORIES)
+        return list(dict.fromkeys(str(item).strip().upper() for item in value if str(item).strip().upper() in allowed))
+    return list(DEFAULT_INDICES)
+
+
+def latest_intraday_row(payload: Any) -> dict[str, Any] | None:
+    """Extract the newest row from supported AutoTrender response envelopes."""
+    if isinstance(payload, list):
+        rows = [item for item in payload if isinstance(item, dict)]
+        return rows[-1] if rows else None
+    if not isinstance(payload, dict):
+        return None
+
+    # Some responses wrap the actual row under data.trend/summary.
+    for key in ("data", "intraday", "records", "rows", "items", "result"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            rows = [item for item in value if isinstance(item, dict)]
+            return rows[-1] if rows else None
+        if isinstance(value, dict):
+            if any(field in value for field in ("call", "callStrength", "call_strength")):
+                return value
+            nested = latest_intraday_row(value)
+            if nested is not None:
+                return nested
+
+    if any(field in payload for field in ("call", "callStrength", "call_strength")):
+        return payload
+    return None
+
+
+def _entry_window(now: datetime, settings: dict[str, Any]) -> tuple[bool, str]:
+    if now.weekday() >= 5:
+        return False, "weekend"
+    try:
+        start = time.fromisoformat(str(settings["autoTrenderEntryStartTime"]))
+        end = time.fromisoformat(str(settings["autoTrenderEntryEndTime"]))
+    except (KeyError, TypeError, ValueError):
+        return False, "invalid_entry_window_settings"
+    if end <= start:
+        return False, "invalid_entry_window_settings"
+    current = now.timetz().replace(tzinfo=None)
+    if current < start or current > end:
+        return False, "outside_entry_window"
+    return True, "inside_entry_window"
+
+
+def _fetch_intraday(index: str) -> dict[str, Any]:
+    """Fetch one index snapshot directly through the existing authenticated provider."""
+    global _AUTH
+    if _AUTH is None:
+        _AUTH = AutoTrenderAuth()
+    response = _AUTH.get(
+        "/api/derivatives/intra-day",
+        params={"category": INDEX_CATEGORIES[index], "mins": 5},
+    )
+    response.raise_for_status()
+    content_type = response.headers.get("Content-Type", "").lower()
+    if "json" not in content_type:
+        raise ValueError("AutoTrender returned a non-JSON intraday response")
+    payload = response.json()
+    if not isinstance(payload, dict):
+        raise ValueError("AutoTrender returned an unexpected intraday response")
+    return payload
+
+
+def run_cycle(now: datetime | None = None) -> dict[str, Any]:
+    """Evaluate each enabled index once; never creates or modifies trades."""
+    global _LAST_CYCLE
+    current = now or datetime.now(IST)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=IST)
+    current = current.astimezone(IST)
+    try:
+        settings = _read_settings()
+    except SQLAlchemyError:
+        result = {
+            "state": "degraded",
+            "last_cycle_at": current.isoformat(),
+            "reason": "settings_unavailable",
+            "indices": {},
+        }
+        _LAST_CYCLE = result
+        return result
+
+    allowed, window_reason = _entry_window(current, settings)
+    if not allowed:
+        result = {
+            "state": "waiting",
+            "last_cycle_at": current.isoformat(),
+            "reason": window_reason,
+            "indices": {},
+        }
+        _LAST_CYCLE = result
+        return result
+
+    outcomes: dict[str, Any] = {}
+    for index in enabled_indices(settings.get("autoTrenderDashboardIndices")):
+        if index not in INDEX_CATEGORIES:
+            continue
+        try:
+            payload = _fetch_intraday(index)
+            row = latest_intraday_row(payload)
+            if row is None:
+                outcomes[index] = {"state": "skipped", "reason": "no_intraday_row"}
+                continue
+            evaluation: Evaluation = evaluate_signal(
+                row,
+                call_put_strength_diff=float(settings["callPutStrengthDiff"]),
+                call_pcr=float(settings["callPcr"]),
+                put_pcr=float(settings["putPcr"]),
+                vwap_price_difference_buffer=float(settings["vwapPriceDifferenceBuffer"]),
+            )
+            outcomes[index] = {
+                "state": "eligible_candidate" if evaluation.eligible else "rejected",
+                "direction": evaluation.direction,
+                "reason": evaluation.reason,
+                "strength_difference": evaluation.strength_difference,
+                "vwap_difference_percent": evaluation.vwap_difference_percent,
+            }
+            logger.info(
+                "AutoTrender 60-second evaluation index=%s eligible=%s direction=%s reason=%s",
+                index, evaluation.eligible, evaluation.direction, evaluation.reason,
+            )
+        except Exception as exc:  # isolate a failed index so other indices still evaluate
+            logger.exception("AutoTrender worker failed for index %s", index)
+            outcomes[index] = {"state": "error", "reason": type(exc).__name__}
+
+    result = {
+        "state": "running",
+        "last_cycle_at": current.isoformat(),
+        "reason": "evaluation_complete",
+        "indices": outcomes,
+    }
+    _LAST_CYCLE = result
+    return result
+
+
+def status() -> dict[str, Any]:
+    """Return the latest process-local worker status for diagnostics."""
+    return {"poll_interval_seconds": POLL_SECONDS, **_LAST_CYCLE}
+
+
+async def run_scheduler() -> None:
+    """Run one AutoTrender evaluation cycle every 60 seconds until shutdown."""
+    logger.info("AutoTrender 60-second signal worker started")
+    while True:
+        try:
+            await asyncio.to_thread(run_cycle)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("AutoTrender worker cycle failed unexpectedly")
+        await asyncio.sleep(POLL_SECONDS)
