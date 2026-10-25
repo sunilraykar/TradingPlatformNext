@@ -164,7 +164,6 @@ def main() -> int:
         trade for trade in existing_trades
         if isinstance(trade, dict)
         and str(trade.get("status") or "OPEN").upper() not in terminal_statuses
-        and str(trade.get("execution_mode") or "PAPER").upper() == "PAPER"
     ]
     if open_sensex_trades:
         print("An active SENSEX paper trade already exists; no new trade created.")
@@ -185,10 +184,8 @@ def main() -> int:
     if lot_size <= 0:
         raise RuntimeError("Selected contract has no valid lot size; no terminal record was created.")
 
-    # Idempotency prevents duplicate records if the script is rerun.
-    idempotency_key = f"temp-sensex-1420-{today}-{decision['enter']}-{contract['tradingsymbol']}"
+    # Duplicate prevention is based only on checking for an active trade for this underlying.
     payload = {
-        "idempotency_key": idempotency_key,
         "execution_mode": "PAPER",
         "source": "TEMP_SENSEX_1420",
         "strategy": "SENSEX AutoTrender 14:20 temporary evaluation",
@@ -210,7 +207,7 @@ def main() -> int:
     result = post("/trades", payload)
     trade = result.get("trade", result)
     print(json.dumps({
-        "result": "terminal paper record created or already exists (idempotent)",
+        "result": "terminal paper record created",
         "trade_id": trade.get("trade_id"),
         "status": trade.get("status"),
         "execution_mode": trade.get("execution_mode"),
