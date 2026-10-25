@@ -722,18 +722,18 @@ function AutoTrenderHistoricalData() {
       <div><div className="eyebrow">AUTOTRENDER / MYSQL ARCHIVE</div><h2>Historical Data</h2><p className="settings-intro">Daily snapshots of the complete AutoTrender Index Price cache, scheduled for 15:30 IST.</p></div>
       <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh history'}</button>
     </div>
-    <div className="panel historical-summary">
-      <div><span>Stored snapshots</span><strong>{Number(result.total || 0).toLocaleString('en-IN')}</strong></div>
-      <div><span>Archive</span><strong>MySQL</strong></div>
-      <div><span>Schedule</span><strong>Daily · 15:30 IST</strong></div>
-    </div>
-    <div className="historical-filters">
+    <section className="metric-grid historical-summary">
+      <div className="metric"><span>STORED SNAPSHOTS</span><strong>{Number(result.total || 0).toLocaleString('en-IN')}</strong></div>
+      <div className="metric"><span>ARCHIVE</span><strong>MySQL</strong></div>
+      <div className="metric"><span>SCHEDULE</span><strong>15:30 IST</strong></div>
+    </section>
+    <div className="control-panel historical-filters">
       <label>From date<input type="date" value={startDate} max={endDate || undefined} onChange={(e) => { setStartDate(e.target.value); setPage(0); setSelected(null); }} /></label>
       <label>To date<input type="date" value={endDate} min={startDate || undefined} onChange={(e) => { setEndDate(e.target.value); setPage(0); setSelected(null); }} /></label>
       <button type="button" className="button secondary" onClick={() => { setStartDate(''); setEndDate(''); setPage(0); setSelected(null); }}>Clear dates</button>
     </div>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
-    <div className="historical-table-heading"><strong>Daily snapshots</strong><span>{result.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No snapshots found'}{loading ? ' · Loading…' : ''}</span></div>
+    <section className="panel historical-table-panel"><div className="panel-header"><div><div className="eyebrow">AUTOTRENDER / ARCHIVE</div><h2>Daily snapshots</h2></div><span className="data-count">{result.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No snapshots found'}{loading ? ' · Loading…' : ''}</span></div>
     <div className="table-scroll"><table className="kite-data-table">
       <thead><tr><th>Trading date</th><th>Captured at (IST)</th><th>Stored at (IST)</th><th>Payload size</th><th>Details</th></tr></thead>
       <tbody>{(result.snapshots || []).map((snapshot) => <tr key={snapshot.snapshot_id}>
@@ -747,7 +747,7 @@ function AutoTrenderHistoricalData() {
     <div className="instrument-pagination"><span>Page {page + 1} of {Math.max(1, Math.ceil((result.total || 0) / pageSize))}</span><div>
       <button type="button" className="button secondary" disabled={page === 0 || loading} onClick={() => { setPage((current) => Math.max(0, current - 1)); setSelected(null); }}>Previous</button>
       <button type="button" className="button secondary" disabled={loading || (page + 1) * pageSize >= (result.total || 0)} onClick={() => { setPage((current) => current + 1); setSelected(null); }}>Next</button>
-    </div></div>
+    </div></div></section>
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="panel historical-payload">
       <div className="panel-header"><div><div className="eyebrow">SNAPSHOT #{selected.snapshot_id}</div><h3>Stored AutoTrender payload</h3><p className="settings-intro">Trading date {selected.trading_date || '—'} · SHA-256 {selected.payload_hash || '—'}</p></div><button type="button" className="button secondary" onClick={() => setSelected(null)}>Close</button></div>
