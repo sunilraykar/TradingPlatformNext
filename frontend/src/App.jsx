@@ -678,6 +678,7 @@ function AutoTrenderHistoricalData() {
   const [page, setPage] = useState(0);
   const [result, setResult] = useState({ snapshots: [], total: 0 });
   const [selected, setSelected] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState('FINNIFTY');
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
@@ -732,6 +733,9 @@ function AutoTrenderHistoricalData() {
       <label>To date<input type="date" value={endDate} min={startDate || undefined} onChange={(e) => { setEndDate(e.target.value); setPage(0); setSelected(null); }} /></label>
       <button type="button" className="button secondary" onClick={() => { setStartDate(''); setEndDate(''); setPage(0); setSelected(null); }}>Clear dates</button>
     </div>
+    <div className="index-switch historical-index-switch" aria-label="Select historical index">
+      {DEFAULT_INDICES.concat(['MIDCPNIFTY', 'BANKEX']).filter((value, position, values) => values.indexOf(value) === position).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
+    </div>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
     <section className="panel historical-table-panel"><div className="panel-header"><div><div className="eyebrow">AUTOTRENDER / ARCHIVE</div><h2>Daily snapshots</h2></div><span className="data-count">{result.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No snapshots found'}{loading ? ' · Loading…' : ''}</span></div>
     <div className="table-scroll"><table className="kite-data-table">
@@ -751,7 +755,18 @@ function AutoTrenderHistoricalData() {
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="panel historical-payload">
       <div className="panel-header"><div><div className="eyebrow">SNAPSHOT #{selected.snapshot_id}</div><h3>Stored AutoTrender payload</h3><p className="settings-intro">Trading date {selected.trading_date || '—'} · SHA-256 {selected.payload_hash || '—'}</p></div><button type="button" className="button secondary" onClick={() => setSelected(null)}>Close</button></div>
-      <pre>{JSON.stringify(selected.payload, null, 2)}</pre>
+      <div className="metric-grid historical-live-metrics">
+        <Metric label="INDEX" value={selectedIndex} />
+        <Metric label="CAPTURED" value={formatDateTime(selected.captured_at)} />
+        <Metric label="INTRADAY INTERVAL" value={selected.payload?.capture_interval_minutes ? selected.payload.capture_interval_minutes + ' min' : '—'} />
+        <Metric label="PRICE CACHE" value={selected.payload?.index_price?.data?.[selectedIndex.toLowerCase()]?.price ?? selected.payload?.index_price?.data?.[selectedIndex.toLowerCase()]?.ltp ?? '—'} />
+        <Metric label="OI GRAPH" value={selected.payload?.indices?.[selectedIndex]?.oi_graph ? 'Available' : 'Not captured'} />
+      </div>
+      <section className="content-grid historical-dataset-grid">
+        <article className="panel"><div className="panel-header"><div><div className="eyebrow">HISTORICAL / {selectedIndex{'}'}</div><h2>Intraday data</h2></div></div><KiteDataTable rows={(() => { const data = selected.payload?.indices?.[selectedIndex]?.intraday; if (!data || data.error) return []; const candidate = data.data ?? data.rows ?? data.result; return Array.isArray(candidate) ? candidate : Array.isArray(data) ? data : candidate && typeof candidate === 'object' ? [candidate] : []; })()} emptyText={selected.payload?.indices?.[selectedIndex]?.intraday?.error || 'No tabular intraday rows in this saved snapshot.'} /></article>
+        <article className="panel"><div className="panel-header"><div><div className="eyebrow">HISTORICAL / {selectedIndex{'}'}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
+      </section>
+      <details className="historical-raw-payload"><summary>View complete saved JSON payload · SHA-256 {selected.payload_hash || '—'}</summary><pre>{JSON.stringify(selected.payload, null, 2)}</pre></details>
     </section>}
   </section>;
 }
