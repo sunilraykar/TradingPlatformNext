@@ -154,6 +154,28 @@ def main() -> int:
         print("Decision is WAIT; refusing to insert a terminal trade.")
         return 2
 
+    # Do not stack a second active SENSEX paper trade. Closed/terminal trades do not block a new entry.
+    terminal_response = get("/trades?underlying=SENSEX")
+    existing_trades = terminal_response.get("trades")
+    if not isinstance(existing_trades, list):
+        raise RuntimeError("Trade Terminal response does not contain a trades array; refusing to create a trade.")
+    terminal_statuses = {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
+    open_sensex_trades = [
+        trade for trade in existing_trades
+        if isinstance(trade, dict)
+        and str(trade.get("status") or "OPEN").upper() not in terminal_statuses
+        and str(trade.get("execution_mode") or "PAPER").upper() == "PAPER"
+    ]
+    if open_sensex_trades:
+        print("An active SENSEX paper trade already exists; no new trade created.")
+        print(json.dumps([{
+            "trade_id": trade.get("trade_id"),
+            "instrument_symbol": trade.get("instrument_symbol"),
+            "status": trade.get("status", "OPEN"),
+            "source": trade.get("source"),
+        } for trade in open_sensex_trades], indent=2))
+        return 0
+
     # Direction decides which option side to buy: bullish -> CE, bearish -> PE.
     contract = get(f"/kite/instruments/select-atm?index={INDEX}&signal={decision['enter']}")
     if contract.get("status") != "SELECTED":
