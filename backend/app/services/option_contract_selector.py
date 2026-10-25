@@ -39,7 +39,7 @@ def _spot_price(token: int) -> float | None:
     cached = live_quotes.get(token)
     if cached and cached.get("last_price") is not None and cached.get("received_at"):
         try:
-            received_at = datetime.fromisoformat(str(cached["received_at"]).replace("Z", "+00:00"))
+            received_at = datetime.fromisoformat(str(cached["received_at"]))
             if received_at.tzinfo is None:
                 received_at = received_at.replace(tzinfo=UTC)
             if (datetime.now(UTC) - received_at.astimezone(UTC)).total_seconds() <= 120:
