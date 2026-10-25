@@ -6,6 +6,7 @@ from app.services.autotrender_paper_trade_worker import (
     _poll_interval_seconds,
     enabled_indices,
     latest_intraday_row,
+    signal_freshness,
 )
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -36,9 +37,10 @@ def test_enabled_indices_accepts_list_and_defaults_when_unset():
 
 
 def test_entry_window_includes_start_and_end_boundaries():
-    settings = {"autoTrenderEntryStartTime": "10:00", "autoTrenderEntryEndTime": "14:00"}
+    settings = {"autoTrenderEntryStartTime": "10:00", "autoTrenderEntryEndTime": "15:25"}
     assert _entry_window(datetime(2026, 10, 26, 10, 0, tzinfo=IST), settings) == (True, "inside_entry_window")
-    assert _entry_window(datetime(2026, 10, 26, 14, 0, tzinfo=IST), settings) == (True, "inside_entry_window")
+    assert _entry_window(datetime(2026, 10, 26, 15, 24, 59, tzinfo=IST), settings) == (True, "inside_entry_window")
+    assert _entry_window(datetime(2026, 10, 26, 15, 25, tzinfo=IST), settings) == (False, "outside_entry_window")
 
 
 def test_entry_window_rejects_outside_hours_and_weekends():
@@ -53,3 +55,18 @@ def test_worker_interval_uses_configured_seconds_and_safe_bounds():
     assert _poll_interval_seconds(0) == 1
     assert _poll_interval_seconds(99999) == 3600
     assert _poll_interval_seconds("invalid") == 5
+
+
+def test_signal_freshness_rejects_missing_stale_and_future_timestamps():
+    now = datetime(2026, 10, 26, 10, 0, tzinfo=IST)
+    assert signal_freshness({"call": 80}, now, 300)[:2] == (False, "signal_timestamp_missing_or_invalid")
+    assert signal_freshness({"timestamp": "2026-10-26T09:54:59+05:30"}, now, 300)[:2] == (False, "stale_signal")
+    assert signal_freshness({"timestamp": "2026-10-26T10:01:00+05:30"}, now, 300)[:2] == (False, "signal_timestamp_in_future")
+
+
+def test_signal_freshness_accepts_recent_timestamp():
+    now = datetime(2026, 10, 26, 10, 0, tzinfo=IST)
+    fresh, reason, timestamp = signal_freshness({"timestamp": "2026-10-26T09:59:00+05:30"}, now, 300)
+    assert fresh is True
+    assert reason == "fresh_signal"
+    assert timestamp == datetime(2026, 10, 26, 9, 59, tzinfo=IST)
