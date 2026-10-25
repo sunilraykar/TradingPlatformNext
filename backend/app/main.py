@@ -14,6 +14,7 @@ from app.api.subscription_test import router as subscription_test_router
 from app.api.trades import router as trades_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
+from app.providers.autotrender.auth import AutoTrenderAuth
 from app.providers.kite.client import KiteProvider, KiteProviderError
 from app.providers.kite.registry import (
     clear_active_kite_session,
@@ -21,6 +22,7 @@ from app.providers.kite.registry import (
 )
 from app.services import (
     auto_exit_profitable_trades,
+    autotrender_cache_snapshot,
     autotrender_paper_trade_worker,
     live_market_data,
     trade_terminal,
@@ -32,6 +34,7 @@ from app.services.kite_sessions import (
     load_session,
     reset_sessions,
 )
+from app.services.autotrender_cache import AutoTrenderCache
 from app.services.live_quotes import live_quotes
 
 logger = logging.getLogger(__name__)
@@ -86,9 +89,11 @@ async def _restore_kite_session() -> None:
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
+    application.state.autotrender_auth = AutoTrenderAuth()
+    application.state.autotrender_cache = AutoTrenderCache(application.state.autotrender_auth)
     trade_terminal.hydrate_cache()
     live_quotes.add_listener(trade_terminal.apply_quote_to_open_trades)
     await _restore_kite_session()
@@ -101,11 +106,14 @@ async def lifespan(_: FastAPI):
     instrument_task = asyncio.create_task(run_daily_instrument_refresh_scheduler())
     auto_exit_task = asyncio.create_task(auto_exit_profitable_trades.run_auto_exit_scheduler())
     autotrender_worker_task = asyncio.create_task(autotrender_paper_trade_worker.run_scheduler())
+    autotrender_snapshot_task = asyncio.create_task(
+        autotrender_cache_snapshot.run_daily_snapshot_scheduler(application.state.autotrender_cache)
+    )
     try:
         yield
     finally:
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
-        for task in (reset_task, trade_task, instrument_task, auto_exit_task, autotrender_worker_task):
+        for task in (reset_task, trade_task, instrument_task, auto_exit_task, autotrender_worker_task, autotrender_snapshot_task):
             task.cancel()
         for task in (reset_task, trade_task, instrument_task, auto_exit_task, autotrender_worker_task):
             with suppress(asyncio.CancelledError):
