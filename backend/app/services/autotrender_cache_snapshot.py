@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import text
 
 from app.db.session import get_engine
+from app.providers.autotrender.auth import AutoTrenderAuth
 from app.services.autotrender_cache import AutoTrenderCache
 
 logger = logging.getLogger(__name__)
@@ -20,6 +21,7 @@ IST = ZoneInfo("Asia/Kolkata")
 SNAPSHOT_TIME = time(15, 30)
 SNAPSHOT_TYPE = "AUTOTRENDER_CACHE"
 SNAPSHOT_KEY = "index-price"
+INDEX_CATEGORIES = {"NIFTY": "Nifty", "BANKNIFTY": "BankNifty", "FINNIFTY": "FinNifty", "MIDCPNIFTY": "MidcpNifty", "SENSEX": "Sensex", "BANKEX": "Bankex"}
 
 
 def _next_run(now: datetime) -> datetime:
@@ -36,6 +38,7 @@ def persist_cache_snapshot(
     *,
     captured_at: datetime | None = None,
     engine: Any | None = None,
+    auth: AutoTrenderAuth | None = None,
 ) -> dict[str, Any]:
     """Store the entire upstream cache payload once per IST trading date.
 
@@ -44,7 +47,27 @@ def persist_cache_snapshot(
     """
     captured = (captured_at or datetime.now(IST)).astimezone(IST)
     payload = cache.get_index_price()
-    upstream_payload = {key: value for key, value in payload.items() if key != "cache"}
+    upstream_payload: dict[str, Any] = {
+        "index_price": {key: value for key, value in payload.items() if key != "cache"},
+        "indices": {},
+        "capture_interval_minutes": 5,
+    }
+    # Preserve the Live Data datasets for every supported index.
+    if auth is not None:
+        for index, category in INDEX_CATEGORIES.items():
+            entry: dict[str, Any] = {}
+            datasets = [("intraday", "/api/derivatives/intra-day", {"category": category, "mins": 5})]
+            if index in {"FINNIFTY", "SENSEX"}:
+                datasets.append(("oi_graph", "/api/derivatives/table/graph", {"category": category}))
+            for dataset, endpoint, params in datasets:
+                try:
+                    response = auth.get(endpoint, params=params)
+                    response.raise_for_status()
+                    value = response.json()
+                    entry[dataset] = value if isinstance(value, dict) else {"error": "Unexpected non-object response"}
+                except Exception as exc:
+                    entry[dataset] = {"error": f"{type(exc).__name__}: {exc}"}
+            upstream_payload["indices"][index] = entry
     serialized = json.dumps(upstream_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     payload_hash = hashlib.sha256(serialized.encode("utf-8")).digest()
     trading_date: date = captured.date()
@@ -101,7 +124,7 @@ def persist_cache_snapshot(
     }
 
 
-async def run_daily_snapshot_scheduler(cache: AutoTrenderCache) -> None:
+async def run_daily_snapshot_scheduler(cache: AutoTrenderCache, auth: AutoTrenderAuth | None = None) -> None:
     """Run the AutoTrender cache snapshot every day at 15:30 Asia/Kolkata."""
     while True:
         now = datetime.now(IST)
@@ -112,6 +135,7 @@ async def run_daily_snapshot_scheduler(cache: AutoTrenderCache) -> None:
                 persist_cache_snapshot,
                 cache,
                 captured_at=target,
+                auth=auth,
             )
             logger.info("AutoTrender daily cache snapshot result: %s", result)
         except asyncio.CancelledError:
