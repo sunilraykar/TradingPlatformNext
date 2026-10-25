@@ -672,6 +672,90 @@ function SettingsPanel() {
   </section>;
 }
 
+function AutoTrenderHistoricalData() {
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [page, setPage] = useState(0);
+  const [result, setResult] = useState({ snapshots: [], total: 0 });
+  const [selected, setSelected] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState('');
+  const pageSize = 50;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
+      if (startDate) params.set('start_date', startDate);
+      if (endDate) params.set('end_date', endDate);
+      setResult(await api('/autotrender/historical?' + params.toString()));
+    } catch (e) {
+      setError(e.message || 'Unable to load historical AutoTrender snapshots from MySQL.');
+      setResult({ snapshots: [], total: 0 });
+    } finally {
+      setLoading(false);
+    }
+  }, [page, startDate, endDate]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openSnapshot = async (snapshot) => {
+    setSelected(null);
+    setDetailLoading(true);
+    setError('');
+    try {
+      setSelected(await api('/autotrender/historical/' + encodeURIComponent(snapshot.snapshot_id)));
+    } catch (e) {
+      setError(e.message || 'Unable to load this historical snapshot.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+  const formatDateTime = (value) => value ? new Date(value.endsWith('Z') ? value : value + 'Z').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
+  const first = result.total ? page * pageSize + 1 : 0;
+  const last = Math.min((page + 1) * pageSize, result.total || 0);
+
+  return <section className="historical-viewer">
+    <div className="panel-header">
+      <div><div className="eyebrow">AUTOTRENDER / MYSQL ARCHIVE</div><h2>Historical Data</h2><p className="settings-intro">Daily snapshots of the complete AutoTrender Index Price cache, scheduled for 15:30 IST.</p></div>
+      <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh history'}</button>
+    </div>
+    <div className="panel historical-summary">
+      <div><span>Stored snapshots</span><strong>{Number(result.total || 0).toLocaleString('en-IN')}</strong></div>
+      <div><span>Archive</span><strong>MySQL</strong></div>
+      <div><span>Schedule</span><strong>Daily · 15:30 IST</strong></div>
+    </div>
+    <div className="historical-filters">
+      <label>From date<input type="date" value={startDate} max={endDate || undefined} onChange={(e) => { setStartDate(e.target.value); setPage(0); setSelected(null); }} /></label>
+      <label>To date<input type="date" value={endDate} min={startDate || undefined} onChange={(e) => { setEndDate(e.target.value); setPage(0); setSelected(null); }} /></label>
+      <button type="button" className="button secondary" onClick={() => { setStartDate(''); setEndDate(''); setPage(0); setSelected(null); }}>Clear dates</button>
+    </div>
+    {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
+    <div className="historical-table-heading"><strong>Daily snapshots</strong><span>{result.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No snapshots found'}{loading ? ' · Loading…' : ''}</span></div>
+    <div className="table-scroll"><table className="kite-data-table">
+      <thead><tr><th>Trading date</th><th>Captured at (IST)</th><th>Stored at (IST)</th><th>Payload size</th><th>Details</th></tr></thead>
+      <tbody>{(result.snapshots || []).map((snapshot) => <tr key={snapshot.snapshot_id}>
+        <td><strong>{snapshot.trading_date || '—'}</strong></td>
+        <td>{formatDateTime(snapshot.captured_at)}</td><td>{formatDateTime(snapshot.created_at)}</td>
+        <td>{snapshot.payload_bytes == null ? '—' : Number(snapshot.payload_bytes).toLocaleString('en-IN') + ' bytes'}</td>
+        <td><button type="button" className="button secondary" onClick={() => openSnapshot(snapshot)} disabled={detailLoading}>{selected?.snapshot_id === snapshot.snapshot_id ? 'Selected' : 'View payload'}</button></td>
+      </tr>)}
+      {!result.snapshots?.length && <tr><td colSpan="5" className="empty-cell">{loading ? 'Loading saved snapshots…' : 'No saved snapshots match these dates. The archive will appear after a successful daily save.'}</td></tr>}</tbody>
+    </table></div>
+    <div className="instrument-pagination"><span>Page {page + 1} of {Math.max(1, Math.ceil((result.total || 0) / pageSize))}</span><div>
+      <button type="button" className="button secondary" disabled={page === 0 || loading} onClick={() => { setPage((current) => Math.max(0, current - 1)); setSelected(null); }}>Previous</button>
+      <button type="button" className="button secondary" disabled={loading || (page + 1) * pageSize >= (result.total || 0)} onClick={() => { setPage((current) => current + 1); setSelected(null); }}>Next</button>
+    </div></div>
+    {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
+    {selected && <section className="panel historical-payload">
+      <div className="panel-header"><div><div className="eyebrow">SNAPSHOT #{selected.snapshot_id}</div><h3>Stored AutoTrender payload</h3><p className="settings-intro">Trading date {selected.trading_date || '—'} · SHA-256 {selected.payload_hash || '—'}</p></div><button type="button" className="button secondary" onClick={() => setSelected(null)}>Close</button></div>
+      <pre>{JSON.stringify(selected.payload, null, 2)}</pre>
+    </section>}
+  </section>;
+}
+
 function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false }) {
   if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
   const hidden = new Set(hiddenColumns.map((key) => key.toLowerCase()));
@@ -681,6 +765,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
 }
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
+  const [autotrenderView, setAutotrenderView] = useState('live');
   const [kiteTab, setKiteTab] = useState('Dashboard');
   const [kiteData, setKiteData] = useState(null);
   const [kiteLoading, setKiteLoading] = useState(false);
@@ -853,9 +938,8 @@ export default function App() {
         </div>
       </header>
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal /> : applicationTab === 'autotrender' ? <>
-      
-
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <><nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav><AutoTrenderHistoricalData /></> : <>
+      <nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
           {DEFAULT_INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
@@ -954,7 +1038,7 @@ export default function App() {
         <span>{hasMarketData ? 'Data received from AutoTrender API' : 'Waiting for AutoTrender market data'}</span>
         <span>Cache {cache?.cached ? `${number(cache.cache_age_seconds, 1)}s old` : 'not populated'} · API proxy: local backend</span>
       </footer>
-      </> : <>
+      </>) : <>
                 <nav className="kite-tabs" aria-label="Kite sections">
           {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings', 'Funds'].map((tab) =>
             <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => setKiteTab(tab)}>{tab}</button>
