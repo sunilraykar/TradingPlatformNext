@@ -1,12 +1,12 @@
 import json
 from datetime import date
+from typing import Annotated
 
 import requests
 from fastapi import APIRouter, HTTPException, Query, Request
 from sqlalchemy import text
 
 from app.db.session import get_engine
-
 from app.providers.autotrender.auth import AutoTrenderAuth
 from app.services.autotrender_cache import AutoTrenderCache
 
@@ -119,10 +119,10 @@ def autotrender_worker_status() -> dict:
 
 @router.get("/historical")
 def historical_cache_snapshots(
-    start_date: date | None = Query(default=None),
-    end_date: date | None = Query(default=None),
-    limit: int = Query(default=100, ge=1, le=500),
-    offset: int = Query(default=0, ge=0),
+    start_date: Annotated[date | None, Query()] = None,
+    end_date: Annotated[date | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> dict:
     """List daily AutoTrender cache snapshots stored in MySQL."""
     clauses = ["snapshot_type = :snapshot_type", "snapshot_key = :snapshot_key"]
