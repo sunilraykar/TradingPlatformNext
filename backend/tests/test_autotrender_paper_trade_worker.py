@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from app.services.autotrender_paper_trade_worker import (
     _entry_window,
+    _poll_interval_seconds,
     enabled_indices,
     latest_intraday_row,
 )
@@ -44,3 +45,11 @@ def test_entry_window_rejects_outside_hours_and_weekends():
     settings = {"autoTrenderEntryStartTime": "10:00", "autoTrenderEntryEndTime": "14:00"}
     assert _entry_window(datetime(2026, 10, 26, 9, 59, tzinfo=IST), settings) == (False, "outside_entry_window")
     assert _entry_window(datetime(2026, 10, 25, 11, 0, tzinfo=IST), settings) == (False, "weekend")
+
+
+def test_worker_interval_uses_configured_seconds_and_safe_bounds():
+    assert _poll_interval_seconds(15) == 15
+    assert _poll_interval_seconds("2.9") == 2
+    assert _poll_interval_seconds(0) == 1
+    assert _poll_interval_seconds(99999) == 3600
+    assert _poll_interval_seconds("invalid") == 5
