@@ -773,6 +773,24 @@ export default function App() {
     return String(right).localeCompare(String(left), undefined, { numeric: true });
   }), [calculatedRows]);
   const latest = intradayRows[intradayRows.length - 1] || {};
+
+  const contractSignal = [signalValue(latest.optionSignal), signalValue(trend.signal)].find((value) => value === 'BUY' || value === 'SELL') || '';
+
+  useEffect(() => {
+    let active = true;
+    if (!contractSignal) {
+      setSelectedContract(null);
+      setContractError('Waiting for a BUY or SELL option signal.');
+      setContractLoading(false);
+      return () => { active = false; };
+    }
+    setContractLoading(true);
+    api('/kite/instruments/select-atm?index=' + encodeURIComponent(index) + '&signal=' + encodeURIComponent(contractSignal))
+      .then((result) => { if (active) { setSelectedContract(result); setContractError(''); } })
+      .catch((e) => { if (active) { setSelectedContract(null); setContractError(e.message || 'Unable to select an option contract.'); } })
+      .finally(() => { if (active) setContractLoading(false); });
+    return () => { active = false; };
+  }, [index, contractSignal, lastUpdated]);
   const indexPriceKey = Object.keys(indexPrices?.data || {}).find((key) => INDEX_LABELS[key.toLowerCase()] === index);
   const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
   const graph = oi?.data?.graph || {};
