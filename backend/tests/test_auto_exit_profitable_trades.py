@@ -6,7 +6,7 @@ from app.services import auto_exit_profitable_trades as worker
 
 
 IST = ZoneInfo("Asia/Kolkata")
-CLOSE = datetime(2026, 10, 26, 15, 28, tzinfo=IST)
+CLOSE = datetime(2026, 10, 26, 15, 30, 10, tzinfo=IST)
 
 
 def _trade(**changes):
@@ -22,7 +22,7 @@ def _trade(**changes):
         "open_quantity": 50,
         "entry_price": 100,
         "last_price": 110,
-        "last_market_data_at": "2026-10-26T15:27:00+05:30",
+        "last_market_data_at": "2026-10-26T15:29:00+05:30",
     }
     trade.update(changes)
     return trade
