@@ -1,5 +1,11 @@
+import json
+from datetime import date
+
 import requests
 from fastapi import APIRouter, HTTPException, Query, Request
+from sqlalchemy import text
+
+from app.db.session import get_engine
 
 from app.providers.autotrender.auth import AutoTrenderAuth
 from app.services.autotrender_cache import AutoTrenderCache
@@ -109,3 +115,86 @@ def autotrender_worker_status() -> dict:
     from app.services.autotrender_paper_trade_worker import status
 
     return status()
+
+
+@router.get("/historical")
+def historical_cache_snapshots(
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> dict:
+    """List daily AutoTrender cache snapshots stored in MySQL."""
+    clauses = ["snapshot_type = :snapshot_type", "snapshot_key = :snapshot_key"]
+    params: dict = {"snapshot_type": "AUTOTRENDER_CACHE", "snapshot_key": "index-price", "limit": limit, "offset": offset}
+    if start_date:
+        clauses.append("trading_date >= :start_date")
+        params["start_date"] = start_date
+    if end_date:
+        clauses.append("trading_date <= :end_date")
+        params["end_date"] = end_date
+    where_sql = " AND ".join(clauses)
+
+    with get_engine().connect() as connection:
+        total = connection.execute(
+            text(f"SELECT COUNT(*) FROM market_snapshots WHERE {where_sql}"),
+            params,
+        ).scalar_one()
+        rows = connection.execute(
+            text(
+                "SELECT snapshot_id, trading_date, captured_at, created_at, OCTET_LENGTH(payload) AS payload_bytes "
+                f"FROM market_snapshots WHERE {where_sql} "
+                "ORDER BY trading_date DESC, captured_at DESC LIMIT :limit OFFSET :offset"
+            ),
+            params,
+        ).mappings().all()
+
+    return {
+        "total": int(total),
+        "limit": limit,
+        "offset": offset,
+        "snapshots": [
+            {
+                "snapshot_id": row["snapshot_id"],
+                "trading_date": row["trading_date"].isoformat() if row["trading_date"] else None,
+                "captured_at": row["captured_at"].isoformat() if row["captured_at"] else None,
+                "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+                "payload_bytes": row["payload_bytes"],
+            }
+            for row in rows
+        ],
+    }
+
+
+@router.get("/historical/{snapshot_id}")
+def historical_cache_snapshot(snapshot_id: int) -> dict:
+    """Read a single stored AutoTrender cache snapshot from MySQL."""
+    with get_engine().connect() as connection:
+        row = connection.execute(
+            text(
+                "SELECT snapshot_id, snapshot_type, snapshot_key, trading_date, captured_at, "
+                "created_at, payload, HEX(payload_hash) AS payload_hash "
+                "FROM market_snapshots WHERE snapshot_id = :snapshot_id "
+                "AND snapshot_type = :snapshot_type AND snapshot_key = :snapshot_key"
+            ),
+            {
+                "snapshot_id": snapshot_id,
+                "snapshot_type": "AUTOTRENDER_CACHE",
+                "snapshot_key": "index-price",
+            },
+        ).mappings().first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Historical AutoTrender snapshot not found")
+    payload = row["payload"]
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    return {
+        "snapshot_id": row["snapshot_id"],
+        "snapshot_type": row["snapshot_type"],
+        "snapshot_key": row["snapshot_key"],
+        "trading_date": row["trading_date"].isoformat() if row["trading_date"] else None,
+        "captured_at": row["captured_at"].isoformat() if row["captured_at"] else None,
+        "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+        "payload_hash": row["payload_hash"],
+        "payload": payload,
+    }
