@@ -286,7 +286,7 @@ def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_
     if quote_time:
         if isinstance(quote_time, str):
             try:
-                quote_time = datetime.fromisoformat(quote_time.replace("Z", "+00:00"))
+                quote_time = datetime.fromisoformat(quote_time)
             except ValueError as exc:
                 raise ValueError("invalid_live_option_quote_timestamp") from exc
         if isinstance(quote_time, datetime):
