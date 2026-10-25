@@ -1,4 +1,4 @@
-"""60-second AutoTrender signal-monitoring worker.
+"""Configurable-interval AutoTrender signal-monitoring worker.
 
 This first scheduler slice deliberately evaluates and logs signals only. It does not
 create trades until option-contract, live-premium, target, and duplicate-entry wiring
@@ -22,7 +22,9 @@ from app.services.autotrender_signal_evaluator import Evaluation, evaluate_signa
 
 logger = logging.getLogger(__name__)
 IST = ZoneInfo("Asia/Kolkata")
-POLL_SECONDS = 60
+DEFAULT_POLL_SECONDS = 5
+MIN_POLL_SECONDS = 1
+MAX_POLL_SECONDS = 3600
 DEFAULT_INDICES = ("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX")
 INDEX_CATEGORIES = {
     "NIFTY": "Nifty",
@@ -41,7 +43,7 @@ _INDEX_SETTING_NAMES = {
     "BANKEX": ("BANKEX", "Bankex"),
 }
 _AUTH: AutoTrenderAuth | None = None
-_LAST_CYCLE: dict[str, Any] = {"state": "not_started", "last_cycle_at": None, "indices": {}}
+_LAST_CYCLE: dict[str, Any] = {"state": "not_started", "last_cycle_at": None, "indices": {}, "poll_interval_seconds": DEFAULT_POLL_SECONDS}
 
 
 def _decode(value: Any) -> Any:
@@ -63,6 +65,7 @@ def _read_settings() -> dict[str, Any]:
         "vwapPriceDifferenceBuffer",
         "autoTrenderEntryStartTime",
         "autoTrenderEntryEndTime",
+        "autoTrenderWorkerIntervalSeconds",
     )
     defaults: dict[str, Any] = {
         "autoTrenderDashboardIndices": {
@@ -77,6 +80,7 @@ def _read_settings() -> dict[str, Any]:
         "vwapPriceDifferenceBuffer": 0.3,
         "autoTrenderEntryStartTime": "10:00",
         "autoTrenderEntryEndTime": "14:00",
+        "autoTrenderWorkerIntervalSeconds": DEFAULT_POLL_SECONDS,
     }
     try:
         with get_engine().connect() as connection:
@@ -96,6 +100,15 @@ def _read_settings() -> dict[str, Any]:
         key = str(row["setting_key"])[3:]
         settings[key] = _decode(row["setting_value"])
     return settings
+
+
+def _poll_interval_seconds(value: Any) -> int:
+    """Normalize the saved worker interval to a safe 1-second–1-hour range."""
+    try:
+        interval = int(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return DEFAULT_POLL_SECONDS
+    return max(MIN_POLL_SECONDS, min(MAX_POLL_SECONDS, interval))
 
 
 def enabled_indices(value: Any) -> list[str]:
@@ -188,10 +201,12 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             "last_cycle_at": current.isoformat(),
             "reason": "settings_unavailable",
             "indices": {},
+            "poll_interval_seconds": DEFAULT_POLL_SECONDS,
         }
         _LAST_CYCLE = result
         return result
 
+    poll_interval_seconds = _poll_interval_seconds(settings.get("autoTrenderWorkerIntervalSeconds"))
     allowed, window_reason = _entry_window(current, settings)
     if not allowed:
         result = {
@@ -199,6 +214,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             "last_cycle_at": current.isoformat(),
             "reason": window_reason,
             "indices": {},
+            "poll_interval_seconds": poll_interval_seconds,
         }
         _LAST_CYCLE = result
         return result
@@ -240,6 +256,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
         "last_cycle_at": current.isoformat(),
         "reason": "evaluation_complete",
         "indices": outcomes,
+        "poll_interval_seconds": poll_interval_seconds,
     }
     _LAST_CYCLE = result
     return result
@@ -247,17 +264,20 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
 
 def status() -> dict[str, Any]:
     """Return the latest process-local worker status for diagnostics."""
-    return {"poll_interval_seconds": POLL_SECONDS, **_LAST_CYCLE}
+    return dict(_LAST_CYCLE)
 
 
 async def run_scheduler() -> None:
-    """Run one AutoTrender evaluation cycle every 60 seconds until shutdown."""
-    logger.info("AutoTrender 60-second signal worker started")
+    """Run AutoTrender evaluation cycles at the interval saved in AutoTrender settings."""
+    logger.info("AutoTrender signal worker started")
     while True:
         try:
-            await asyncio.to_thread(run_cycle)
+            result = await asyncio.to_thread(run_cycle)
+            interval = _poll_interval_seconds(result.get("poll_interval_seconds", DEFAULT_POLL_SECONDS))
+            logger.debug("AutoTrender worker cycle completed; next cycle in %s seconds", interval)
         except asyncio.CancelledError:
             raise
         except Exception:
             logger.exception("AutoTrender worker cycle failed unexpectedly")
-        await asyncio.sleep(POLL_SECONDS)
+            interval = DEFAULT_POLL_SECONDS
+        await asyncio.sleep(interval)
