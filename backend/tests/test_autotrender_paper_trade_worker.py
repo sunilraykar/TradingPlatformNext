@@ -4,8 +4,8 @@ from zoneinfo import ZoneInfo
 import app.services.autotrender_paper_trade_worker as worker
 from app.services.autotrender_paper_trade_worker import (
     _entry_window,
-    _poll_interval_seconds,
     _max_signal_age_seconds,
+    _poll_interval_seconds,
     enabled_indices,
     latest_intraday_row,
     signal_freshness,
