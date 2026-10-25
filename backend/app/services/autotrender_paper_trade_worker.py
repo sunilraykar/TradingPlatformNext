@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -25,6 +25,9 @@ IST = ZoneInfo("Asia/Kolkata")
 DEFAULT_POLL_SECONDS = 5
 MIN_POLL_SECONDS = 1
 MAX_POLL_SECONDS = 3600
+DEFAULT_MAX_SIGNAL_AGE_SECONDS = 300
+MAX_FUTURE_CLOCK_SKEW_SECONDS = 30
+SIGNAL_TIMESTAMP_FIELDS = ("timestamp", "time", "datetime", "dateTime", "created_at", "createdAt", "updated_at", "updatedAt", "candle_time", "candleTime", "ts")
 DEFAULT_INDICES = ("NIFTY", "BANKNIFTY", "FINNIFTY", "SENSEX")
 INDEX_CATEGORIES = {
     "NIFTY": "Nifty",
@@ -44,6 +47,7 @@ _INDEX_SETTING_NAMES = {
 }
 _AUTH: AutoTrenderAuth | None = None
 _LAST_CYCLE: dict[str, Any] = {"state": "not_started", "last_cycle_at": None, "indices": {}, "poll_interval_seconds": DEFAULT_POLL_SECONDS}
+_LAST_SIGNAL_BY_INDEX: dict[str, str] = {}
 
 
 def _decode(value: Any) -> Any:
@@ -66,6 +70,7 @@ def _read_settings() -> dict[str, Any]:
         "autoTrenderEntryStartTime",
         "autoTrenderEntryEndTime",
         "autoTrenderWorkerIntervalSeconds",
+        "autoTrenderMaxSignalAgeSeconds",
     )
     defaults: dict[str, Any] = {
         "autoTrenderDashboardIndices": {
@@ -79,7 +84,8 @@ def _read_settings() -> dict[str, Any]:
         "putPcr": 1.0,
         "vwapPriceDifferenceBuffer": 0.3,
         "autoTrenderEntryStartTime": "10:00",
-        "autoTrenderEntryEndTime": "14:00",
+        "autoTrenderEntryEndTime": "15:25",
+        "autoTrenderMaxSignalAgeSeconds": DEFAULT_MAX_SIGNAL_AGE_SECONDS,
         "autoTrenderWorkerIntervalSeconds": DEFAULT_POLL_SECONDS,
     }
     try:
@@ -151,6 +157,54 @@ def latest_intraday_row(payload: Any) -> dict[str, Any] | None:
     return None
 
 
+def parse_signal_timestamp(row: dict[str, Any]) -> datetime | None:
+    """Parse a source timestamp; missing/unknown timestamp formats fail closed."""
+    raw: Any = next((row.get(key) for key in SIGNAL_TIMESTAMP_FIELDS if row.get(key) not in (None, "")), None)
+    if raw is None:
+        return None
+    parsed: datetime | None = None
+    if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+        try:
+            epoch = float(raw)
+            if epoch > 10_000_000_000:
+                epoch /= 1000
+            parsed = datetime.fromtimestamp(epoch, tz=timezone.utc)
+        except (ValueError, OverflowError, OSError):
+            return None
+    elif isinstance(raw, str):
+        candidate = raw.strip()
+        try:
+            parsed = datetime.fromisoformat(candidate.replace("Z", "+00:00"))
+        except ValueError:
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%H:%M:%S", "%H:%M"):
+                try:
+                    parsed = datetime.strptime(candidate, fmt)
+                    if fmt in ("%H:%M:%S", "%H:%M"):
+                        now_ist = datetime.now(IST)
+                        parsed = parsed.replace(year=now_ist.year, month=now_ist.month, day=now_ist.day)
+                    break
+                except ValueError:
+                    continue
+    if parsed is None:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=IST)
+    return parsed.astimezone(IST)
+
+
+def signal_freshness(row: dict[str, Any], now: datetime, max_age_seconds: int) -> tuple[bool, str, datetime | None]:
+    """Reject missing, malformed, future-dated, or over-age signal snapshots."""
+    timestamp = parse_signal_timestamp(row)
+    if timestamp is None:
+        return False, "signal_timestamp_missing_or_invalid", None
+    age = (now.astimezone(IST) - timestamp).total_seconds()
+    if age < -MAX_FUTURE_CLOCK_SKEW_SECONDS:
+        return False, "signal_timestamp_in_future", timestamp
+    if age > max_age_seconds:
+        return False, "stale_signal", timestamp
+    return True, "fresh_signal", timestamp
+
+
 def _entry_window(now: datetime, settings: dict[str, Any]) -> tuple[bool, str]:
     if now.weekday() >= 5:
         return False, "weekend"
@@ -162,7 +216,7 @@ def _entry_window(now: datetime, settings: dict[str, Any]) -> tuple[bool, str]:
     if end <= start:
         return False, "invalid_entry_window_settings"
     current = now.timetz().replace(tzinfo=None)
-    if current < start or current > end:
+    if current < start or current >= end:
         return False, "outside_entry_window"
     return True, "inside_entry_window"
 
@@ -229,6 +283,15 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             if row is None:
                 outcomes[index] = {"state": "skipped", "reason": "no_intraday_row"}
                 continue
+            max_age = _poll_interval_seconds(settings.get("autoTrenderMaxSignalAgeSeconds", DEFAULT_MAX_SIGNAL_AGE_SECONDS))
+            fresh, freshness_reason, signal_timestamp = signal_freshness(row, current, max_age)
+            if not fresh:
+                outcomes[index] = {"state": "rejected", "reason": freshness_reason}
+                continue
+            signal_id = signal_timestamp.isoformat()
+            if _LAST_SIGNAL_BY_INDEX.get(index) == signal_id:
+                outcomes[index] = {"state": "skipped", "reason": "duplicate_signal"}
+                continue
             evaluation: Evaluation = evaluate_signal(
                 row,
                 call_put_strength_diff=float(settings["callPutStrengthDiff"]),
@@ -236,15 +299,18 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                 put_pcr=float(settings["putPcr"]),
                 vwap_price_difference_buffer=float(settings["vwapPriceDifferenceBuffer"]),
             )
+            if evaluation.eligible:
+                _LAST_SIGNAL_BY_INDEX[index] = signal_id
             outcomes[index] = {
                 "state": "eligible_candidate" if evaluation.eligible else "rejected",
+                "signal_timestamp": signal_id,
                 "direction": evaluation.direction,
                 "reason": evaluation.reason,
                 "strength_difference": evaluation.strength_difference,
                 "vwap_difference_percent": evaluation.vwap_difference_percent,
             }
             logger.info(
-                "AutoTrender 60-second evaluation index=%s eligible=%s direction=%s reason=%s",
+                "AutoTrender evaluation index=%s eligible=%s direction=%s reason=%s",
                 index, evaluation.eligible, evaluation.direction, evaluation.reason,
             )
         except Exception as exc:  # isolate a failed index so other indices still evaluate
