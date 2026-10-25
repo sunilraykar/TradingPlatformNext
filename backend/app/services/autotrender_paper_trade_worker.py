@@ -169,7 +169,7 @@ def _fetch_intraday(index: str) -> dict[str, Any]:
         raise ValueError("AutoTrender returned a non-JSON intraday response")
     payload = response.json()
     if not isinstance(payload, dict):
-        raise ValueError("AutoTrender returned an unexpected intraday response")
+        raise TypeError("AutoTrender returned an unexpected intraday response")
     return payload
 
 
