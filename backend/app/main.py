@@ -102,7 +102,7 @@ async def lifespan(_: FastAPI):
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
         for task in (reset_task, trade_task, instrument_task, auto_exit_task, autotrender_worker_task):
             task.cancel()
-        for task in (reset_task, trade_task, instrument_task, auto_exit_task):
+        for task in (reset_task, trade_task, instrument_task, auto_exit_task, autotrender_worker_task):
             with suppress(asyncio.CancelledError):
                 await task
 
