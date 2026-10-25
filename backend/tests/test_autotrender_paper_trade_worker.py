@@ -1,6 +1,7 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+import app.services.autotrender_paper_trade_worker as worker
 from app.services.autotrender_paper_trade_worker import (
     _entry_window,
     _poll_interval_seconds,
@@ -8,7 +9,6 @@ from app.services.autotrender_paper_trade_worker import (
     latest_intraday_row,
     signal_freshness,
 )
-import app.services.autotrender_paper_trade_worker as worker
 
 IST = ZoneInfo("Asia/Kolkata")
 
@@ -72,7 +72,7 @@ def test_signal_freshness_accepts_recent_timestamp():
     assert reason == "fresh_signal"
     assert timestamp == datetime(2026, 10, 26, 9, 59, tzinfo=IST)
 
- 
+
 def test_run_cycle_creates_paper_trade_for_fresh_eligible_signal(monkeypatch):
     now = datetime(2026, 10, 26, 10, 1, tzinfo=IST)
     row = {
