@@ -5,6 +5,7 @@ from zoneinfo import ZoneInfo
 from app.services import auto_exit_profitable_trades as worker
 
 
+
 IST = ZoneInfo("Asia/Kolkata")
 CLOSE = datetime(2026, 10, 26, 15, 30, 10, tzinfo=IST)
 
@@ -38,7 +39,7 @@ def test_zerodha_option_charges_include_round_trip_order_costs():
     assert charges["brokerage"] == Decimal("40.00")
     assert charges["stt"] == Decimal("8.25")
     assert charges["exchange_transaction_charges"] > Decimal(0)
-    assert charges["sebi_charges"] > Decimal("0")
+    assert charges["sebi_charges"] > Decimal(0)
     assert charges["stamp_duty"] == Decimal("0.15")
     assert charges["gst"] > Decimal("0")
     assert charges["total"] > charges["brokerage"]
