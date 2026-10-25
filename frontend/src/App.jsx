@@ -100,6 +100,7 @@ function recordTime(row) {
 
 function buildIntradayRows(rows, settings = {}) {
   const strengthThreshold = Math.abs(numericValue(settings.callPutStrengthDiff) ?? 10);
+  const bufferThreshold = Math.abs(numericValue(settings.vwapPriceDifferenceBuffer) ?? 0.3);
   const callPcrThreshold = numericValue(settings.callPcr) ?? 1;
   const putPcrThreshold = numericValue(settings.putPcr) ?? 1;
 
@@ -120,8 +121,10 @@ function buildIntradayRows(rows, settings = {}) {
     const pcr = numericValue(row.pcr);
 
     const strengthPass = strengthDiff !== null && strengthDiff > strengthThreshold;
-    const bullish = strengthPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
-    const bearish = strengthPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
+    // The configured buffer is a maximum absolute Price-VWAP percentage gap.
+    const bufferPass = buffer !== null && Math.abs(buffer) <= bufferThreshold;
+    const bullish = strengthPass && bufferPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
+    const bearish = strengthPass && bufferPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
     const enter = bullish ? 'BUY' : bearish ? 'SELL' : 'WAIT';
 
     return { key: recordTime(row) + '-' + index, time: recordTime(row), call, put, diff: numericValue(row.diff), pcr, price, vwap, vwapSignal, optionSignal, callStrength, putStrength, strengthDiff, buffer, enter };
@@ -697,25 +700,7 @@ export default function App() {
   const [selectedContract, setSelectedContract] = useState(null);
   const [contractLoading, setContractLoading] = useState(false);
   const [contractError, setContractError] = useState('');
-  const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1 });
-
-  useEffect(() => {
-    let active = true;
-    api('/settings')
-      .then((result) => {
-        if (!active) return;
-        const saved = result.settings || {};
-        setAutotrendSettings({
-          callPutStrengthDiff: saved.callPutStrengthDiff ?? 10,
-          callPcr: saved.callPcr ?? 1,
-          putPcr: saved.putPcr ?? 1,
-        });
-      })
-      .catch((e) => {
-        if (active) setError((previous) => previous || 'Unable to load AutoTrender thresholds: ' + e.message);
-      });
-    return () => { active = false; };
-  }, []);
+  const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.3 });
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -726,6 +711,9 @@ export default function App() {
       api('/autotrender/auth/status'),
       api('/autotrender/cache/status'),
       api('/autotrender/index-price'),
+      // Reload saved thresholds on every market-data refresh so newly arrived
+      // timestamp rows are evaluated against the latest Settings values.
+      api('/settings'),
     ]);
     if (results[0].status === 'fulfilled') setIntraday(results[0].value);
     else setError((prev) => prev || `Intraday: ${results[0].reason.message}`);
@@ -737,6 +725,17 @@ export default function App() {
       // Price data is independent from the selector: upstream may omit indices
       // from this response, but all five requested indices must remain selectable.
       setIndexPrices(results[4].value);
+    }
+    if (results[5].status === 'fulfilled') {
+      const saved = results[5].value.settings || {};
+      setAutotrendSettings({
+        callPutStrengthDiff: saved.callPutStrengthDiff ?? 10,
+        callPcr: saved.callPcr ?? 1,
+        putPcr: saved.putPcr ?? 1,
+        vwapPriceDifferenceBuffer: saved.vwapPriceDifferenceBuffer ?? 0.3,
+      });
+    } else {
+      setError((prev) => prev || 'Unable to refresh AutoTrender thresholds from Settings.');
     }
     setLastUpdated(new Date());
     setLoading(false);
