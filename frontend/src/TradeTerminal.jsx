@@ -26,6 +26,9 @@ export default function TradeTerminal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [closeTrade, setCloseTrade] = useState(null);
+  const [closeOrderType, setCloseOrderType] = useState('MARKET');
+  const [closeLimitPrice, setCloseLimitPrice] = useState('');
   const [symbolQuery, setSymbolQuery] = useState('');
   const [symbolExchange, setSymbolExchange] = useState('ALL');
   const [symbolType, setSymbolType] = useState('ALL');
@@ -197,22 +200,34 @@ export default function TradeTerminal() {
     finally { setLoading(false); }
   };
 
-  const updateStatus = async (trade, nextStatus) => {
-    let changes = { status: nextStatus };
-    if (nextStatus === 'CLOSED') {
-      const rawExit = window.prompt('Enter the paper-trade exit price to record:');
-      if (rawExit === null) return;
-      const exitPrice = Number(rawExit);
-      if (!Number.isFinite(exitPrice) || exitPrice < 0) { setError('Enter a valid non-negative exit price.'); return; }
-      const rawEntryPrice = trade.average_entry_price ?? trade.entry_price;
-      const entryPrice = rawEntryPrice === null || rawEntryPrice === undefined || rawEntryPrice === '' ? NaN : Number(rawEntryPrice);
-      const qty = Number(trade.open_quantity ?? trade.quantity ?? 0);
-      const directionFactor = String(trade.direction).toUpperCase() === 'SELL' ? -1 : 1;
-      changes = { ...changes, exit_price: exitPrice, average_exit_price: exitPrice, open_quantity: 0 };
-      if (Number.isFinite(entryPrice)) changes.realized_pnl = (exitPrice - entryPrice) * qty * directionFactor;
+  const openCloseDialog = (trade) => {
+    setCloseTrade(trade);
+    setCloseOrderType('MARKET');
+    setCloseLimitPrice('');
+    setError('');
+  };
+
+  const updateStatus = async () => {
+    if (!closeTrade) return;
+    const trade = closeTrade;
+    const exitPrice = closeOrderType === 'MARKET'
+      ? Number(trade.last_price)
+      : Number(closeLimitPrice);
+    if (!Number.isFinite(exitPrice) || exitPrice <= 0) {
+      setError(closeOrderType === 'MARKET'
+        ? 'No valid last price is available for this trade. Refresh quotes before closing.'
+        : 'Enter a valid positive limit price.');
+      return;
     }
+    const rawEntryPrice = trade.average_entry_price ?? trade.entry_price;
+    const entryPrice = rawEntryPrice === null || rawEntryPrice === undefined || rawEntryPrice === '' ? NaN : Number(rawEntryPrice);
+    const qty = Number(trade.open_quantity ?? trade.quantity ?? 0);
+    const directionFactor = String(trade.direction).toUpperCase() === 'SELL' ? -1 : 1;
+    const changes = { status: 'CLOSED', exit_price: exitPrice, average_exit_price: exitPrice, open_quantity: 0 };
+    if (Number.isFinite(entryPrice)) changes.realized_pnl = (exitPrice - entryPrice) * qty * directionFactor;
     try {
       await request(`/trades/${encodeURIComponent(trade.trade_id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) });
+      setCloseTrade(null);
       await refresh();
     } catch (e) { setError(e.message || 'Trade update failed.'); }
   };
@@ -221,11 +236,21 @@ export default function TradeTerminal() {
     <div className="page-heading trade-terminal-heading"><div className="trade-terminal-actions"><button className="button secondary" onClick={refresh} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh'}</button><button className="button secondary" onClick={reconcileLive} disabled={loading}>{loading ? 'Syncing…' : 'Sync Live Positions'}</button><button className="button primary" onClick={() => { setShowCreate(true); setSymbolQuery(''); setSymbolExchange('ALL'); setSymbolType('ALL'); }}>+ New Paper Trade</button></div></div>
     {error && <div className="error-banner"><strong>Trade terminal issue</strong><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
     <div className="trade-terminal-metrics">
-      <div className="metric"><span>Cached trades</span><strong>{fmt(terminal.cached_trades ?? 0)}</strong></div>
+      <div className="metric"><span>Total Trades</span><strong>{fmt(trades.length)}</strong></div>
       <div className="metric"><span>Open trades</span><strong>{fmt(terminal.open_trades ?? 0)}</strong></div>
       <div className="metric"><span>Pending persistence</span><strong className={terminal.persistence_degraded ? 'negative' : 'positive'}>{fmt(terminal.dirty_trades ?? 0)}</strong></div>
     </div>
     {terminal.persistence_degraded && <div className="trade-persistence-warning">Database persistence is degraded. Do not assume cache-only changes are durable. {terminal.persistence_error || ''}</div>}
+    {closeTrade && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCloseTrade(null); }}>
+      <div className="panel trade-create-form trade-create-modal" role="dialog" aria-modal="true" aria-labelledby="close-trade-title">
+        <div className="trade-modal-heading"><div><h2 id="close-trade-title">Close paper trade</h2><p>{closeTrade.instrument_symbol} · {fmt(closeTrade.open_quantity ?? closeTrade.quantity)} units</p></div><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>✕</button></div>
+        <label className="settings-control"><span>Exit order price</span><select value={closeOrderType} onChange={(e) => setCloseOrderType(e.target.value)}><option value="MARKET">Market price (use current last price)</option><option value="LIMIT">Limit price (enter price)</option></select></label>
+        {closeOrderType === 'MARKET'
+          ? <div className="trade-selected-instrument">Current last price: <strong>{fmt(closeTrade.last_price)}</strong></div>
+          : <label className="settings-control"><span>Limit price *</span><input autoFocus type="number" min="0.01" step="any" required value={closeLimitPrice} onChange={(e) => setCloseLimitPrice(e.target.value)} placeholder="Enter limit price" /></label>}
+        <div className="settings-actions"><span className="trade-paper-label">PAPER MODE · no broker order will be placed</span><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>Cancel</button><button className="button primary" type="button" onClick={updateStatus}>Confirm close</button></div>
+      </div>
+    </div>}
     {showCreate && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) setShowCreate(false); }}>
       <form className="panel trade-create-form trade-create-modal" onSubmit={create}>
       <div className="trade-modal-heading"><div><h2>New paper trade</h2><p>Search the Kite instrument master and select a symbol.</p></div><button className="button secondary" type="button" onClick={() => setShowCreate(false)} disabled={saving}>✕</button></div>
@@ -269,9 +294,9 @@ export default function TradeTerminal() {
       <div className="trade-filter-group"><span className="trade-filter-label">Trade date</span><div className="trade-filter-buttons">{[['ALL','All'],['TODAY','Today'],['WEEK','This Week'],['MONTH','This Month'],['CUSTOM','Custom']].map(([value,label]) => <button key={value} type="button" className={(dateFilter === value ? 'trade-filter-button active' : 'trade-filter-button')} onClick={() => setDateFilter(value)}>{label}</button>)}</div>{dateFilter === 'CUSTOM' && <input className="trade-date-custom" type="date" value={tradeDate} onChange={(e) => setTradeDate(e.target.value)} />}</div>
       <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · live updates</span>
     </div>
-    <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr><th>Mode</th><th>Trade ID</th><th>Underlying</th><th>Instrument</th><th>Side</th><th>Qty</th><th>Entry</th><th>Last price</th><th>SL</th><th>Target</th><th>Realized P&amp;L</th><th>Unrealized P&amp;L</th><th>Status</th><th>Source / Strategy</th><th>Updated</th><th>Action</th></tr></thead><tbody>
-      {visibleTrades.map((trade) => <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td title={trade.trade_id}>{String(trade.trade_id).slice(0, 8)}</td><td>{fmt(trade.underlying)}</td><td>{fmt(trade.instrument_symbol)}</td><td>{fmt(trade.direction)}</td><td>{fmt(trade.open_quantity ?? trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td>{fmt(trade.last_price)}{trade.quote_state && trade.quote_state !== 'LIVE' && <div className="trade-quote-state">{trade.quote_state === 'WAITING_FOR_FIRST_QUOTE' ? 'Waiting for live quote' : trade.quote_state === 'INSTRUMENT_NOT_RESOLVED' ? 'Instrument not resolved' : 'Subscription pending'}</div>}</td><td>{fmt(trade.stop_loss)}</td><td>{fmt(trade.target)}</td><td className={Number(trade.realized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.realized_pnl || 0))}</td><td className={Number(trade.unrealized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.unrealized_pnl || 0))}</td><td>{fmt(trade.status)}</td><td>{fmt(trade.source)}{trade.strategy ? ` · ${trade.strategy}` : ''}</td><td>{trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'}{trade.persistence_state === 'DEGRADED' && <div className="negative">Persistence issue</div>}</td><td>{trade.execution_mode === 'PAPER' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(String(trade.status).toUpperCase()) && <button className="button secondary trade-close-button" onClick={() => updateStatus(trade, 'CLOSED')}>Close</button>}</td></tr>)}
-      {!visibleTrades.length && <tr><td colSpan="16" className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or sync live positions.'}</td></tr>}
+    <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr><th>Mode</th><th>Underlying</th><th>Instrument</th><th>Side</th><th>Qty</th><th>Entry</th><th>Last price</th><th>SL</th><th>Target</th><th>Unrealized P&amp;L</th><th>Status</th><th>Source / Strategy</th><th>Updated</th><th>Action</th></tr></thead><tbody>
+      {visibleTrades.map((trade) => <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{fmt(trade.underlying)}</td><td>{fmt(trade.instrument_symbol)}</td><td>{fmt(trade.direction)}</td><td>{fmt(trade.open_quantity ?? trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td>{fmt(trade.last_price)}{trade.quote_state && trade.quote_state !== 'LIVE' && <div className="trade-quote-state">{trade.quote_state === 'WAITING_FOR_FIRST_QUOTE' ? 'Waiting for live quote' : trade.quote_state === 'INSTRUMENT_NOT_RESOLVED' ? 'Instrument not resolved' : 'Subscription pending'}</div>}</td><td>{fmt(trade.stop_loss)}</td><td>{fmt(trade.target)}</td><td className={Number(trade.unrealized_pnl || 0) >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(Number(trade.unrealized_pnl || 0))}</td><td>{fmt(trade.status)}</td><td>{fmt(trade.source)}{trade.strategy ? ` · ${trade.strategy}` : ''}</td><td>{trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'}{trade.persistence_state === 'DEGRADED' && <div className="negative">Persistence issue</div>}</td><td>{trade.execution_mode === 'PAPER' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(String(trade.status).toUpperCase()) && <button className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button>}</td></tr>)}
+      {!visibleTrades.length && <tr><td colSpan="14" className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or sync live positions.'}</td></tr>}
     </tbody></table></div><div className="panel-footer">Durable lifecycle events are saved immediately. Quote and unrealized P&amp;L updates are cache-only. Live broker reconciliation is read-only and remains a separate integration step.</div></section>
   </section>;
 }
