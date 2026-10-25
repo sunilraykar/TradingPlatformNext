@@ -31,13 +31,13 @@ def _trade(**changes):
 def test_zerodha_option_charges_include_round_trip_order_costs():
     charges = worker.calculate_zerodha_option_charges(
         exchange="NFO",
-        buy_premium=Decimal("100"),
-        sell_premium=Decimal("110"),
+        buy_premium=Decimal(100),
+        sell_premium=Decimal(110),
         quantity=50,
     )
     assert charges["brokerage"] == Decimal("40.00")
     assert charges["stt"] == Decimal("8.25")
-    assert charges["exchange_transaction_charges"] > Decimal("0")
+    assert charges["exchange_transaction_charges"] > Decimal(0)
     assert charges["sebi_charges"] > Decimal("0")
     assert charges["stamp_duty"] == Decimal("0.15")
     assert charges["gst"] > Decimal("0")
