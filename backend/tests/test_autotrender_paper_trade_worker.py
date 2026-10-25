@@ -64,6 +64,7 @@ def test_signal_freshness_rejects_missing_stale_and_future_timestamps():
     assert signal_freshness({"call": 80}, now, 300)[:2] == (False, "signal_timestamp_missing_or_invalid")
     assert signal_freshness({"timestamp": "2026-10-26T09:54:59+05:30"}, now, 300)[:2] == (False, "stale_signal")
     assert signal_freshness({"timestamp": "2026-10-26T10:01:00+05:30"}, now, 300)[:2] == (False, "signal_timestamp_in_future")
+    assert signal_freshness({"timestamp": "2026-10-26T10:00:20+05:30"}, now, 300)[:2] == (False, "signal_timestamp_in_future")
 
 
 def test_signal_freshness_accepts_recent_timestamp():
