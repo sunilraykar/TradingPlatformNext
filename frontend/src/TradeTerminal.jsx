@@ -22,7 +22,7 @@ export default function TradeTerminal() {
   const [underlyingFilter, setUnderlyingFilter] = useState('ALL');
   const [symbolLetter, setSymbolLetter] = useState('ALL');
   const [tradeDate, setTradeDate] = useState('');
-  const [dateFilter, setDateFilter] = useState('ALL');
+  const [dateFilter, setDateFilter] = useState('TODAY');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
