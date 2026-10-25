@@ -1,8 +1,8 @@
 from datetime import datetime
 from decimal import Decimal
 from zoneinfo import ZoneInfo
-from app.services import auto_exit_profitable_trades as worker
 
+from app.services import auto_exit_profitable_trades as worker
 
 IST = ZoneInfo("Asia/Kolkata")
 CLOSE = datetime(2026, 10, 26, 15, 30, 10, tzinfo=IST)
