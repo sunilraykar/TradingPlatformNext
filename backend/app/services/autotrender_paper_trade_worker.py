@@ -192,9 +192,6 @@ def parse_signal_timestamp(row: dict[str, Any]) -> datetime | None:
             for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
                 try:
                     parsed = datetime.strptime(candidate, fmt)
-                    if fmt in ("%H:%M:%S", "%H:%M"):
-                        now_ist = datetime.now(IST)
-                        parsed = parsed.replace(year=now_ist.year, month=now_ist.month, day=now_ist.day)
                     break
                 except ValueError:
                     continue
@@ -211,7 +208,7 @@ def signal_freshness(row: dict[str, Any], now: datetime, max_age_seconds: int) -
     if timestamp is None:
         return False, "signal_timestamp_missing_or_invalid", None
     age = (now.astimezone(IST) - timestamp).total_seconds()
-    if age < -MAX_FUTURE_CLOCK_SKEW_SECONDS:
+    if age < 0:
         return False, "signal_timestamp_in_future", timestamp
     if age > max_age_seconds:
         return False, "stale_signal", timestamp
