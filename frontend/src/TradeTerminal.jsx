@@ -244,7 +244,13 @@ export default function TradeTerminal() {
     {closeTrade && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCloseTrade(null); }}>
       <div className="panel trade-create-form trade-create-modal" role="dialog" aria-modal="true" aria-labelledby="close-trade-title">
         <div className="trade-modal-heading"><div><h2 id="close-trade-title">Close paper trade</h2><p>{closeTrade.instrument_symbol} · {fmt(closeTrade.open_quantity ?? closeTrade.quantity)} units</p></div><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>✕</button></div>
-        <label className="settings-control"><span>Exit order price</span><select value={closeOrderType} onChange={(e) => setCloseOrderType(e.target.value)}><option value="MARKET">Market price (use current last price)</option><option value="LIMIT">Limit price (enter price)</option></select></label>
+        <div className="trade-close-order-choices">
+          <span className="trade-filter-label">Exit order type</span>
+          <div className="trade-filter-buttons">
+            <button className={closeOrderType === 'MARKET' ? 'trade-filter-button active' : 'trade-filter-button'} type="button" onClick={() => setCloseOrderType('MARKET')}>Market Price</button>
+            <button className={closeOrderType === 'LIMIT' ? 'trade-filter-button active' : 'trade-filter-button'} type="button" onClick={() => setCloseOrderType('LIMIT')}>Limit Price</button>
+          </div>
+        </div>
         {closeOrderType === 'MARKET'
           ? <div className="trade-selected-instrument">Current last price: <strong>{fmt(closeTrade.last_price)}</strong></div>
           : <label className="settings-control"><span>Limit price *</span><input autoFocus type="number" min="0.01" step="any" required value={closeLimitPrice} onChange={(e) => setCloseLimitPrice(e.target.value)} placeholder="Enter limit price" /></label>}
