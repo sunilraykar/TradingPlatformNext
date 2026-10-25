@@ -121,7 +121,7 @@ def latest_intraday_row(payload: Any) -> dict[str, Any] | None:
         return None
 
     # Some responses wrap the actual row under data.trend/summary.
-    for key in ("data", "intraday", "records", "rows", "items", "result"):
+    for key in ("data", "intraday", "records", "rows", "items", "result", "trend", "summary", "strength"):
         value = payload.get(key)
         if isinstance(value, list):
             rows = [item for item in value if isinstance(item, dict)]
