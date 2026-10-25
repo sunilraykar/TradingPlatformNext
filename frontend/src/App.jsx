@@ -269,12 +269,14 @@ const SETTINGS_FIELDS = {
   ],
   autotrend: [
     ['autoTrenderRefreshSeconds', 'AutoTrender Refresh Interval (seconds)', 'number', '5', 'Refresh interval for AutoTrender data.', '1'],
+    ['autoTrenderWorkerIntervalSeconds', 'AutoTrender Signal Evaluation Interval (seconds)', 'number', '5', 'How often the backend evaluates AutoTrender signals; separate from UI refresh.', '1'],
+    ['autoTrenderMaxSignalAgeSeconds', 'AutoTrender Maximum Signal Age (seconds)', 'number', '300', 'Reject signals older than this age or without a valid source timestamp.', '1'],
     ['vwapPriceDifferenceBuffer', 'VWAP-Price Difference Buffer (%)', 'number', '0.3', 'Maximum absolute VWAP/price buffer used by the entry filter.', '0'],
     ['putPcr', 'Put PCR Threshold', 'number', '1', 'Put PCR threshold used by the signal filter.', '0'],
     ['callPcr', 'Call PCR Threshold', 'number', '1', 'Call PCR threshold used by the signal filter.', '0'],
     ['callPutStrengthDiff', 'Call-Put Strength Difference', 'number', '10', 'Minimum call/put strength difference for a signal.', '0'],
     ['autoTrenderEntryStartTime', 'AutoTrender Entry Start Time (IST)', 'time', '10:00', 'New AutoTrender entries are blocked before this time. The start time is inclusive.'],
-    ['autoTrenderEntryEndTime', 'AutoTrender Entry End Time (IST)', 'time', '14:00', 'New AutoTrender entries are blocked after this time. The end time is inclusive.'],
+    ['autoTrenderEntryEndTime', 'AutoTrender Entry Cutoff Time (IST)', 'time', '15:25', 'New AutoTrender entries are blocked at this time and afterwards. The cutoff is exclusive.'],
   ],
   'active-trades': [
     ['autoExitProfitableTrades', 'Auto Exit Profitable Trades at Market Close', 'boolean', false, 'Enable AutoExitProfitableTradesWorker. When disabled, the worker must not auto-exit profitable trades.'],
