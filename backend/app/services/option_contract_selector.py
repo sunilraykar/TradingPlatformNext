@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -37,9 +37,13 @@ def _previous_weekday(day: date) -> date:
 
 def _spot_price(token: int) -> float | None:
     cached = live_quotes.get(token)
-    if cached and cached.get("last_price") is not None:
+    if cached and cached.get("last_price") is not None and cached.get("received_at"):
         try:
-            return float(cached["last_price"])
+            received_at = datetime.fromisoformat(str(cached["received_at"]).replace("Z", "+00:00"))
+            if received_at.tzinfo is None:
+                received_at = received_at.replace(tzinfo=UTC)
+            if (datetime.now(UTC) - received_at.astimezone(UTC)).total_seconds() <= 120:
+                return float(cached["last_price"])
         except (TypeError, ValueError):
             pass
     try:
