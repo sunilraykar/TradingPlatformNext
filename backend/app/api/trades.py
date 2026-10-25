@@ -167,7 +167,7 @@ def _enforce_autotrender_entry_window(source: str, signal_timestamp: str | None)
     if not signal_timestamp:
         raise HTTPException(status_code=422, detail="AutoTrender entries require a source signal timestamp")
     try:
-        parsed_signal_time = datetime.fromisoformat(signal_timestamp.strip().replace("Z", "+00:00"))
+        parsed_signal_time = datetime.fromisoformat(signal_timestamp.strip())
     except ValueError as exc:
         raise HTTPException(status_code=422, detail="AutoTrender signal timestamp is invalid") from exc
     if parsed_signal_time.tzinfo is None:
