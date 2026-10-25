@@ -146,7 +146,7 @@ def _enforce_autotrender_entry_window(source: str) -> None:
             or end <= start
         ):
             raise ValueError("Invalid entry window")
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         raise HTTPException(
             status_code=503,
             detail="AutoTrender entry-window settings are invalid; correct them in Settings",
