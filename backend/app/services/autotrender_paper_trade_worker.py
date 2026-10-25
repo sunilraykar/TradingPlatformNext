@@ -252,13 +252,38 @@ def _fetch_intraday(index: str) -> dict[str, Any]:
 
 def _spot_price(row: dict[str, Any]) -> float | None:
     for key in ("price", "close", "ltp", "spot", "spotPrice", "indexPrice", "lastPrice"):
+        value = row.get(key)
+        if isinstance(value, dict):
+            value = next(
+                (value[field] for field in ("value", "price", "ltp", "close", "current", "number")
+                 if value.get(field) not in (None, "")),
+                None,
+            )
         try:
-            parsed = float(row.get(key))
+            parsed = float(str(value).replace(",", "").strip())
         except (TypeError, ValueError):
             continue
         if parsed > 0:
             return parsed
     return None
+
+
+def _quote_timestamp_is_fresh(value: Any, now: datetime | None = None) -> bool:
+    """Require an explicit quote timestamp no older than 120 seconds and not in the future."""
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return False
+    if not isinstance(value, datetime):
+        return False
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=IST)
+    current = now or datetime.now(IST)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=IST)
+    age = (current.astimezone(IST) - value.astimezone(IST)).total_seconds()
+    return 0 <= age <= 120
 
 
 def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float) -> dict[str, Any]:
@@ -289,18 +314,8 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
     if premium <= 0:
         raise ValueError("missing_positive_live_option_premium")
     quote_time = quote.get("timestamp") or quote.get("last_trade_time")
-    if quote_time:
-        if isinstance(quote_time, str):
-            try:
-                quote_time = datetime.fromisoformat(quote_time)
-            except ValueError as exc:
-                raise ValueError("invalid_live_option_quote_timestamp") from exc
-        if isinstance(quote_time, datetime):
-            if quote_time.tzinfo is None:
-                quote_time = quote_time.replace(tzinfo=IST)
-            quote_age = (datetime.now(IST) - quote_time.astimezone(IST)).total_seconds()
-            if quote_age < -MAX_FUTURE_CLOCK_SKEW_SECONDS or quote_age > 120:
-                raise ValueError("stale_live_option_premium")
+    if not _quote_timestamp_is_fresh(quote_time):
+        raise ValueError("missing_or_stale_live_option_premium")
     quantity = int(chosen.get("lot_size") or 0)
     if quantity <= 0:
         raise ValueError("invalid_option_lot_size")
