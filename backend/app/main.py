@@ -19,7 +19,7 @@ from app.providers.kite.registry import (
     clear_active_kite_session,
     configure_active_kite_session,
 )
-from app.services import live_market_data, trade_terminal
+from app.services import auto_exit_profitable_trades, live_market_data, trade_terminal
 from app.services.kite_instrument_master import run_daily_instrument_refresh_scheduler
 from app.services.kite_session_reset import run_daily_reset_scheduler
 from app.services.kite_sessions import (
@@ -94,19 +94,16 @@ async def lifespan(_: FastAPI):
     reset_task = asyncio.create_task(run_daily_reset_scheduler())
     trade_task = asyncio.create_task(trade_terminal.run_maintenance_scheduler())
     instrument_task = asyncio.create_task(run_daily_instrument_refresh_scheduler())
+    auto_exit_task = asyncio.create_task(auto_exit_profitable_trades.run_auto_exit_scheduler())
     try:
         yield
     finally:
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
-        reset_task.cancel()
-        trade_task.cancel()
-        instrument_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await reset_task
-        with suppress(asyncio.CancelledError):
-            await trade_task
-        with suppress(asyncio.CancelledError):
-            await instrument_task
+        for task in (reset_task, trade_task, instrument_task, auto_exit_task):
+            task.cancel()
+        for task in (reset_task, trade_task, instrument_task, auto_exit_task):
+            with suppress(asyncio.CancelledError):
+                await task
 
 
 settings = get_settings()
