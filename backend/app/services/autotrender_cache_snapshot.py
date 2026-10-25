@@ -10,6 +10,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import requests
 from sqlalchemy import text
 
 from app.db.session import get_engine
@@ -65,7 +66,7 @@ def persist_cache_snapshot(
                     response.raise_for_status()
                     value = response.json()
                     entry[dataset] = value if isinstance(value, dict) else {"error": "Unexpected non-object response"}
-                except Exception as exc:
+                except (RuntimeError, TypeError, ValueError, requests.RequestException) as exc:
                     entry[dataset] = {"error": f"{type(exc).__name__}: {exc}"}
             upstream_payload["indices"][index] = entry
     serialized = json.dumps(upstream_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
