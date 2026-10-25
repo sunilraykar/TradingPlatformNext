@@ -360,7 +360,12 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             max_age = _poll_interval_seconds(settings.get("autoTrenderMaxSignalAgeSeconds", DEFAULT_MAX_SIGNAL_AGE_SECONDS))
             fresh, freshness_reason, signal_timestamp = signal_freshness(row, current, max_age)
             if not fresh:
-                outcomes[index] = {"state": "rejected", "reason": freshness_reason}
+                outcomes[index] = {
+                    "state": "rejected",
+                    "reason": freshness_reason,
+                    "source_fields": sorted(str(key) for key in row.keys()),
+                    "recognized_timestamp_fields": [key for key in SIGNAL_TIMESTAMP_FIELDS if row.get(key) not in (None, "")],
+                }
                 continue
             signal_id = signal_timestamp.isoformat()
             if _LAST_SIGNAL_BY_INDEX.get(index) == signal_id:
@@ -398,8 +403,8 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                 "vwap_difference_percent": evaluation.vwap_difference_percent,
             }
             logger.info(
-                "AutoTrender evaluation index=%s eligible=%s direction=%s reason=%s",
-                index, evaluation.eligible, evaluation.direction, evaluation.reason,
+                "AutoTrender evaluation index=%s eligible=%s direction=%s reason=%s trade_id=%s",
+                index, evaluation.eligible, evaluation.direction, reason, trade_id,
             )
         except Exception as exc:  # isolate a failed index so other indices still evaluate
             logger.exception("AutoTrender worker failed for index %s", index)
