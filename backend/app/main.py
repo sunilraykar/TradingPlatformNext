@@ -19,7 +19,7 @@ from app.providers.kite.registry import (
     clear_active_kite_session,
     configure_active_kite_session,
 )
-from app.services import auto_exit_profitable_trades, autotrender_paper_trade_worker, live_market_data, trade_terminal
+from app.services import (\n    auto_exit_profitable_trades,\n    autotrender_paper_trade_worker,\n    live_market_data,\n    trade_terminal,\n)
 from app.services.kite_instrument_master import run_daily_instrument_refresh_scheduler
 from app.services.kite_session_reset import run_daily_reset_scheduler
 from app.services.kite_sessions import (
