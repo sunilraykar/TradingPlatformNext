@@ -308,3 +308,21 @@
 .trade-selected-instrument strong{color:var(--cyan)}
 .trade-create-modal .settings-actions{position:sticky;bottom:-24px;margin:18px -24px -24px;padding:16px 24px;background:var(--panel);border-top:1px solid var(--line)}
 @media(max-width:640px){.trade-modal-backdrop{padding:8px;align-items:flex-end}.trade-create-modal{max-height:95vh;padding:16px}.trade-instrument-filters{grid-template-columns:1fr}.trade-create-modal .settings-actions{bottom:-16px;margin:16px -16px -16px;padding:12px 16px}.trade-instrument-results{max-height:200px}}
+
+
+.selected-contract-panel{margin:0 0 14px;padding:16px 18px}
+.selected-contract-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.selected-contract-heading h2{margin:4px 0 0;font-size:15px}
+.contract-status{display:inline-flex;align-items:center;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.contract-status.ready{color:var(--positive,#38d9a9);background:rgba(56,217,169,.1);border:1px solid rgba(56,217,169,.24)}
+.contract-status.waiting{color:var(--muted);background:rgba(148,163,184,.08);border:1px solid var(--line)}
+.selected-contract-main{display:grid;grid-template-columns:minmax(190px,1.8fr) repeat(4,minmax(90px,1fr));gap:10px}
+.selected-contract-main>div{display:flex;flex-direction:column;justify-content:center;gap:6px;min-width:0;padding:11px 12px;border:1px solid var(--line);border-radius:7px;background:rgba(15,25,42,.58)}
+.selected-contract-symbol strong{font-size:16px;color:var(--cyan);overflow-wrap:anywhere}
+.selected-contract-symbol span,.selected-contract-stat span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.selected-contract-stat strong{font-size:13px;font-weight:650;overflow-wrap:anywhere}
+.selected-contract-footnote{margin-top:11px;color:var(--muted);font-size:11px;line-height:1.5}
+.selected-contract-calendar-note{margin-top:4px;color:var(--muted);font-size:10px;opacity:.8}
+.selected-contract-empty{padding:14px;border:1px dashed var(--line);border-radius:7px;color:var(--muted);font-size:12px}
+@media(max-width:900px){.selected-contract-main{grid-template-columns:repeat(2,minmax(0,1fr))}.selected-contract-symbol{grid-column:1/-1}}
+@media(max-width:480px){.selected-contract-panel{padding:12px}.selected-contract-main{grid-template-columns:1fr 1fr}.selected-contract-main>div{padding:9px}.selected-contract-symbol strong{font-size:14px}}
