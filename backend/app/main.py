@@ -92,8 +92,10 @@ async def _restore_kite_session() -> None:
 async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
-    application.state.autotrender_auth = AutoTrenderAuth()
-    application.state.autotrender_cache = AutoTrenderCache(application.state.autotrender_auth)
+    if not hasattr(application.state, "autotrender_auth"):
+        application.state.autotrender_auth = AutoTrenderAuth()
+    if not hasattr(application.state, "autotrender_cache"):
+        application.state.autotrender_cache = AutoTrenderCache(application.state.autotrender_auth)
     trade_terminal.hydrate_cache()
     live_quotes.add_listener(trade_terminal.apply_quote_to_open_trades)
     await _restore_kite_session()
