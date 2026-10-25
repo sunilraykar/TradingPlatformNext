@@ -94,7 +94,8 @@ def evaluate(row: dict, settings: dict) -> dict:
     vwap_signal = signal(row.get("vWapSignal", row.get("vwapSignal")))
     option_signal = signal(row.get("optionSignal"))
 
-    strength_threshold = abs(number(settings.get("callPutStrengthDiff")) or 0)
+    strength_value = number(settings.get("callPutStrengthDiff"))
+    strength_threshold = abs(10 if strength_value is None else strength_value)
     buffer_threshold = abs(number(settings.get("vwapPriceDifferenceBuffer")) if settings.get("vwapPriceDifferenceBuffer") is not None else 0.3)
     call_pcr_threshold = number(settings.get("callPcr"))
     put_pcr_threshold = number(settings.get("putPcr"))
