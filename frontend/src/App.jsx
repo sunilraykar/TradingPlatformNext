@@ -98,14 +98,19 @@ function recordTime(row) {
   return timeLabel(row.time ?? row.mtime ?? row.timestamp ?? row.dateTime ?? row.datetime ?? row.createdAt);
 }
 
-function buildIntradayRows(rows) {
+function buildIntradayRows(rows, settings = {}) {
+  const strengthThreshold = Math.abs(numericValue(settings.callPutStrengthDiff) ?? 10);
+  const callPcrThreshold = numericValue(settings.callPcr) ?? 1;
+  const putPcrThreshold = numericValue(settings.putPcr) ?? 1;
+
   return rows.map((row, index) => {
     const call = numericValue(row.call);
     const put = numericValue(row.put);
     const total = call !== null && put !== null ? call + put : null;
     const callStrength = total !== null && total > 0 ? (call / total) * 100 : null;
     const putStrength = total !== null && total > 0 ? (put / total) * 100 : null;
-    // Positive difference means call strength is higher.
+    // Positive difference means call strength is higher. Both directions use
+    // the absolute configured threshold; VWAP/Option signals distinguish direction.
     const strengthDiff = callStrength !== null && putStrength !== null ? callStrength - putStrength : null;
     const price = numericValue(row.price ?? row.close ?? row.ltp);
     const vwap = numericValue(row.vWap ?? row.vwap);
@@ -113,9 +118,12 @@ function buildIntradayRows(rows) {
     const optionSignal = signalValue(row.optionSignal);
     const vwapSignal = signalValue(row.vWapSignal ?? row.vwapSignal);
     const pcr = numericValue(row.pcr);
-    let enter = '—';
-    if (optionSignal === 'BUY' && vwapSignal === 'BUY') enter = strengthDiff !== null && strengthDiff > 10 && pcr !== null && pcr > 1 && buffer !== null && Math.abs(buffer) < 0.3 ? 'BUY' : 'WAIT';
-    else if (optionSignal === 'SELL' && vwapSignal === 'SELL') enter = strengthDiff !== null && strengthDiff < -10 && pcr !== null && pcr < 1 && buffer !== null && Math.abs(buffer) < 0.3 ? 'SELL' : 'WAIT';
+
+    const strengthPass = strengthDiff !== null && strengthDiff > strengthThreshold;
+    const bullish = strengthPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
+    const bearish = strengthPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
+    const enter = bullish ? 'BUY' : bearish ? 'SELL' : 'WAIT';
+
     return { key: recordTime(row) + '-' + index, time: recordTime(row), call, put, diff: numericValue(row.diff), pcr, price, vwap, vwapSignal, optionSignal, callStrength, putStrength, strengthDiff, buffer, enter };
   });
 }
@@ -685,6 +693,25 @@ export default function App() {
   const [selectedContract, setSelectedContract] = useState(null);
   const [contractLoading, setContractLoading] = useState(false);
   const [contractError, setContractError] = useState('');
+  const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1 });
+
+  useEffect(() => {
+    let active = true;
+    api('/settings')
+      .then((result) => {
+        if (!active) return;
+        const saved = result.settings || {};
+        setAutotrendSettings({
+          callPutStrengthDiff: saved.callPutStrengthDiff ?? 10,
+          callPcr: saved.callPcr ?? 1,
+          putPcr: saved.putPcr ?? 1,
+        });
+      })
+      .catch((e) => {
+        if (active) setError((previous) => previous || 'Unable to load AutoTrender thresholds: ' + e.message);
+      });
+    return () => { active = false; };
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -758,7 +785,7 @@ export default function App() {
 
   const trend = useMemo(() => extractTrend(oi), [oi]);
   const intradayRows = Array.isArray(intraday?.data) ? intraday.data : [];
-  const calculatedRows = useMemo(() => buildIntradayRows(intradayRows), [intradayRows]);
+  const calculatedRows = useMemo(() => buildIntradayRows(intradayRows, autotrendSettings), [intradayRows, autotrendSettings]);
   const calculatedRowsDescending = useMemo(() => [...calculatedRows].sort((a, b) => {
     const sortTime = (value) => {
       const raw = String(value || '').trim();
