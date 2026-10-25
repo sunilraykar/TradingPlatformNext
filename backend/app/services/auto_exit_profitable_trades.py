@@ -21,9 +21,10 @@ from app.services import trade_terminal
 
 logger = logging.getLogger(__name__)
 _IST = ZoneInfo("Asia/Kolkata")
-# A close is only attempted during the final minutes, while the quote is still fresh.
-_WINDOW_START = time(15, 30)
-_WINDOW_END = time(15, 32)
+# NSE/BSE regular derivatives trading ends at 15:30 IST. Evaluate and close PAPER
+# trades before the session ends; never wait until after the market is closed.
+_WINDOW_START = time(15, 25)
+_WINDOW_END = time(15, 29, 30)
 _MAX_QUOTE_AGE_SECONDS = 120
 
 
@@ -170,6 +171,10 @@ def run_auto_exit_cycle(now: datetime | None = None) -> dict[str, Any]:
 
         # update_trade serializes lifecycle changes and persists a versioned close event.
         try:
+            current = trade_terminal.get_trade(trade_id)
+            if not current or str(current.get("status", "OPEN")).upper() != "OPEN":
+                skipped.append({"trade_id": trade_id, "reason": "trade_no_longer_open"})
+                continue
             trade_terminal.update_trade(
                 trade_id,
                 {
@@ -196,18 +201,22 @@ def run_auto_exit_cycle(now: datetime | None = None) -> dict[str, Any]:
 
 
 async def run_auto_exit_scheduler() -> None:
-    """Poll during the final session minutes; once closed, wait for the next session."""
-    last_run_date: str | None = None
+    """Re-evaluate every 15 seconds before market close; stop after the close window."""
+    last_completed_date: str | None = None
     while True:
         try:
             now = datetime.now(_IST)
-            if now.date().isoformat() != last_run_date and _WINDOW_START <= now.time() <= _WINDOW_END:
-                result = run_auto_exit_cycle(now)
-                # If disabled early in the window, keep polling so enabling the setting
-                # before the window closes can still take effect that day.
-                if result.get("enabled") or now.time() >= _WINDOW_END:
-                    last_run_date = now.date().isoformat()
-                logger.info("Auto Exit daily run: %s", result)
+            today = now.date().isoformat()
+            if now.weekday() < 5 and _WINDOW_START <= now.time() <= _WINDOW_END:
+                if today != last_completed_date:
+                    result = run_auto_exit_cycle(now)
+                    logger.info("Auto Exit cycle: %s", result)
+            elif now.weekday() < 5 and now.time() > _WINDOW_END and last_completed_date != today:
+                # The window has ended. Do not retry again today; the next session
+                # starts with a new date. If the setting was disabled, nothing is closed.
+                last_completed_date = today
+            elif now.weekday() >= 5:
+                last_completed_date = today
         except Exception:
             logger.exception("Auto Exit scheduler cycle failed")
         await asyncio.sleep(15)
