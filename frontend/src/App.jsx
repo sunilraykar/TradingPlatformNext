@@ -713,7 +713,7 @@ function AutoTrenderHistoricalData() {
       setDetailLoading(false);
     }
   };
-  const formatDateTime = (value) => value ? new Date(value.endsWith('Z') ? value : value + 'Z').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
+  const formatDateTime = (value) => value ? new Date(/[zZ]|[+-]\\d{2}:?\\d{2}$/.test(value) ? value : value + '+05:30').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
   const first = result.total ? page * pageSize + 1 : 0;
   const last = Math.min((page + 1) * pageSize, result.total || 0);
 
