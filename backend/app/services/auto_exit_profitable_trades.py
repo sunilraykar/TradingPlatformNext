@@ -9,7 +9,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, time
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -58,7 +58,7 @@ def calculate_zerodha_option_charges(
     sebi = (buy_turnover + sell_turnover) * Decimal("0.000001")
     stamp_duty = buy_turnover * Decimal("0.00003")
     gst = (brokerage + transaction + sebi) * Decimal("0.18")
-    total = sum((brokerage, stt, transaction, sebi, stamp_duty, gst), Decimal("0"))
+    total = sum((brokerage, stt, transaction, sebi, stamp_duty, gst), Decimal(0))
     return {
         "brokerage": _money(brokerage),
         "stt": _money(stt),
@@ -107,7 +107,7 @@ def _quote_is_fresh(trade: dict[str, Any], now: datetime) -> bool:
     if not timestamp:
         return False
     try:
-        quoted_at = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+        quoted_at = datetime.fromisoformat(str(timestamp))
         if quoted_at.tzinfo is None:
             quoted_at = quoted_at.replace(tzinfo=_IST)
         return 0 <= (now - quoted_at.astimezone(_IST)).total_seconds() <= _MAX_QUOTE_AGE_SECONDS
@@ -155,7 +155,7 @@ def run_auto_exit_cycle(now: datetime | None = None) -> dict[str, Any]:
             skipped.append({"trade_id": trade_id, "reason": "unsupported_direction"})
             continue
         buy_premium, sell_premium = (entry, exit_price) if direction == "BUY" else (exit_price, entry)
-        gross_pnl = (exit_price - entry) * quantity * (Decimal("1") if direction == "BUY" else Decimal("-1"))
+        gross_pnl = (exit_price - entry) * quantity * (Decimal(1) if direction == "BUY" else Decimal(-1))
         try:
             charges = calculate_zerodha_option_charges(
                 exchange=exchange, buy_premium=buy_premium, sell_premium=sell_premium, quantity=quantity,
