@@ -8,7 +8,6 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from app.db.session import get_engine
-
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import live_market_data, trade_terminal, trade_terminal_stream
@@ -137,7 +136,7 @@ def _enforce_autotrender_entry_window(source: str) -> None:
     end_value = settings["autoTrenderEntryEndTime"]
     try:
         if not isinstance(start_value, str) or not isinstance(end_value, str):
-            raise ValueError("Entry times must be strings")
+            raise TypeError("Entry times must be strings")
         start = time.fromisoformat(start_value)
         end = time.fromisoformat(end_value)
         if (
@@ -147,7 +146,7 @@ def _enforce_autotrender_entry_window(source: str) -> None:
             or end <= start
         ):
             raise ValueError("Invalid entry window")
-    except ValueError as exc:
+    except (TypeError, ValueError) as exc:
         raise HTTPException(
             status_code=503,
             detail="AutoTrender entry-window settings are invalid; correct them in Settings",
