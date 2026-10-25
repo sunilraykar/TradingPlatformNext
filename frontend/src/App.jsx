@@ -682,6 +682,9 @@ export default function App() {
   const [loggingIn, setLoggingIn] = useState(false);
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [selectedContract, setSelectedContract] = useState(null);
+  const [contractLoading, setContractLoading] = useState(false);
+  const [contractError, setContractError] = useState('');
 
   const refresh = useCallback(async () => {
     setLoading(true);
