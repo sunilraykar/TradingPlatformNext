@@ -52,12 +52,21 @@ def number(value):
     if isinstance(value, dict):
         for key in ("value", "type", "signal", "label", "status", "name", "text"):
             if key in value and value[key] is not None:
-                return value[key]
+                result = number(value[key])
+                if result is not None:
+                    return result
         return None
-    try:
-        return float(value) if value is not None and value != "" else None
-    except (TypeError, ValueError):
-        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        normalized = value.strip().replace(",", "").replace("%", "")
+        if not normalized:
+            return None
+        try:
+            return float(normalized)
+        except ValueError:
+            return None
+    return None
 
 
 def signal(value) -> str:
