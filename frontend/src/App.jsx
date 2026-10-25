@@ -152,7 +152,7 @@ function PriceVwapChart({ rows }) {
   const sessionEnd = 15 * 60 + 30;
   // Plot chronologically from 09:30 to 15:30 regardless of API response order.
   const usable = rows
-    .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer }))
+    .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer, enter: row.enter, optionSignal: row.optionSignal, vwapSignal: row.vwapSignal }))
     .filter((row) => row.minutes !== null && row.minutes >= sessionStart && row.minutes <= sessionEnd && (row.price !== null || row.vwap !== null))
     .sort((a, b) => a.minutes - b.minutes);
   const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
@@ -173,7 +173,7 @@ function PriceVwapChart({ rows }) {
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
-    <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span></div>
+    <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#fbbf24" }} /> WAIT</span></div>
     <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
       <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart from 09:30 to 15:30" preserveAspectRatio="none">
@@ -186,6 +186,9 @@ function PriceVwapChart({ rows }) {
           <rect x={x(row.minutes) - 7} y="20" width="14" height="185" className="chart-hover-target" aria-label={`Show values for ${row.time}`} />
           {row.price !== null && <circle cx={x(row.minutes)} cy={y(row.price)} r="3.5" className="price-hover-dot" />}
           {row.vwap !== null && <circle cx={x(row.minutes)} cy={y(row.vwap)} r="3.5" className="vwap-hover-dot" />}
+          {(row.enter === 'BUY' || row.enter === 'SELL' || row.enter === 'WAIT') && (row.price !== null || row.vwap !== null) && <circle cx={x(row.minutes)} cy={y(row.price !== null ? row.price : row.vwap)} r={row.enter === 'WAIT' ? 3 : 5} fill={row.enter === 'BUY' ? '#22c55e' : row.enter === 'SELL' ? '#f87171' : '#fbbf24'} stroke="#0b1020" strokeWidth="1.5">
+            <title>{`${row.time} · ${row.enter} · VWAP ${row.vwapSignal || '—'} · Option ${row.optionSignal || '—'} · Price ${row.price ?? '—'}`}</title>
+          </circle>}
         </g>)}
         {ticks.map((minutes) => <line key={minutes} x1={x(minutes)} x2={x(minutes)} y1="202" y2="207" className="time-tick" />)}
       </svg>
