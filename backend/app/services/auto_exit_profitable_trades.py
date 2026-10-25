@@ -203,7 +203,10 @@ async def run_auto_exit_scheduler() -> None:
             now = datetime.now(_IST)
             if now.date().isoformat() != last_run_date and _WINDOW_START <= now.time() <= _WINDOW_END:
                 result = run_auto_exit_cycle(now)
-                last_run_date = now.date().isoformat()
+                # If disabled early in the window, keep polling so enabling the setting
+                # before the window closes can still take effect that day.
+                if result.get("enabled") or now.time() >= _WINDOW_END:
+                    last_run_date = now.date().isoformat()
                 logger.info("Auto Exit daily run: %s", result)
         except Exception:
             logger.exception("Auto Exit scheduler cycle failed")
