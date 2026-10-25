@@ -187,7 +187,7 @@ def _enforce_autotrender_entry_window(source: str, signal_timestamp: str | None)
 def create_terminal_trade(payload: TradeCreate) -> dict[str, Any]:
     _enforce_autotrender_entry_window(payload.source, payload.signal_timestamp)
     try:
-        return {"trade": trade_terminal.create_trade(payload.model_dump())}
+        return {"trade": trade_terminal.create_trade(payload.model_dump(exclude={"signal_timestamp"}))}
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:
