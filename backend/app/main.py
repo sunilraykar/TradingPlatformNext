@@ -109,7 +109,7 @@ async def lifespan(application: FastAPI):
     auto_exit_task = asyncio.create_task(auto_exit_profitable_trades.run_auto_exit_scheduler())
     autotrender_worker_task = asyncio.create_task(autotrender_paper_trade_worker.run_scheduler())
     autotrender_snapshot_task = asyncio.create_task(
-        autotrender_cache_snapshot.run_daily_snapshot_scheduler(application.state.autotrender_cache)
+        autotrender_cache_snapshot.run_daily_snapshot_scheduler(application.state.autotrender_cache, application.state.autotrender_auth)
     )
     try:
         yield
