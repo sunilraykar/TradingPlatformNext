@@ -101,3 +101,11 @@ def cache_status(request: Request) -> dict:
 def cache_content(request: Request) -> dict:
     """Read-only, redacted view of currently cached index-price data."""
     return _cache(request).viewer()
+
+
+@router.get("/worker/status")
+def autotrender_worker_status() -> dict:
+    """Report the latest AutoTrender 60-second evaluator cycle."""
+    from app.services.autotrender_paper_trade_worker import status
+
+    return status()

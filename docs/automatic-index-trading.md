@@ -16,7 +16,7 @@ Reuse the existing strategy from the legacy repository `sunilraykar/TradingPlatf
 
 ## Existing automatic-entry behavior to preserve
 
-- Evaluate every 60 seconds during market hours.
+- Evaluate at the configurable `AutoTrender Signal Evaluation Interval (seconds)` from Settings → AutoTrender (default 5 seconds; allowed range 1–3600 seconds). The setting controls background signal-evaluation cadence, not the separate UI data refresh interval. Eligible fresh signals now attempt one PAPER option entry through the canonical Trade Terminal: nearest-strike contract in the nearest listed expiry, live positive Kite premium, one lot, and target from `targetFallbackPercent` (default 1%). Entries are blocked if no contract/premium is available or an AutoTrender PAPER trade is already active for that underlying. No broker orders are placed. The actual AutoTrender timestamp field still must be verified against an authenticated live response; unknown/missing fields fail closed. Entry evaluation is blocked on weekends, before the configured start time, and at or after the configured end/cutoff (default 15:25 IST). Signals must contain a recognized source timestamp and be no older than the configurable `AutoTrender Maximum Signal Age (seconds)` (default 300 seconds; allowed range 1–3600); missing, invalid, stale, or future-dated timestamps fail closed. Repeated eligible rows with the same timestamp are suppressed per index in-process.
 - Automatic option entries are blocked before 10:00 IST and at/after 15:25 IST. This does not disable processing/exits for existing trades.
 - Use the configured enabled index list (`autoTrender.dashboardIndices`) and the existing per-index expiry preference (`callPutExpiry`).
 - Resolve the nearest-strike eligible CE for bullish signals and PE for bearish signals from Kite's instrument master; require a valid expiry and positive live option premium.
@@ -126,3 +126,16 @@ The first implementation slice is on `feature/autotrender-index-auto-trading`:
 - Run and review the latest GitHub Actions results before considering the code validated.
 - Continuous quote subscription / unrealized-P&L refresh for paper trades, automatic broker reconciliation cadence, and live order/fill-to-trade linking still need a follow-up implementation pass.
 - AutoTrender's automatic index paper-trade worker is not connected yet; it should be integrated only after this canonical lifecycle is verified.
+
+
+## Configurable AutoTrender worker implementation status
+
+The branch `feature/autotrender-60s-worker` adds the first scheduler slice:
+
+- FastAPI lifespan starts and cleanly cancels the AutoTrender evaluator task. Its polling interval is configurable from Settings → AutoTrender via `AutoTrender Signal Evaluation Interval (seconds)` (default 5 seconds; allowed range 1–3600 seconds). The status endpoint reports the active interval.
+- The worker reads the existing dashboard-index and signal-threshold settings from `app_settings`, fetches each enabled index's latest AutoTrender intraday response, extracts the latest row, and calls the unit-tested evaluator.
+- Each index is isolated: malformed or unavailable data is logged for that index without preventing the other enabled indices from being evaluated.
+- `GET /api/v1/autotrender/worker/status` reports the most recent process-local cycle and per-index outcomes.
+- Unit tests cover response extraction, configured enabled indices, and entry-window boundaries.
+
+**Scope boundary:** this slice evaluates and logs eligible signal candidates only. It deliberately does not create PAPER trades yet. Option-contract expiry preference, fresh positive option-premium validation, target fallback, atomic one-active-trade-per-index protection, canonical Trade Terminal creation, and end-to-end tests must be completed before entries are enabled. No broker order placement is called.
