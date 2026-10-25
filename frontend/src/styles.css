@@ -193,7 +193,7 @@
 .trade-terminal-page .page-heading h1{font-size:28px;margin:5px 0 8px}
 .trade-terminal-page .page-heading p{max-width:800px;margin:0;color:var(--muted);font-size:12px;line-height:1.6}
 .trade-terminal-actions{display:flex;gap:8px;flex-shrink:0}
-.trade-terminal-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.trade-terminal-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:18px 0;width:100%;min-width:0}
 .trade-terminal-metrics .metric{background:var(--panel)}
 .trade-terminal-filters{display:flex;align-items:end;gap:14px;flex-wrap:wrap;margin:16px 0}
 .trade-terminal-filters .settings-control{min-width:160px}
