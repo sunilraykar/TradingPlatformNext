@@ -5,7 +5,7 @@ from zoneinfo import ZoneInfo
 from app.services import auto_exit_profitable_trades as worker
 
 IST = ZoneInfo("Asia/Kolkata")
-CLOSE = datetime(2026, 10, 26, 15, 30, 10, tzinfo=IST)
+CLOSE = datetime(2026, 10, 26, 15, 27, 10, tzinfo=IST)
 
 
 def _trade(**changes):
@@ -21,7 +21,7 @@ def _trade(**changes):
         "open_quantity": 50,
         "entry_price": 100,
         "last_price": 110,
-        "last_market_data_at": "2026-10-26T15:29:00+05:30",
+        "last_market_data_at": "2026-10-26T15:26:00+05:30",
     }
     trade.update(changes)
     return trade
@@ -46,6 +46,7 @@ def test_zerodha_option_charges_include_round_trip_order_costs():
 def test_auto_exit_closes_only_net_profitable_paper_trade(monkeypatch):
     monkeypatch.setattr(worker, "_enabled", lambda: True)
     monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [_trade()])
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: _trade())
     calls = []
     monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -62,6 +63,7 @@ def test_auto_exit_closes_only_net_profitable_paper_trade(monkeypatch):
 def test_auto_exit_leaves_trade_open_when_net_profit_is_not_positive(monkeypatch):
     monkeypatch.setattr(worker, "_enabled", lambda: True)
     monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [_trade(last_price=101)])
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: _trade(last_price=101))
     calls = []
     monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append(args))
 
@@ -86,6 +88,7 @@ def test_live_trades_are_never_auto_closed(monkeypatch):
     live_trade = _trade(execution_mode="LIVE", trade_id="live-1")
     monkeypatch.setattr(worker, "_enabled", lambda: True)
     monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [live_trade])
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: live_trade)
     calls = []
     monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append(args))
 
@@ -102,6 +105,7 @@ def test_stale_quotes_are_not_used_for_auto_exit(monkeypatch):
         "list_trades",
         lambda **kwargs: [_trade(last_market_data_at="2026-10-26T15:20:00+05:30")],
     )
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: _trade())
     calls = []
     monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append(args))
 
@@ -114,6 +118,23 @@ def test_stale_quotes_are_not_used_for_auto_exit(monkeypatch):
 
 def test_auto_exit_runs_only_during_market_close_window(monkeypatch):
     monkeypatch.setattr(worker, "_enabled", lambda: True)
-    result = worker.run_auto_exit_cycle(datetime(2026, 10, 26, 14, 59, tzinfo=IST))
-    assert result["enabled"] is False
-    assert result["reason"] == "outside_market_close_window"
+    before_window = worker.run_auto_exit_cycle(datetime(2026, 10, 26, 14, 59, tzinfo=IST))
+    after_window = worker.run_auto_exit_cycle(datetime(2026, 10, 26, 15, 30, tzinfo=IST))
+    assert before_window["enabled"] is False
+    assert before_window["reason"] == "outside_market_close_window"
+    assert after_window["enabled"] is False
+    assert after_window["reason"] == "outside_market_close_window"
+
+
+def test_auto_exit_does_not_reclose_trade_that_is_already_closed(monkeypatch):
+    monkeypatch.setattr(worker, "_enabled", lambda: True)
+    monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [_trade()])
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: _trade(status="CLOSED"))
+    calls = []
+    monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append(args))
+
+    result = worker.run_auto_exit_cycle(CLOSE)
+
+    assert result["closed"] == []
+    assert result["skipped"] == [{"trade_id": "paper-1", "reason": "trade_no_longer_open"}]
+    assert calls == []
