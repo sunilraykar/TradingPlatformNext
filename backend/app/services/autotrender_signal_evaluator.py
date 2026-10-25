@@ -24,7 +24,7 @@ def _number(value: Any) -> float | None:
         result = float(str(value).replace(",", "").replace("%", "").strip())
     except (TypeError, ValueError):
         return None
-    return result if result == result and abs(result) != float("inf") else None
+    return result if math.isfinite(result) else None
 
 
 def _signal(value: Any) -> str:
