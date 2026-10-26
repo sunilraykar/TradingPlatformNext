@@ -91,7 +91,7 @@ def evaluate_signal(
     )
     if strength_difference < strength_threshold or at_strength_threshold:
         return Evaluation(False, None, "STRENGTH_DIFFERENCE_NOT_ABOVE_THRESHOLD", strength_difference, vwap_difference)
-    if vwap_difference >= abs(vwap_price_difference_buffer):
+    if vwap_difference > abs(vwap_price_difference_buffer):
         return Evaluation(False, None, "VWAP_GAP_NOT_BELOW_THRESHOLD", strength_difference, vwap_difference)
 
     bullish = option_signal == "BUY" and pcr > call_pcr
