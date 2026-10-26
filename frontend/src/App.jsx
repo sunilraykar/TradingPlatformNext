@@ -997,6 +997,13 @@ export default function App() {
   };
   const rawDayChangePercent = liveIndexRecord?.day_change_percentage ?? liveIndexRecord?.change_percentage ?? liveIndexRecord?.changePercent ?? liveIndexRecord?.change_percent;
   const dailyChangePercent = rawDayChangePercent === null || rawDayChangePercent === undefined || rawDayChangePercent === '' ? null : numericValue(rawDayChangePercent);
+  const dailyChangeAbsolute = (() => {
+    const explicit = liveIndexRecord?.day_change ?? liveIndexRecord?.change ?? liveIndexRecord?.net_change;
+    if (explicit !== null && explicit !== undefined && explicit !== '') return numericValue(explicit);
+    const last = numericValue(liveIndexRecord?.last_price ?? liveIndexRecord?.price ?? liveIndexRecord?.ltp);
+    const close = numericValue(liveIndexRecord?.close ?? liveIndexRecord?.close_price ?? liveIndexRecord?.ohlc?.close);
+    return last !== null && close !== null ? last - close : null;
+  })();
   const graph = oi?.data?.graph || {};
   const optionSeries = Array.isArray(graph.option) ? graph.option : [];
   const futureSeries = Array.isArray(graph.future) ? graph.future : [];
@@ -1051,7 +1058,7 @@ export default function App() {
             <div><span>HIGH</span><strong>{number(liveIndexRecord?.high ?? liveIndexRecord?.ohlc?.high ?? dailyOhlc.high)}</strong></div>
             <div><span>LOW</span><strong>{number(liveIndexRecord?.low ?? liveIndexRecord?.ohlc?.low ?? dailyOhlc.low)}</strong></div>
             <div><span>CLOSE</span><strong>{number(liveIndexRecord?.close ?? liveIndexRecord?.close_price ?? liveIndexRecord?.ohlc?.close ?? dailyOhlc.close)}</strong></div>
-            <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}</strong></div>
+            <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}{dailyChangeAbsolute === null ? '' : ` (${dailyChangeAbsolute > 0 ? '+' : ''}${number(dailyChangeAbsolute)})`}</strong></div>
           </div>
         </div>
         <Metric label="LATEST PRICE" value={number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)} />
