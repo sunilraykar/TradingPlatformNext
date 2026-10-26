@@ -772,13 +772,30 @@ function AutoTrenderHistoricalData() {
 }
 
 function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false }) {
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
   const normalizeColumn = (key) => String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().replace(/[^a-z0-9]/g, '');
   const hidden = new Set([...hiddenColumns, 'lastquantity', 'lastqty', 'lasquantity'].map(normalizeColumn));
   // Match API snake_case, camelCase, and already-formatted headings consistently.
   const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(normalizeColumn(key)) && !['lastquantity', 'lastqty', 'lasquantity'].includes(normalizeColumn(key))).slice(0, 18);
   const formatCell = (value) => { if (value === null || value === undefined || value === '') return '—'; if (typeof value === 'object') return JSON.stringify(value); if (typeof value === 'number') return value.toLocaleString('en-IN', { maximumFractionDigits: 2 }); return String(value); };
-  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key}>{key.replaceAll('_', ' ')}</th>)}</tr></thead><tbody>{rows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{formatCell(row[key])}</td>)}</tr>; })}</tbody></table></div>;
+  const compareValues = (left, right) => {
+    if (left === null || left === undefined || left === '') return right === null || right === undefined || right === '' ? 0 : 1;
+    if (right === null || right === undefined || right === '') return -1;
+    const a = typeof left === 'object' ? JSON.stringify(left) : String(left).trim();
+    const b = typeof right === 'object' ? JSON.stringify(right) : String(right).trim();
+    const na = Number(a.replace(/,/g, '').replace(/%$/, ''));
+    const nb = Number(b.replace(/,/g, '').replace(/%$/, ''));
+    if (a !== '' && b !== '' && Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  };
+  const sortedRows = sortConfig.key ? [...rows].sort((a, b) => {
+    const result = compareValues(a?.[sortConfig.key], b?.[sortConfig.key]);
+    return sortConfig.direction === 'asc' ? result : -result;
+  }) : rows;
+  const toggleSort = (key) => setSortConfig((current) => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }));
+  const isSymbol = (key) => normalizeColumn(key) === 'tradingsymbol';
+  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' ')}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' ')}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{formatCell(row[key])}</td>)}</tr>; })}</tbody></table></div>;
 }
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
