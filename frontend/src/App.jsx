@@ -890,7 +890,12 @@ export default function App() {
     setLoading(false);
   }, [index, mins]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+    // AutoTrender live values should refresh once per second while this view is active.
+    const timer = window.setInterval(() => { refresh(); }, 1000);
+    return () => window.clearInterval(timer);
+  }, [refresh]);
 
   const refreshWebsocketStatus = useCallback(async () => {
     try { setWebsocketStatus(await api('/kite/market-data/status')); }
