@@ -259,6 +259,56 @@ def kite_session_status() -> dict[str, str | bool]:
 def market_data_status() -> dict:
     return live_market_data.status()
 
+@router.get("/kite/market-data/autotrender-indices", tags=["kite"])
+def autotrender_index_quotes() -> dict:
+    """Read latest AutoTrender index ticks from the Kite WebSocket quote cache."""
+    from sqlalchemy import text
+    from app.db.session import get_engine
+
+    symbol_map = {
+        ("NSE", "NIFTY 50"): "NIFTY",
+        ("NSE", "NIFTY BANK"): "BANKNIFTY",
+        ("NSE", "NIFTY FIN SERVICE"): "FINNIFTY",
+        ("NSE", "NIFTY MID SELECT"): "MIDCPNIFTY",
+        ("BSE", "SENSEX"): "SENSEX",
+        ("BSE", "BANKEX"): "BANKEX",
+    }
+    token_rows = {}
+    with get_engine().connect() as connection:
+        rows = connection.execute(text("""
+            SELECT instrument_token, exchange, tradingsymbol
+            FROM instruments
+            WHERE source = 'KITE' AND is_active = TRUE
+        """)).mappings().all()
+    for row in rows:
+        symbol = symbol_map.get((row["exchange"], row["tradingsymbol"]))
+        if symbol:
+            token_rows[symbol] = int(row["instrument_token"])
+    result = {}
+    for symbol, token in token_rows.items():
+        tick = live_quotes.get(token)
+        if not tick:
+            continue
+        ohlc = tick.get("ohlc") or {}
+        last_price = tick.get("last_price")
+        close = ohlc.get("close")
+        change_percent = ((float(last_price) - float(close)) / float(close) * 100) if last_price is not None and close not in (None, 0) else None
+        result[symbol] = {
+            "instrument_token": token,
+            "last_price": last_price,
+            "open": ohlc.get("open"),
+            "high": ohlc.get("high"),
+            "low": ohlc.get("low"),
+            "close": close,
+            "day_change_percentage": change_percent,
+            "received_at": tick.get("received_at"),
+        }
+    return {
+        "source": "kite_websocket_cache",
+        "connected": live_market_data.status().get("connected", False),
+        "data": result,
+    }
+
 
 @router.get("/kite/market-data/runtime", tags=["kite"])
 def market_data_runtime() -> dict:
