@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TradeTerminal from './TradeTerminal.jsx';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -836,6 +836,9 @@ export default function App() {
   const [holdingsProfitFilter, setHoldingsProfitFilter] = useState('ALL');
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
+  const refreshInFlight = useRef(false);
+  const selectedIndexRef = useRef(index);
+  selectedIndexRef.current = index;
   const [indexPrices, setIndexPrices] = useState(null);
   const [kiteIndexQuotes, setKiteIndexQuotes] = useState(null);
   const [mins, setMins] = useState(5);
@@ -853,6 +856,11 @@ export default function App() {
   const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.3 });
 
   const refresh = useCallback(async () => {
+    // Prevent overlapping 1-second polls from returning out of order and
+    // overwriting the currently selected index with an older index response.
+    if (refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    const requestedIndex = index;
     setLoading(true);
     setError('');
     const results = await Promise.allSettled([
@@ -866,6 +874,11 @@ export default function App() {
       api('/settings'),
       api('/kite/market-data/autotrender-indices'),
     ]);
+    if (selectedIndexRef.current !== requestedIndex) {
+      setLoading(false);
+      refreshInFlight.current = false;
+      return;
+    }
     if (results[0].status === 'fulfilled') setIntraday(results[0].value);
     else setError((prev) => prev || `Intraday: ${results[0].reason.message}`);
     if (results[1].status === 'fulfilled') setOi(results[1].value);
@@ -891,6 +904,7 @@ export default function App() {
     }
     setLastUpdated(new Date());
     setLoading(false);
+    refreshInFlight.current = false;
   }, [index, mins]);
 
   useEffect(() => {
