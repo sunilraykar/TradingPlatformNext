@@ -44,6 +44,7 @@ class TradeUpdate(BaseModel):
     stop_loss: float | None = Field(default=None, ge=0)
     target: float | None = Field(default=None, ge=0)
     realized_pnl: float | None = None
+    unrealized_pnl: float | None = None
     notes: str | None = Field(default=None, max_length=2000)
     exit_reason: str | None = Field(default=None, max_length=120)
     exit_method: str | None = Field(default=None, max_length=80)
