@@ -145,30 +145,36 @@ def enabled_indices(value: Any) -> list[str]:
 
 
 def latest_intraday_row(payload: Any) -> dict[str, Any] | None:
-    """Extract the newest row from supported AutoTrender response envelopes."""
+    """Select the chronologically latest row from supported AutoTrender envelopes."""
     if isinstance(payload, list):
         rows = [item for item in payload if isinstance(item, dict)]
-        return rows[-1] if rows else None
+        if not rows:
+            return None
+        # Do not assume provider rows are sorted. Prefer the newest parseable
+        # source timestamp/time; preserve last-row fallback only if none parse.
+        ranked = [(parse_signal_timestamp(row), i, row) for i, row in enumerate(rows)]
+        parseable = [item for item in ranked if item[0] is not None]
+        return max(parseable, key=lambda item: (item[0], item[1]))[2] if parseable else rows[-1]
     if not isinstance(payload, dict):
         return None
 
-    # Some responses wrap the actual row under data.trend/summary.
+    # Recurse through known response envelopes. If multiple arrays are present,
+    # choose the newest row across them rather than the first matching container.
+    candidates: list[dict[str, Any]] = []
+    row_fields = ("call", "callStrength", "call_strength")
+    if any(field in payload for field in row_fields):
+        candidates.append(payload)
     for key in ("data", "intraday", "records", "rows", "items", "result", "trend", "summary", "strength"):
         value = payload.get(key)
-        if isinstance(value, list):
-            rows = [item for item in value if isinstance(item, dict)]
-            return rows[-1] if rows else None
-        if isinstance(value, dict):
-            if any(field in value for field in ("call", "callStrength", "call_strength")):
-                return value
-            nested = latest_intraday_row(value)
-            if nested is not None:
-                return nested
-
-    if any(field in payload for field in ("call", "callStrength", "call_strength")):
-        return payload
-    return None
-
+        if isinstance(value, (list, dict)):
+            row = latest_intraday_row(value)
+            if row is not None:
+                candidates.append(row)
+    if not candidates:
+        return None
+    ranked = [(parse_signal_timestamp(row), i, row) for i, row in enumerate(candidates)]
+    parseable = [item for item in ranked if item[0] is not None]
+    return max(parseable, key=lambda item: (item[0], item[1]))[2] if parseable else candidates[-1]
 
 def parse_signal_timestamp(row: dict[str, Any]) -> datetime | None:
     """Parse a source timestamp; missing/unknown timestamp formats fail closed."""
@@ -189,12 +195,18 @@ def parse_signal_timestamp(row: dict[str, Any]) -> datetime | None:
         try:
             parsed = datetime.fromisoformat(candidate)
         except ValueError:
-            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
-                try:
-                    parsed = datetime.strptime(candidate, fmt)
-                    break
-                except ValueError:
-                    continue
+            # Provider intraday rows may expose only a local time such as "13:30".
+            # Anchor time-only values to today's date in IST for freshness checks.
+            try:
+                parsed_time = time.fromisoformat(candidate)
+                parsed = datetime.combine(datetime.now(IST).date(), parsed_time, tzinfo=IST)
+            except ValueError:
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M"):
+                    try:
+                        parsed = datetime.strptime(candidate, fmt)
+                        break
+                    except ValueError:
+                        continue
     if parsed is None:
         return None
     if parsed.tzinfo is None:
