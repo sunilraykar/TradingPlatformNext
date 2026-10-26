@@ -455,7 +455,35 @@ def kite_positions() -> dict:
 @router.get("/kite/holdings", tags=["kite"])
 def kite_holdings() -> dict:
     try:
-        return {"holdings": get_kite_provider().holdings()}
+        provider = get_kite_provider()
+        holdings = provider.holdings()
+        # Kite holdings provide close/day-change values, but not today's OHLC.
+        # Enrich each holding from the live quote endpoint so the UI can show
+        # Open, High and Low alongside the existing portfolio values.
+        quote_keys = [
+            f"{(holding.get('exchange') or 'NSE')}:{holding.get('tradingsymbol')}"
+            for holding in holdings
+            if holding.get("tradingsymbol")
+        ]
+        quotes = {}
+        if quote_keys:
+            try:
+                quotes = provider.quotes(quote_keys)
+            except KiteProviderError:
+                # Keep holdings available if live quote enrichment temporarily fails.
+                quotes = {}
+        for holding in holdings:
+            key = f"{(holding.get('exchange') or 'NSE')}:{holding.get('tradingsymbol')}"
+            quote = quotes.get(key) or {}
+            ohlc = quote.get("ohlc") or {}
+            holding["open"] = ohlc.get("open")
+            holding["high"] = ohlc.get("high")
+            holding["low"] = ohlc.get("low")
+            holding["close"] = holding.get("close_price", ohlc.get("close"))
+            holding["day_change_percentage"] = holding.get(
+                "day_change_percentage", quote.get("change")
+            )
+        return {"holdings": holdings}
     except KiteProviderError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
