@@ -837,6 +837,7 @@ export default function App() {
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
   const [indexPrices, setIndexPrices] = useState(null);
+  const [kiteIndexQuotes, setKiteIndexQuotes] = useState(null);
   const [mins, setMins] = useState(5);
   const [intraday, setIntraday] = useState(null);
   const [oi, setOi] = useState(null);
@@ -863,6 +864,7 @@ export default function App() {
       // Reload saved thresholds on every market-data refresh so newly arrived
       // timestamp rows are evaluated against the latest Settings values.
       api('/settings'),
+      api('/kite/market-data/autotrender-indices'),
     ]);
     if (results[0].status === 'fulfilled') setIntraday(results[0].value);
     else setError((prev) => prev || `Intraday: ${results[0].reason.message}`);
@@ -875,6 +877,7 @@ export default function App() {
       // from this response, but all five requested indices must remain selectable.
       setIndexPrices(results[4].value);
     }
+    if (results[6].status === 'fulfilled') setKiteIndexQuotes(results[6].value);
     if (results[5].status === 'fulfilled') {
       const saved = results[5].value.settings || {};
       setAutotrendSettings({
@@ -981,6 +984,8 @@ export default function App() {
   }, [index, contractSignal, lastUpdated]);
   const indexPriceKey = Object.keys(indexPrices?.data || {}).find((key) => INDEX_LABELS[key.toLowerCase()] === index);
   const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
+  const kiteIndexRecord = kiteIndexQuotes?.data?.[index] || null;
+  const liveIndexRecord = kiteIndexRecord || indexPriceRecord;
   // Derive the visible session range from the intraday price series when the
   // upstream index-price endpoint does not provide daily OHLC fields.
   const sessionPrices = intradayRows.map((row) => numericValue(row.price ?? row.close ?? row.ltp)).filter((value) => value !== null);
@@ -990,7 +995,7 @@ export default function App() {
     low: sessionPrices.length ? Math.min(...sessionPrices) : null,
     close: sessionPrices.length ? sessionPrices[sessionPrices.length - 1] : null,
   };
-  const rawDayChangePercent = indexPriceRecord?.day_change_percentage ?? indexPriceRecord?.change_percentage ?? indexPriceRecord?.changePercent ?? indexPriceRecord?.change_percent;
+  const rawDayChangePercent = liveIndexRecord?.day_change_percentage ?? liveIndexRecord?.change_percentage ?? liveIndexRecord?.changePercent ?? liveIndexRecord?.change_percent;
   const dailyChangePercent = rawDayChangePercent === null || rawDayChangePercent === undefined || rawDayChangePercent === '' ? null : numericValue(rawDayChangePercent);
   const graph = oi?.data?.graph || {};
   const optionSeries = Array.isArray(graph.option) ? graph.option : [];
@@ -1042,14 +1047,14 @@ export default function App() {
           <span>INDEX</span>
           <strong>{index}</strong>
           <div className="autotrender-ohlc-inline">
-            <div><span>OPEN</span><strong>{number(indexPriceRecord?.open ?? indexPriceRecord?.ohlc?.open ?? dailyOhlc.open)}</strong></div>
-            <div><span>HIGH</span><strong>{number(indexPriceRecord?.high ?? indexPriceRecord?.ohlc?.high ?? dailyOhlc.high)}</strong></div>
-            <div><span>LOW</span><strong>{number(indexPriceRecord?.low ?? indexPriceRecord?.ohlc?.low ?? dailyOhlc.low)}</strong></div>
-            <div><span>CLOSE</span><strong>{number(indexPriceRecord?.close ?? indexPriceRecord?.close_price ?? indexPriceRecord?.ohlc?.close ?? dailyOhlc.close)}</strong></div>
+            <div><span>OPEN</span><strong>{number(liveIndexRecord?.open ?? liveIndexRecord?.ohlc?.open ?? dailyOhlc.open)}</strong></div>
+            <div><span>HIGH</span><strong>{number(liveIndexRecord?.high ?? liveIndexRecord?.ohlc?.high ?? dailyOhlc.high)}</strong></div>
+            <div><span>LOW</span><strong>{number(liveIndexRecord?.low ?? liveIndexRecord?.ohlc?.low ?? dailyOhlc.low)}</strong></div>
+            <div><span>CLOSE</span><strong>{number(liveIndexRecord?.close ?? liveIndexRecord?.close_price ?? liveIndexRecord?.ohlc?.close ?? dailyOhlc.close)}</strong></div>
             <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}</strong></div>
           </div>
         </div>
-        <Metric label="LATEST PRICE" value={number(latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)} />
+        <Metric label="LATEST PRICE" value={number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)} />
         <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
         <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
         <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
