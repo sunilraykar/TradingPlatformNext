@@ -356,3 +356,83 @@
 .historical-raw-payload{margin:0 0 16px;border:1px solid var(--line);border-radius:10px;background:#0f1725}
 .historical-raw-payload summary{padding:14px 16px;cursor:pointer;color:var(--cyan);font-size:12px}
 @media(max-width:900px){.historical-live-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.historical-dataset-grid{grid-template-columns:1fr}}
+
+
+/* Trade Terminal usability fixes */
+.trade-sort-select {
+  min-width: 150px;
+  min-height: 32px;
+  padding: 6px 9px;
+  color: var(--text-primary, #dbe7f5);
+  background: var(--surface-2, #111b2b);
+  border: 1px solid var(--border, #263449);
+  border-radius: 8px;
+  font: inherit;
+}
+.trade-sort-header {
+  padding: 2px 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.trade-sort-header:hover,
+.trade-symbol-link:hover { color: var(--accent, #5bd4d0); }
+.trade-symbol-link {
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.trade-quote-state {
+  margin-top: 3px;
+  font-size: 0.68rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.trade-quote-state.fresh { color: var(--positive, #45d6a0); }
+.trade-quote-state.stale { color: var(--negative, #ff7f8a); }
+.trade-details-modal { width: min(760px, calc(100vw - 32px)); max-height: 88vh; overflow: auto; }
+.trade-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.trade-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px;
+  background: rgba(127, 147, 176, 0.07);
+  border: 1px solid rgba(127, 147, 176, 0.15);
+  border-radius: 8px;
+}
+.trade-detail-item span,
+.trade-details-notes > span {
+  color: var(--text-muted, #8da0bb);
+  font-size: 0.72rem;
+}
+.trade-detail-item strong {
+  overflow-wrap: anywhere;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+.trade-details-notes { margin-top: 14px; }
+.trade-details-notes p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.trade-paper-notice {
+  margin: 10px 0 0;
+  color: var(--text-muted, #9aacc4);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+@media (max-width: 760px) {
+  .trade-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
