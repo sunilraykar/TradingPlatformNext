@@ -773,8 +773,10 @@ function AutoTrenderHistoricalData() {
 
 function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false }) {
   if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
-  const hidden = new Set(hiddenColumns.map((key) => key.toLowerCase()));
-  const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(key.toLowerCase())).slice(0, 18);
+  const normalizeColumn = (key) => String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const hidden = new Set(hiddenColumns.map(normalizeColumn));
+  // Match API snake_case, camelCase, and already-formatted headings consistently.
+  const columns = [...new Set(rows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(normalizeColumn(key))).slice(0, 18);
   const formatCell = (value) => { if (value === null || value === undefined || value === '') return '—'; if (typeof value === 'object') return JSON.stringify(value); if (typeof value === 'number') return value.toLocaleString('en-IN', { maximumFractionDigits: 2 }); return String(value); };
   return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key}>{key.replaceAll('_', ' ')}</th>)}</tr></thead><tbody>{rows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{formatCell(row[key])}</td>)}</tr>; })}</tbody></table></div>;
 }
