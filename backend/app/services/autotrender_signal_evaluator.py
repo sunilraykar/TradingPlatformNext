@@ -65,10 +65,6 @@ def evaluate_signal(
     vwap_signal = _signal(row.get("vWapSignal", row.get("vwapSignal", row.get("VWAP Signal"))))
     option_signal = _signal(row.get("optionSignal", row.get("Option Signal")))
 
-    if vwap_signal not in {"BUY", "SELL"} or option_signal not in {"BUY", "SELL"}:
-        return Evaluation(False, None, "INVALID_OR_MISSING_SIGNAL")
-    if vwap_signal != option_signal:
-        return Evaluation(False, None, "SIGNALS_DISAGREE")
     if call is None or put is None or call < 0 or put < 0 or call + put <= 0:
         return Evaluation(False, None, "INVALID_STRENGTH")
     if price is None or vwap is None or price <= 0 or vwap <= 0:
@@ -83,6 +79,12 @@ def evaluate_signal(
     strength_difference = abs(signed_strength_difference)
     strength_threshold = abs(call_put_strength_diff)
     vwap_difference = abs((price - vwap) / price * 100)
+
+    # Return the calculated metrics even when a later confirmation check fails.
+    if vwap_signal not in {"BUY", "SELL"} or option_signal not in {"BUY", "SELL"}:
+        return Evaluation(False, None, "INVALID_OR_MISSING_SIGNAL", strength_difference, vwap_difference)
+    if vwap_signal != option_signal:
+        return Evaluation(False, None, "SIGNALS_DISAGREE", strength_difference, vwap_difference)
 
     # Keep the configured rule strictly greater than the threshold.
     at_strength_threshold = math.isclose(
