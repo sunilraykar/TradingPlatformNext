@@ -123,8 +123,8 @@ function buildIntradayRows(rows, settings = {}) {
     const strengthPass = strengthDiff !== null && Math.abs(strengthDiff) > strengthThreshold;
     // The configured buffer is a maximum absolute Price-VWAP percentage gap.
     const bufferPass = buffer !== null && Math.abs(buffer) <= bufferThreshold;
-    const bullish = strengthPass && strengthDiff > 0 && bufferPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
-    const bearish = strengthPass && strengthDiff < 0 && bufferPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
+    const bullish = strengthPass && bufferPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
+    const bearish = strengthPass && bufferPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
     const enter = bullish ? 'BUY' : bearish ? 'SELL' : 'WAIT';
 
     return { key: recordTime(row) + '-' + index, time: recordTime(row), call, put, diff: numericValue(row.diff), pcr, price, vwap, vwapSignal, optionSignal, callStrength, putStrength, strengthDiff, buffer, enter };
