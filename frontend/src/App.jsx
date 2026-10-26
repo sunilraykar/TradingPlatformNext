@@ -976,6 +976,17 @@ export default function App() {
   }, [index, contractSignal, lastUpdated]);
   const indexPriceKey = Object.keys(indexPrices?.data || {}).find((key) => INDEX_LABELS[key.toLowerCase()] === index);
   const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
+  // Derive the visible session range from the intraday price series when the
+  // upstream index-price endpoint does not provide daily OHLC fields.
+  const sessionPrices = intradayRows.map((row) => numericValue(row.price ?? row.close ?? row.ltp)).filter((value) => value !== null);
+  const dailyOhlc = {
+    open: sessionPrices.length ? sessionPrices[0] : null,
+    high: sessionPrices.length ? Math.max(...sessionPrices) : null,
+    low: sessionPrices.length ? Math.min(...sessionPrices) : null,
+    close: sessionPrices.length ? sessionPrices[sessionPrices.length - 1] : null,
+  };
+  const rawDayChangePercent = indexPriceRecord?.day_change_percentage ?? indexPriceRecord?.change_percentage ?? indexPriceRecord?.changePercent ?? indexPriceRecord?.change_percent;
+  const dailyChangePercent = rawDayChangePercent === null || rawDayChangePercent === undefined || rawDayChangePercent === '' ? null : numericValue(rawDayChangePercent);
   const graph = oi?.data?.graph || {};
   const optionSeries = Array.isArray(graph.option) ? graph.option : [];
   const futureSeries = Array.isArray(graph.future) ? graph.future : [];
@@ -1022,23 +1033,21 @@ export default function App() {
       </section>}
 
       <section className="metric-grid">
-        <Metric label="INDEX" value={index} />
+        <div className="metric autotrender-index-summary">
+          <span>INDEX</span>
+          <strong>{index}</strong>
+          <div className="autotrender-ohlc-inline">
+            <div><span>OPEN</span><strong>{number(indexPriceRecord?.open ?? indexPriceRecord?.ohlc?.open ?? dailyOhlc.open)}</strong></div>
+            <div><span>HIGH</span><strong>{number(indexPriceRecord?.high ?? indexPriceRecord?.ohlc?.high ?? dailyOhlc.high)}</strong></div>
+            <div><span>LOW</span><strong>{number(indexPriceRecord?.low ?? indexPriceRecord?.ohlc?.low ?? dailyOhlc.low)}</strong></div>
+            <div><span>CLOSE</span><strong>{number(indexPriceRecord?.close ?? indexPriceRecord?.close_price ?? indexPriceRecord?.ohlc?.close ?? dailyOhlc.close)}</strong></div>
+            <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}</strong></div>
+          </div>
+        </div>
         <Metric label="LATEST PRICE" value={number(latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)} />
         <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
         <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
         <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
-      </section>
-      <section className="metric-grid autotrender-ohlc-grid" aria-label={`${index} daily price statistics`}>
-        <Metric label="OPEN" value={number(indexPriceRecord?.open ?? indexPriceRecord?.ohlc?.open)} />
-        <Metric label="HIGH" value={number(indexPriceRecord?.high ?? indexPriceRecord?.ohlc?.high)} />
-        <Metric label="LOW" value={number(indexPriceRecord?.low ?? indexPriceRecord?.ohlc?.low)} />
-        <Metric label="CLOSE" value={number(indexPriceRecord?.close ?? indexPriceRecord?.close_price ?? indexPriceRecord?.ohlc?.close)} />
-        <Metric label="DAY'S CHANGE %" value={(() => {
-          const change = indexPriceRecord?.day_change_percentage ?? indexPriceRecord?.change_percentage ?? indexPriceRecord?.changePercent ?? indexPriceRecord?.change_percent ?? indexPriceRecord?.change;
-          if (change === null || change === undefined || change === '') return '—';
-          const parsed = numericValue(change);
-          return parsed === null ? displayValue(change) : `${number(parsed)}%`;
-        })()} tone={numericValue(indexPriceRecord?.day_change_percentage ?? indexPriceRecord?.change_percentage ?? indexPriceRecord?.changePercent ?? indexPriceRecord?.change_percent ?? indexPriceRecord?.change) >= 0 ? 'positive' : 'negative'} />
       </section>
 
       <section className="selected-contract-panel panel" aria-live="polite">
