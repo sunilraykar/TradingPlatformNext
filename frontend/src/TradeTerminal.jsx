@@ -15,7 +15,7 @@ const fmt = (value) => value === null || value === undefined || value === '' ? '
 const isTerminalStatus = (value) => ['CLOSED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(String(value || '').toUpperCase());
 const quoteFreshness = (trade) => {
   const raw = trade.last_market_data_at || trade.quote_received_at || trade.quote_timestamp || trade.last_quote_at;
-  if (!raw) return { label: trade.quote_state === 'LIVE' ? 'LIVE · time unknown' : (trade.quote_state || 'No quote'), stale: trade.quote_state !== 'LIVE' };
+  if (!raw) return { label: trade.quote_state === 'LIVE' ? 'Timestamp unavailable' : (trade.quote_state || 'No quote'), stale: true };
   const timestamp = new Date(raw).getTime();
   if (!Number.isFinite(timestamp)) return { label: 'Quote time unavailable', stale: true };
   const age = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
@@ -227,6 +227,10 @@ export default function TradeTerminal() {
     const exitPrice = closeOrderType === 'MARKET'
       ? Number(trade.last_price)
       : Number(closeLimitPrice);
+    if (closeOrderType === 'MARKET' && quoteFreshness(trade).stale) {
+      setError('The latest quote is stale or has no timestamp. Refresh market data or choose Limit Price for this paper simulation.');
+      return;
+    }
     if (!Number.isFinite(exitPrice) || exitPrice <= 0) {
       setError(closeOrderType === 'MARKET'
         ? 'No valid last price is available for this trade. Refresh quotes before closing.'
@@ -238,7 +242,7 @@ export default function TradeTerminal() {
     const qty = Number(trade.open_quantity ?? trade.quantity ?? 0);
     const directionFactor = String(trade.direction).toUpperCase() === 'SELL' ? -1 : 1;
     const changes = {
-      status: 'CLOSED', exit_price: exitPrice, average_exit_price: exitPrice, open_quantity: 0,
+      status: 'CLOSED', exit_price: exitPrice, average_exit_price: exitPrice, open_quantity: 0, unrealized_pnl: 0,
       exit_reason: 'Manual paper close',
       exit_method: closeOrderType === 'MARKET' ? 'PAPER_MARKET_SIMULATION' : 'PAPER_LIMIT_SIMULATION',
     };
@@ -254,7 +258,7 @@ export default function TradeTerminal() {
     const left = a[sortConfig.key];
     const right = b[sortConfig.key];
     let comparison;
-    if (['quantity', 'open_quantity', 'entry_price', 'average_entry_price', 'last_price', 'stop_loss', 'target', 'realized_pnl', 'unrealized_pnl'].includes(sortConfig.key)) {
+    if (['quantity', 'open_quantity', 'entry_price', 'average_entry_price', 'last_price', 'stop_loss', 'target', 'realized_pnl', 'unrealized_pnl', 'average_exit_price'].includes(sortConfig.key)) {
       const leftNumber = Number(left ?? (sortConfig.key === 'open_quantity' ? a.quantity : 0));
       const rightNumber = Number(right ?? (sortConfig.key === 'open_quantity' ? b.quantity : 0));
       comparison = leftNumber - rightNumber;
@@ -286,7 +290,7 @@ export default function TradeTerminal() {
   const pnlSummary = visibleTrades.reduce((summary, trade) => {
     const realized = Number(trade.realized_pnl || 0);
     const unrealized = Number(trade.unrealized_pnl || 0);
-    const total = realized + unrealized;
+    const total = realized + (isTerminalStatus(trade.status) ? 0 : unrealized);
     if (total > 0) summary.profit += total;
     if (total < 0) summary.loss += Math.abs(total);
     summary.net += total;
