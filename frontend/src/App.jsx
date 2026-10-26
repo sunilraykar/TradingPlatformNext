@@ -1028,6 +1028,18 @@ export default function App() {
         <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
         <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
       </section>
+      <section className="metric-grid autotrender-ohlc-grid" aria-label={`${index} daily price statistics`}>
+        <Metric label="OPEN" value={number(indexPriceRecord?.open ?? indexPriceRecord?.ohlc?.open)} />
+        <Metric label="HIGH" value={number(indexPriceRecord?.high ?? indexPriceRecord?.ohlc?.high)} />
+        <Metric label="LOW" value={number(indexPriceRecord?.low ?? indexPriceRecord?.ohlc?.low)} />
+        <Metric label="CLOSE" value={number(indexPriceRecord?.close ?? indexPriceRecord?.close_price ?? indexPriceRecord?.ohlc?.close)} />
+        <Metric label="DAY'S CHANGE %" value={(() => {
+          const change = indexPriceRecord?.day_change_percentage ?? indexPriceRecord?.change_percentage ?? indexPriceRecord?.changePercent ?? indexPriceRecord?.change_percent ?? indexPriceRecord?.change;
+          if (change === null || change === undefined || change === '') return '—';
+          const parsed = numericValue(change);
+          return parsed === null ? displayValue(change) : `${number(parsed)}%`;
+        })()} tone={numericValue(indexPriceRecord?.day_change_percentage ?? indexPriceRecord?.change_percentage ?? indexPriceRecord?.changePercent ?? indexPriceRecord?.change_percent ?? indexPriceRecord?.change) >= 0 ? 'positive' : 'negative'} />
+      </section>
 
       <section className="selected-contract-panel panel" aria-live="polite">
         <div className="selected-contract-heading">
