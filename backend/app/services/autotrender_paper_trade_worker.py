@@ -406,16 +406,13 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             if row is None:
                 outcomes[index] = {"state": "skipped", "reason": "no_intraday_row"}
                 continue
-            max_age = _max_signal_age_seconds(settings.get("autoTrenderMaxSignalAgeSeconds", DEFAULT_MAX_SIGNAL_AGE_SECONDS))
-            fresh, freshness_reason, signal_timestamp = signal_freshness(row, current, max_age)
-            if not fresh:
-                outcomes[index] = {
-                    "state": "rejected",
-                    "reason": freshness_reason,
-                    "source_fields": sorted(str(key) for key in row),
-                    "recognized_timestamp_fields": [key for key in SIGNAL_TIMESTAMP_FIELDS if row.get(key) not in (None, "")],
-                }
-                continue
+            # Signal timestamp age/missing/format checks must not reject a signal.
+            # Preserve a parseable source timestamp for deduplication; otherwise use
+            # the current minute as a stable fallback for this polling cycle.
+            signal_timestamp = (
+                parse_signal_timestamp(row)
+                or current.replace(second=0, microsecond=0)
+            )
             signal_id = signal_timestamp.isoformat()
             if _LAST_SIGNAL_BY_INDEX.get(index) == signal_id:
                 outcomes[index] = {"state": "skipped", "reason": "duplicate_signal"}
