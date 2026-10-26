@@ -26,8 +26,8 @@ def main():
         raise SystemExit(2)
 
     now = datetime.now(worker.IST)
-    print(f"\\nAutoTrender read-only entry diagnostic | {index} | {now.isoformat()}")
-    print("No trade is created or placed by this script.\\n")
+    print(f"\nAutoTrender read-only entry diagnostic | {index} | {now.isoformat()}")
+    print("No trade is created or placed by this script.\n")
     settings = worker._read_settings()
     print("CONFIGURED SETTINGS")
     for key in (
@@ -42,7 +42,7 @@ def main():
     window_ok, window_reason = worker._entry_window(now, settings)
     report("Trading time window", window_ok, window_reason)
     if index not in enabled:
-        print("\\nSTOP: selected index is disabled in AutoTrender settings.")
+        print("\nSTOP: selected index is disabled in AutoTrender settings.")
         raise SystemExit(1)
 
     try:
@@ -57,7 +57,7 @@ def main():
         print("Payload top-level keys:", list(payload) if isinstance(payload, dict) else type(payload).__name__)
         raise SystemExit(1)
 
-    print("\\nLATEST ROW FIELDS")
+    print("\nLATEST ROW FIELDS")
     for key in (
         "time", "timestamp", "datetime", "created_at", "call", "put", "pcr",
         "price", "close", "ltp", "vWap", "vwap", "vWapSignal", "vwapSignal", "optionSignal",
@@ -94,7 +94,7 @@ def main():
     strength_limit = abs(float(settings["callPutStrengthDiff"]))
     buffer_limit = abs(float(settings["vwapPriceDifferenceBuffer"]))
 
-    print("\\nENTRY CONDITION SUMMARY")
+    print("\nENTRY CONDITION SUMMARY")
     strength_pass = strength_diff is not None and strength_diff > strength_limit
     direction = ("BULLISH" if signed_strength_diff > 0 else "BEARISH") if signed_strength_diff not in (None, 0) else "UNDETERMINED"
     report(
@@ -114,7 +114,7 @@ def main():
         f"absolute buffer={fmt(buffer_pct)}%; required <= {buffer_limit}%",
     )
     print(f"  PCR (informational; does not determine direction): {fmt(pcr)}")
-    print(f"\\nBACKEND EVALUATOR: eligible={result.eligible}; direction={result.direction}; reason={result.reason}")
+    print(f"\nBACKEND EVALUATOR: eligible={result.eligible}; direction={result.direction}; reason={result.reason}")
     print(f"Calculated absolute strength difference={fmt(result.strength_difference)}%")
     print(f"Calculated VWAP buffer={fmt(result.vwap_difference_percent)}%")
 
@@ -126,7 +126,7 @@ def main():
         print(f"WORKER BLOCKER: evaluator rejected this row ({result.reason})")
     else:
         print("Evaluator conditions pass. Trade creation can still be blocked by duplicate-signal or active-trade/contract/quote checks.")
-    print("\\nNote: current worker fetches intraday data with mins=5; this script uses that same worker fetch path.")
+    print("\nNote: current worker fetches intraday data with mins=5; this script uses that same worker fetch path.")
 
 
 if __name__ == "__main__":
