@@ -119,10 +119,26 @@ class AutoTrenderAuth:
                         logger.debug("Browser cleanup failed: %s", exc)
 
     def get(self, endpoint: str, **kwargs):
-        if not self.authenticated and (not self._restore_saved_cookie() or not self._validate_session()):
-            raise RuntimeError("AutoTrender is not authenticated.")
+        """Fetch an API endpoint, automatically logging in if the saved session is invalid."""
         url = endpoint if endpoint.startswith("http") else API_BASE_URL + endpoint
-        return self.session.get(url, timeout=30, **kwargs)
+
+        # Restore/validate the saved session first; if it is absent or expired,
+        # perform the same configured headless login used by the manual login action.
+        if not self.authenticated and not (self._restore_saved_cookie() and self._validate_session()):
+            logger.info("AutoTrender session unavailable; attempting automatic login")
+            self.login()
+
+        response = self.session.get(url, timeout=30, **kwargs)
+        content_type = response.headers.get("Content-Type", "").lower()
+        if response.status_code in (401, 403) or "text/html" in content_type:
+            # The session may have expired after the initial validation. Retry only
+            # once after re-authentication to avoid an infinite login/retry loop.
+            logger.warning("AutoTrender API rejected the session; attempting one re-login")
+            self.clear_saved_cookie()
+            self.login()
+            response = self.session.get(url, timeout=30, **kwargs)
+
+        return response
 
     def is_authenticated(self) -> bool:
         return bool(self.authenticated and self._validate_session())
