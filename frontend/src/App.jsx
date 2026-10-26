@@ -269,6 +269,7 @@ const SETTINGS_FIELDS = {
   ],
   autotrend: [
     ['autoTrenderRefreshSeconds', 'AutoTrender Refresh Interval (seconds)', 'number', '5', 'Refresh interval for AutoTrender data.', '1'],
+    ['autoTrenderIntradayMinutes', 'AutoTrender Intraday Data Window (minutes)', 'number', '3', 'Lookback window requested for AutoTrender intraday data and chart.', '1'],
     ['autoTrenderWorkerIntervalSeconds', 'AutoTrender Signal Evaluation Interval (seconds)', 'number', '5', 'How often the backend evaluates AutoTrender signals; separate from UI refresh.', '1'],
     ['autoTrenderMaxSignalAgeSeconds', 'AutoTrender Maximum Signal Age (seconds)', 'number', '300', 'Reject signals older than this age or without a valid source timestamp.', '1'],
     ['vwapPriceDifferenceBuffer', 'VWAP-Price Difference Buffer (%)', 'number', '0.3', 'Maximum absolute VWAP/price buffer used by the entry filter.', '0'],
@@ -841,7 +842,7 @@ export default function App() {
   selectedIndexRef.current = index;
   const [indexPrices, setIndexPrices] = useState(null);
   const [kiteIndexQuotes, setKiteIndexQuotes] = useState(null);
-  const [mins, setMins] = useState(5);
+  const [mins, setMins] = useState(3);
   const [intraday, setIntraday] = useState(null);
   const [oi, setOi] = useState(null);
   const [auth, setAuth] = useState(null);
@@ -893,6 +894,8 @@ export default function App() {
     if (results[6].status === 'fulfilled') setKiteIndexQuotes(results[6].value);
     if (results[5].status === 'fulfilled') {
       const saved = results[5].value.settings || {};
+      const configuredMinutes = Number(saved.autoTrenderIntradayMinutes ?? 3);
+      setMins([1, 3, 5, 10, 15, 30, 60].includes(configuredMinutes) ? configuredMinutes : 3);
       setAutotrendSettings({
         callPutStrengthDiff: saved.callPutStrengthDiff ?? 10,
         callPcr: saved.callPcr ?? 1,
@@ -1048,11 +1051,7 @@ export default function App() {
         <div className="index-switch" aria-label="Select index">
           {DEFAULT_INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
         </div>
-        <label className="interval-select">Intraday interval
-          <select value={mins} onChange={(e) => setMins(Number(e.target.value))}>
-            {[1, 3, 5, 10, 15, 30, 60].map((m) => <option key={m} value={m}>{m} min</option>)}
-          </select>
-        </label>
+        <div className="interval-select">Intraday window: <strong>{mins} min</strong></div>
         <div className="control-note">Market data only · No order placement</div>
       </section>
 
