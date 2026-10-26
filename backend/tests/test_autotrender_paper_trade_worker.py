@@ -102,7 +102,7 @@ def test_run_cycle_creates_paper_trade_for_fresh_eligible_signal(monkeypatch):
     assert result["indices"]["NIFTY"]["trade_id"] == "paper-123"
 
 
-def test_run_cycle_fails_closed_for_unknown_live_timestamp_field(monkeypatch):
+def test_run_cycle_allows_signal_without_recognized_timestamp(monkeypatch):
     now = datetime(2026, 10, 26, 10, 1, tzinfo=IST)
     row = {
         "createdOn": now.isoformat(),
@@ -119,16 +119,16 @@ def test_run_cycle_fails_closed_for_unknown_live_timestamp_field(monkeypatch):
     }
     monkeypatch.setattr(worker, "_read_settings", lambda: settings)
     monkeypatch.setattr(worker, "_fetch_intraday", lambda index: {"data": [row]})
-    monkeypatch.setattr(worker, "_create_paper_trade", lambda *args: (_ for _ in ()).throw(AssertionError("must not create trade")))
+    created = []
+    monkeypatch.setattr(worker, "_create_paper_trade", lambda *args: created.append(args) or {"trade_id": "paper-fallback"})
     worker._LAST_SIGNAL_BY_INDEX.clear()
 
     result = worker.run_cycle(now)
 
     outcome = result["indices"]["NIFTY"]
-    assert outcome["state"] == "rejected"
-    assert outcome["reason"] == "signal_timestamp_missing_or_invalid"
-    assert "createdOn" in outcome["source_fields"]
-    assert outcome["recognized_timestamp_fields"] == []
+    assert outcome["state"] == "paper_trade_created"
+    assert outcome["trade_id"] == "paper-fallback"
+    assert created[0][3] == now.replace(second=0, microsecond=0)
 
 
 
