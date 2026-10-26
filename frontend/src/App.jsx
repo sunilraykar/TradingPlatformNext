@@ -1064,6 +1064,7 @@ export default function App() {
         <Metric label="LATEST PRICE" value={number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)} />
         <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
         <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
+        <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
       </section>
 
       <section className="selected-contract-panel panel" aria-live="polite">
