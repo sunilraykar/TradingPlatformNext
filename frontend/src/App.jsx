@@ -783,15 +783,29 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     ...row,
     invested_amount: quantityOf(row) * averagePriceOf(row),
     current_amount: quantityOf(row) * lastPriceOf(row),
+    open: row.open ?? row.ohlc?.open ?? null,
+    high: row.high ?? row.ohlc?.high ?? null,
+    low: row.low ?? row.ohlc?.low ?? null,
+    close: row.close ?? row.close_price ?? row.ohlc?.close ?? null,
+    day_change_percentage: row.day_change_percentage ?? row.dayChangePercentage ?? null,
   })) : rows;
   const columns = [...new Set(displayRows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(normalizeColumn(key)) && !['lastquantity', 'lastqty', 'lasquantity'].includes(normalizeColumn(key))).slice(0, 18);
-  // Ensure the two calculated portfolio values are always included in Holdings.
+  // Keep key portfolio and daily-price fields visible even if the source row
+  // has many fields or the API omits a field for a particular holding.
   if (holdingsMode) {
-    for (const key of ['invested_amount', 'current_amount']) {
+    for (const key of ['open', 'high', 'low', 'close', 'day_change_percentage', 'invested_amount', 'current_amount']) {
       if (!columns.includes(key)) columns.push(key);
     }
   }
-  const formatCell = (value) => { if (value === null || value === undefined || value === '') return '—'; if (typeof value === 'object') return JSON.stringify(value); if (typeof value === 'number') return value.toLocaleString('en-IN', { maximumFractionDigits: 2 }); return String(value); };
+  const formatCell = (value, key) => {
+    if (value === null || value === undefined || value === '') return '—';
+    if (typeof value === 'object') return JSON.stringify(value);
+    if (typeof value === 'number') {
+      const formatted = value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
+      return key === 'day_change_percentage' ? `${formatted}%` : formatted;
+    }
+    return key === 'day_change_percentage' && !String(value).endsWith('%') ? `${value}%` : String(value);
+  };
   const compareValues = (left, right) => {
     if (left === null || left === undefined || left === '') return right === null || right === undefined || right === '' ? 0 : 1;
     if (right === null || right === undefined || right === '') return -1;
@@ -809,7 +823,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
   const toggleSort = (key) => setSortConfig((current) => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }));
   const isSymbol = (key) => normalizeColumn(key) === 'tradingsymbol';
   const heading = (key) => key === 'invested_amount' ? 'Invested Amount' : key === 'current_amount' ? 'Current Amount' : isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' ');
-  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{formatCell(row[key])}</td>)}</tr>; })}</tbody></table></div>;
+  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{formatCell(row[key], key)}</td>)}</tr>; })}</tbody></table></div>;
 }
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
