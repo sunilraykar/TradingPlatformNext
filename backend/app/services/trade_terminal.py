@@ -412,24 +412,36 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
             if candidate > 0:
                 changes = {**changes, "closed_quantity": candidate}
         updated.update(changes)
-        # Persist a final realized P&L whenever a paper trade is closed. Keep a
-        # caller-supplied realized_pnl when provided; otherwise derive it from
-        # the actual exit price, entry price, closed quantity, and trade side.
-        if str(updated.get("status", "")).upper() in {"CLOSED", "CANCELLED", "EXPIRED"}:
-            supplied_realized = changes.get("realized_pnl")
-            if supplied_realized is None:
-                exit_price = updated.get("average_exit_price", updated.get("exit_price"))
-                entry_price = updated.get("average_entry_price", updated.get("entry_price"))
-                closed_quantity = updated.get("closed_quantity", updated.get("quantity", 0))
-                try:
-                    exit_value = float(exit_price)
-                    entry_value = float(entry_price)
-                    quantity_value = float(closed_quantity or 0)
-                    direction_factor = -1 if str(updated.get("direction", "BUY")).upper() == "SELL" else 1
-                    if exit_value > 0 and entry_value > 0 and quantity_value > 0:
-                        updated["realized_pnl"] = (exit_value - entry_value) * quantity_value * direction_factor
-                except (TypeError, ValueError):
-                    pass
+        # The backend is authoritative for realized P&L. Never trust a client-
+        # supplied realized_pnl: derive it from the persisted entry/exit prices,
+        # trade side, and quantity actually closed.
+        if str(updated.get("status", "")).upper() == "CLOSED":
+            exit_price = updated.get("average_exit_price") or updated.get("exit_price")
+            entry_price = updated.get("average_entry_price") or updated.get("entry_price")
+            closed_quantity = (
+                changes.get("closed_quantity")
+                or current.get("open_quantity")
+                or current.get("quantity")
+                or updated.get("quantity")
+            )
+            try:
+                exit_value = float(exit_price)
+                entry_value = float(entry_price)
+                quantity_value = float(closed_quantity or 0)
+                side = str(updated.get("direction", "BUY")).upper()
+                if side not in {"BUY", "SELL"}:
+                    raise ValueError(f"Unsupported trade direction for realized P&L: {side}")
+                if exit_value <= 0 or entry_value <= 0 or quantity_value <= 0:
+                    raise ValueError("Closing a trade requires positive entry, exit, and closed quantity")
+                direction_factor = -1 if side == "SELL" else 1
+                updated["closed_quantity"] = quantity_value
+                updated["realized_pnl"] = round(
+                    (exit_value - entry_value) * quantity_value * direction_factor, 2
+                )
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "Cannot close trade without valid entry price, exit price, side, and closed quantity"
+                ) from exc
             updated["unrealized_pnl"] = 0
         updated["version"] = int(current.get("version", 1)) + 1
         updated["updated_at"] = _now()
