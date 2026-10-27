@@ -311,10 +311,10 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
             "SELECT instrument_token, exchange, tradingsymbol, name, instrument_type, expiry, strike, lot_size "
             "FROM instruments WHERE source = 'KITE' AND is_active = TRUE AND exchange = :exchange "
             "AND instrument_type = :option_type AND expiry >= :today "
-            "AND (UPPER(name) LIKE :underlying OR UPPER(tradingsymbol) LIKE :symbol_prefix) "
+            "AND UPPER(tradingsymbol) LIKE :symbol_prefix "
             "ORDER BY expiry ASC, ABS(strike - :spot) ASC, instrument_version DESC"
         ), {"exchange": exchange, "option_type": option_type, "today": today,
-            "underlying": "%" + index + "%", "symbol_prefix": index + "%", "spot": spot}).mappings().all()
+            "symbol_prefix": index + "%", "spot": spot}).mappings().all()
     if not candidates:
         raise ValueError("no_eligible_option_contract")
     chosen = candidates[0]
