@@ -485,7 +485,7 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
 
 
 def update_market_state(trade_id: str, *, last_price: float | None = None,
-                        unrealized_pnl: float | None = None, last_market_data_at: str | None = None) -> dict[str, Any]:
+                        last_market_data_at: str | None = None) -> dict[str, Any]:
     """Ephemeral quote/P&L update; intentionally does not touch the database."""
     with _lock:
         current = _cache.get(trade_id)
