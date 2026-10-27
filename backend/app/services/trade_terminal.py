@@ -573,4 +573,14 @@ def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, A
         current = update_trade(old["trade_id"], {"status": "CLOSED", "open_quantity": 0}, event_type="BROKER_POSITION_FLATTENED")
         current["persistence_state"] = "PERSISTED"
         closed += 1
-    return {"created": created, "updated": updated, "closed": closed, "active_positions": len(normalized)}
+    # Newly reconciled broker positions are added after startup, so the
+    # startup subscription pass cannot see them. Resolve their Kite instrument
+    # tokens and register WebSocket subscriptions immediately after every sync.
+    subscription = subscribe_open_trades()
+    return {
+        "created": created,
+        "updated": updated,
+        "closed": closed,
+        "active_positions": len(normalized),
+        "subscriptions": subscription,
+    }
