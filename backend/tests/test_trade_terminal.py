@@ -104,12 +104,46 @@ def test_lifecycle_update_increments_version_and_persists(monkeypatch):
     monkeypatch.setattr(trade_terminal, "_persist", lambda trade, event, payload: calls.append((trade.copy(), event, payload)))
     trade_terminal._cache["trade-1"] = {
         "trade_id": "trade-1", "execution_mode": "PAPER", "status": "OPEN",
+        "direction": "BUY", "quantity": 10, "open_quantity": 10, "entry_price": 100,
         "version": 2, "updated_at": "2026-01-01T00:00:00+00:00",
     }
-    updated = trade_terminal.update_trade("trade-1", {"status": "CLOSED", "realized_pnl": 120}, event_type="TRADE_LIFECYCLE_CHANGED")
+    updated = trade_terminal.update_trade("trade-1", {
+        "status": "CLOSED", "exit_price": 112, "average_exit_price": 112,
+        "closed_quantity": 10, "open_quantity": 0, "realized_pnl": 999,
+    }, event_type="TRADE_LIFECYCLE_CHANGED")
     assert updated["version"] == 3
     assert updated["status"] == "CLOSED"
+    assert updated["closed_quantity"] == 10
+    assert updated["realized_pnl"] == 120
     assert calls[0][1] == "TRADE_LIFECYCLE_CHANGED"
+
+
+def test_backend_calculates_realized_pnl_for_closed_sell(monkeypatch):
+    monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
+    trade_terminal._cache["trade-sell-close"] = {
+        "trade_id": "trade-sell-close", "execution_mode": "PAPER", "status": "OPEN",
+        "direction": "SELL", "quantity": 25, "open_quantity": 25, "entry_price": 200,
+        "version": 1, "updated_at": "2026-01-01T00:00:00+00:00",
+    }
+    updated = trade_terminal.update_trade("trade-sell-close", {
+        "status": "CLOSED", "exit_price": 180, "average_exit_price": 180,
+        "closed_quantity": 25, "open_quantity": 0, "realized_pnl": -500,
+    })
+    assert updated["realized_pnl"] == 500
+
+
+def test_backend_rejects_close_without_valid_prices_or_quantity(monkeypatch):
+    monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
+    trade_terminal._cache["trade-invalid-close"] = {
+        "trade_id": "trade-invalid-close", "execution_mode": "PAPER", "status": "OPEN",
+        "direction": "BUY", "quantity": 10, "open_quantity": 10,
+        "version": 1, "updated_at": "2026-01-01T00:00:00+00:00",
+    }
+    try:
+        trade_terminal.update_trade("trade-invalid-close", {"status": "CLOSED", "realized_pnl": 0})
+        assert False, "Closing without valid entry and exit prices must fail"
+    except ValueError as exc:
+        assert "valid entry price" in str(exc)
 
 
 def test_dirty_trade_retries(monkeypatch):
