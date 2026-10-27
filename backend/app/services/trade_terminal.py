@@ -230,13 +230,10 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
         "strategy": payload.get("strategy"),
         "instrument_symbol": symbol,
         "quantity": quantity,
-        "open_quantity": quantity,
         "status": "OPEN",
         "created_at": now,
         "updated_at": now,
         "version": 1,
-        "realized_pnl": 0,
-        "unrealized_pnl": 0,
         "persistence_state": "PENDING",
     }
     with _lock:
@@ -606,7 +603,7 @@ def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, A
             current["broker_pnl"] = incoming.get("broker_pnl")
             current["last_market_data_at"] = _now()
             if material:
-                current.update({k: incoming[k] for k in ("quantity", "open_quantity", "status", "direction", "average_entry_price")})
+                current.update({k: incoming[k] for k in ("quantity", "status", "direction", "average_entry_price")})
                 current["version"] = int(current.get("version", 1)) + 1
                 current["updated_at"] = _now()
                 current["persistence_state"] = "PENDING"
