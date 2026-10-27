@@ -67,8 +67,11 @@ def _naive_datetime(value: str) -> datetime:
     return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo is not None else parsed
 
 
+_LEGACY_TRADE_FIELDS = {"realized_pnl", "unrealized_pnl", "open_quantity", "closed_quantity", "original_quantity"}
+
 _CACHE_ONLY_FIELDS = {
-    "last_price", "ltp", "price", "unrealized_pnl", "last_market_data_at",
+    "last_price", "ltp", "price", "unrealized_pnl", "realized_pnl",
+    "open_quantity", "closed_quantity", "original_quantity", "last_market_data_at",
     "quote_state", "quote_received_at", "quote_timestamp", "last_quote_at", "received_at",
     "market_quote", "cached_quote", "quote", "quote_data", "instrument_token",
     "subscription_state", "subscription_mode", "subscribed",
@@ -76,7 +79,7 @@ _CACHE_ONLY_FIELDS = {
 
 
 def _persistent_trade_payload(trade: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in trade.items() if key not in _CACHE_ONLY_FIELDS}
+    return {key: value for key, value in trade.items() if key not in _CACHE_ONLY_FIELDS and key not in _LEGACY_TRADE_FIELDS}
 
 
 def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
@@ -110,7 +113,7 @@ def hydrate_cache() -> dict[str, Any]:
             payload = row["payload"]
             trade = json.loads(payload) if isinstance(payload, str) else payload
             if isinstance(trade, dict) and trade.get("trade_id"):
-                restored[str(trade["trade_id"])] = trade
+                restored[str(trade["trade_id"])] = {key: value for key, value in trade.items() if key not in _LEGACY_TRADE_FIELDS}
         with _lock:
             _cache.clear()
             _cache.update(restored)
@@ -137,7 +140,7 @@ def status() -> dict[str, Any]:
 def list_trades(*, mode: str | None = None, status_filter: str | None = None,
                 source: str | None = None, underlying: str | None = None) -> list[dict[str, Any]]:
     with _lock:
-        rows = [dict(trade) for trade in _cache.values()]
+        rows = [{key: value for key, value in trade.items() if key not in _LEGACY_TRADE_FIELDS} for trade in _cache.values()]
     if mode:
         rows = [t for t in rows if t.get("execution_mode") == mode.upper()]
     if status_filter:
@@ -152,7 +155,7 @@ def list_trades(*, mode: str | None = None, status_filter: str | None = None,
 def get_trade(trade_id: str) -> dict[str, Any] | None:
     with _lock:
         trade = _cache.get(trade_id)
-        return dict(trade) if trade else None
+        return {key: value for key, value in trade.items() if key not in _LEGACY_TRADE_FIELDS} if trade else None
 
 
 def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, Any]) -> None:
@@ -368,7 +371,7 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
             updated = dict(current)
             updated["last_price"] = price
             entry = updated.get("average_entry_price", updated.get("entry_price"))
-            quantity = int(updated.get("open_quantity", updated.get("quantity", 0)) or 0)
+            quantity = int(updated.get("quantity", 0) or 0)
             try:
                 entry = float(entry)
                 direction = -1 if str(updated.get("direction", "BUY")).upper() == "SELL" else 1
@@ -437,53 +440,29 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
             }
 
         updated = dict(current)
-        # Preserve the quantity being closed before callers zero the remaining
-        # quantity. Historical records may have quantity=0 after closure.
-        closing_status = str(changes.get("status", current.get("status", ""))).upper()
-        if closing_status in {"CLOSED", "CANCELLED", "EXPIRED"} and "closed_quantity" not in changes:
-            prior_open_quantity = current.get("open_quantity")
-            prior_quantity = current.get("quantity")
-            try:
-                candidate = float(prior_open_quantity if prior_open_quantity is not None else prior_quantity or 0)
-            except (TypeError, ValueError):
-                candidate = 0
-            if candidate > 0:
-                changes = {**changes, "closed_quantity": candidate}
+        # Quantity is the single source of truth for display and all P&L calculations.
+        # Do not persist duplicate quantity or realized/unrealized P&L fields.
+        changes = {
+            key: value for key, value in changes.items()
+            if key not in _LEGACY_TRADE_FIELDS
+        }
+        updated = {
+            key: value for key, value in current.items()
+            if key not in _LEGACY_TRADE_FIELDS
+        }
         updated.update(changes)
-        # The backend is authoritative for realized P&L. Never trust a client-
-        # supplied realized_pnl: derive it from the persisted entry/exit prices,
-        # trade side, and quantity actually closed.
-        if (
-            str(updated.get("status", "")).upper() == "CLOSED"
-            and str(updated.get("execution_mode", "PAPER")).upper() == "PAPER"
-        ):
+        closing_status = str(updated.get("status", "")).upper()
+        if closing_status == "CLOSED" and str(updated.get("execution_mode", "PAPER")).upper() == "PAPER":
             exit_price = updated.get("average_exit_price") or updated.get("exit_price")
             entry_price = updated.get("average_entry_price") or updated.get("entry_price")
-            closed_quantity = (
-                changes.get("closed_quantity")
-                or current.get("open_quantity")
-                or current.get("quantity")
-                or updated.get("quantity")
-            )
+            quantity = updated.get("quantity")
             try:
-                exit_value = float(exit_price)
-                entry_value = float(entry_price)
-                quantity_value = float(closed_quantity or 0)
-                side = str(updated.get("direction", "BUY")).upper()
-                if side not in {"BUY", "SELL"}:
-                    raise ValueError(f"Unsupported trade direction for realized P&L: {side}")
-                if exit_value <= 0 or entry_value <= 0 or quantity_value <= 0:
-                    raise ValueError("Closing a trade requires positive entry, exit, and closed quantity")
-                direction_factor = -1 if side == "SELL" else 1
-                updated["closed_quantity"] = quantity_value
-                updated["realized_pnl"] = round(
-                    (exit_value - entry_value) * quantity_value * direction_factor, 2
-                )
+                if float(exit_price) <= 0 or float(entry_price) <= 0 or float(quantity) <= 0:
+                    raise ValueError("Closing a trade requires positive entry, exit, and quantity")
             except (TypeError, ValueError) as exc:
                 raise ValueError(
-                    "Cannot close trade without valid entry price, exit price, side, and closed quantity"
+                    "Cannot close trade without valid entry price, exit price, side, and quantity"
                 ) from exc
-            updated["unrealized_pnl"] = 0
         updated["version"] = int(current.get("version", 1)) + 1
         updated["updated_at"] = _now()
         updated["persistence_state"] = "PENDING"
