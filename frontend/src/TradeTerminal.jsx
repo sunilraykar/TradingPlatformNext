@@ -15,8 +15,6 @@ const fmt = (value) => value === null || value === undefined || value === '' ? '
 const calculateTradePnl = (trade) => {
   const terminal = isTerminalStatus(trade.status);
   const entryRaw = trade.average_entry_price ?? trade.entry_price;
-  const freshness = terminal ? null : quoteFreshness(trade);
-  if (!terminal && freshness?.stale) return null;
   const markRaw = terminal
     ? (trade.average_exit_price ?? trade.exit_price)
     : trade.last_price;
@@ -249,10 +247,6 @@ export default function TradeTerminal() {
     const exitPrice = closeOrderType === 'MARKET'
       ? Number(trade.last_price)
       : Number(closeLimitPrice);
-    if (closeOrderType === 'MARKET' && quoteFreshness(trade).stale) {
-      setError('The latest quote is stale or has no timestamp. Refresh market data or choose Limit Price for this paper simulation.');
-      return;
-    }
     if (!Number.isFinite(exitPrice) || exitPrice <= 0) {
       setError(closeOrderType === 'MARKET'
         ? 'No valid last price is available for this trade. Refresh quotes before closing.'
@@ -412,7 +406,7 @@ export default function TradeTerminal() {
       <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · live updates</span>
     </div>
     <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr>{[['execution_mode','Mode'],['underlying','Underlying'],['instrument_symbol','Instrument'],['direction','Side'],['quantity','Qty'],['average_entry_price','Entry'],['last_price','Last price'],['stop_loss','SL'],['target','Target'],['display_pnl','Calculated P&L'],['average_exit_price','Exit price'],['status','Status'],['source','Source / Strategy'],['updated_at','Updated']].map(([key,label]) => <th key={key}><button type="button" className="trade-sort-header" onClick={() => toggleSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button></th>)}<th>Action</th></tr></thead><tbody>
-      {displayedTrades.map((trade) => { const freshness = quoteFreshness(trade); return <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{fmt(trade.underlying)}</td><td><button type="button" className="trade-symbol-link" onClick={() => setDetailsTrade(trade)}>{fmt(trade.instrument_symbol)}</button></td><td>{fmt(trade.direction)}</td><td>{fmt(trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td>{fmt(trade.last_price)}<div className={'trade-quote-state ' + (freshness.stale ? 'stale' : 'fresh')}>{freshness.label}</div></td><td>{fmt(trade.stop_loss)}</td><td>{fmt(trade.target)}</td><td className={trade.display_pnl === null ? 'holding-pnl-zero' : trade.display_pnl > 0 ? 'holding-pnl-positive' : trade.display_pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero'}>{fmt(trade.display_pnl)}</td><td>{fmt(trade.average_exit_price ?? trade.exit_price)}</td><td>{fmt(trade.status)}</td><td>{fmt(trade.source)}{trade.strategy ? ` · ${trade.strategy}` : ''}</td><td>{trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'}{trade.persistence_state === 'DEGRADED' && <div className="negative">Persistence issue</div>}</td><td>{trade.execution_mode === 'PAPER' && !isTerminalStatus(trade.status) && <button className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button>}</td></tr> })}
+      {displayedTrades.map((trade) => { return <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{fmt(trade.underlying)}</td><td><button type="button" className="trade-symbol-link" onClick={() => setDetailsTrade(trade)}>{fmt(trade.instrument_symbol)}</button></td><td>{fmt(trade.direction)}</td><td>{fmt(trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td>{fmt(trade.last_price)}</td><td>{fmt(trade.stop_loss)}</td><td>{fmt(trade.target)}</td><td className={trade.display_pnl === null ? 'holding-pnl-zero' : trade.display_pnl > 0 ? 'holding-pnl-positive' : trade.display_pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero'}>{fmt(trade.display_pnl)}</td><td>{fmt(trade.average_exit_price ?? trade.exit_price)}</td><td>{fmt(trade.status)}</td><td>{fmt(trade.source)}{trade.strategy ? ` · ${trade.strategy}` : ''}</td><td>{trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'}{trade.persistence_state === 'DEGRADED' && <div className="negative">Persistence issue</div>}</td><td>{trade.execution_mode === 'PAPER' && !isTerminalStatus(trade.status) && <button className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button>}</td></tr> })}
       {!displayedTrades.length && <tr><td colSpan="16" className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or sync live positions.'}</td></tr>}
     </tbody></table></div><div className="panel-footer">Durable lifecycle events are saved immediately. Quote and unrealized P&amp;L updates are cache-only. Live broker reconciliation is read-only and remains a separate integration step.</div></section>
   </section>;
