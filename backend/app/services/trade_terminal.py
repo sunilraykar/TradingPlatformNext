@@ -431,44 +431,6 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
             raise KeyError(trade_id)
         if current.get("execution_mode") == "LIVE" and not event_type.startswith("BROKER_"):
             raise ValueError("Live trade lifecycle is controlled by broker reconciliation; manual updates are blocked.")
-        # Enforce market-close quote validity on the backend as well as the UI.
-        # Never accept a stale client-supplied price as a simulated market fill.
-        requested_status = str(changes.get("status", current.get("status", ""))).upper()
-        requested_exit_method = str(changes.get("exit_method", current.get("exit_method", ""))).upper()
-        if (
-            requested_status == "CLOSED"
-            and str(current.get("execution_mode", "PAPER")).upper() == "PAPER"
-            and requested_exit_method == "PAPER_MARKET_SIMULATION"
-        ):
-            quote_timestamp = (
-                current.get("last_market_data_at")
-                or current.get("quote_received_at")
-                or current.get("quote_timestamp")
-                or current.get("last_quote_at")
-            )
-            try:
-                normalized_timestamp = str(quote_timestamp).replace("Z", "+00:00")
-                parsed_timestamp = datetime.fromisoformat(normalized_timestamp)
-                if parsed_timestamp.tzinfo is None:
-                    parsed_timestamp = parsed_timestamp.replace(tzinfo=UTC)
-                quote_age = (datetime.now(UTC) - parsed_timestamp.astimezone(UTC)).total_seconds()
-                market_price = float(current.get("last_price"))
-            except (TypeError, ValueError):
-                quote_age = float("inf")
-                market_price = 0.0
-            if quote_age < 0 or quote_age > 30 or market_price <= 0:
-                raise ValueError(
-                    "Cannot close at market: the backend has no valid quote from the last 30 seconds. "
-                    "Wait for a fresh Kite quote or use a limit-price simulation."
-                )
-            # The backend's latest cached market quote is authoritative for a
-            # simulated market exit; ignore any stale client-supplied price.
-            changes = {
-                **changes,
-                "exit_price": market_price,
-                "average_exit_price": market_price,
-            }
-
         updated = dict(current)
         # Quantity is the single source of truth for display and all P&L calculations.
         # Do not persist duplicate quantity or realized/unrealized P&L fields.
