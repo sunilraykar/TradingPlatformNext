@@ -43,9 +43,9 @@ def test_market_updates_do_not_persist(monkeypatch):
     }
     calls = []
     monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: calls.append(args))
-    result = trade_terminal.update_market_state("trade-1", last_price=101.5, unrealized_pnl=15)
+    result = trade_terminal.update_market_state("trade-1", last_price=101.5)
     assert result["last_price"] == 101.5
-    assert result["unrealized_pnl"] == 15
+    assert "unrealized_pnl" not in result
     assert calls == []
 
 
@@ -53,7 +53,7 @@ def test_quote_updates_matching_open_trade_in_memory_and_publishes(monkeypatch):
     trade_terminal._cache["trade-quote"] = {
         "trade_id": "trade-quote", "execution_mode": "PAPER", "status": "OPEN",
         "instrument_token": 123, "direction": "BUY", "quantity": 10,
-        "entry_price": 100, "unrealized_pnl": 0,
+        "entry_price": 100,
     }
     persisted = []
     published = []
@@ -67,7 +67,7 @@ def test_quote_updates_matching_open_trade_in_memory_and_publishes(monkeypatch):
     trade = trade_terminal.get_trade("trade-quote")
     assert count == 1
     assert trade["last_price"] == 105
-    assert trade["unrealized_pnl"] == 50
+    assert "unrealized_pnl" not in trade
     assert trade["quote_state"] == "LIVE"
     assert persisted == []
     assert published[-1]["type"] == "trade_quote"
@@ -113,8 +113,9 @@ def test_lifecycle_update_increments_version_and_persists(monkeypatch):
     }, event_type="TRADE_LIFECYCLE_CHANGED")
     assert updated["version"] == 3
     assert updated["status"] == "CLOSED"
-    assert updated["closed_quantity"] == 10
-    assert updated["realized_pnl"] == 120
+    assert updated["quantity"] == 10
+    assert "closed_quantity" not in updated
+    assert "realized_pnl" not in updated
     assert calls[0][1] == "TRADE_LIFECYCLE_CHANGED"
 
 
@@ -129,7 +130,9 @@ def test_backend_calculates_realized_pnl_for_closed_sell(monkeypatch):
         "status": "CLOSED", "exit_price": 180, "average_exit_price": 180,
         "closed_quantity": 25, "open_quantity": 0, "realized_pnl": -500,
     })
-    assert updated["realized_pnl"] == 500
+    assert updated["quantity"] == 25
+    assert "realized_pnl" not in updated
+    assert "closed_quantity" not in updated
 
 
 def test_backend_rejects_close_without_valid_prices_or_quantity(monkeypatch):
@@ -187,7 +190,8 @@ def test_flattened_live_position_is_durably_closed(monkeypatch):
     trade = next(t for t in trade_terminal._cache.values() if t.get("source") == "KITE_POSITION")
     assert result["closed"] == 1
     assert trade["status"] == "CLOSED"
-    assert trade["open_quantity"] == 0
+    assert trade["quantity"] == 50
+    assert "open_quantity" not in trade
     assert calls[-1][1] == "BROKER_POSITION_FLATTENED"
 
 
@@ -255,7 +259,7 @@ def test_restore_open_trade_preserves_and_applies_existing_cached_quote(monkeypa
     assert restored["instrument_token"] == 408065
     assert restored["last_price"] == 1153.80
     assert restored["quote_state"] == "LIVE"
-    assert abs(restored["unrealized_pnl"] - 53.80) < 1e-9
+    assert "unrealized_pnl" not in restored
 
     monkeypatch.undo()
     live_quotes.clear()
@@ -323,6 +327,7 @@ def test_paper_market_close_uses_fresh_backend_quote_for_realized_pnl(monkeypatc
 
     assert closed["exit_price"] == 112.5
     assert closed["average_exit_price"] == 112.5
-    assert closed["closed_quantity"] == 10
-    assert closed["realized_pnl"] == 125.0
+    assert closed["quantity"] == 10
+    assert "closed_quantity" not in closed
+    assert "realized_pnl" not in closed
     assert persisted and persisted[-1][1] == "TRADE_UPDATED"
