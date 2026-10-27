@@ -138,9 +138,6 @@ def run_auto_exit_cycle(now: datetime | None = None) -> dict[str, Any]:
         if exchange is None:
             skipped.append({"trade_id": trade_id, "reason": "unsupported_instrument"})
             continue
-        if not _quote_is_fresh(trade, now):
-            skipped.append({"trade_id": trade_id, "reason": "stale_or_missing_quote"})
-            continue
         try:
             entry = Decimal(str(trade.get("average_entry_price", trade.get("entry_price"))))
             exit_price = Decimal(str(trade.get("last_price")))
