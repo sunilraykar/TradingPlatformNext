@@ -368,7 +368,7 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
         for trade_id, current in _cache.items():
             if int(current.get("instrument_token") or 0) != token or not _is_active(current):
                 continue
-            updated = dict(current)
+            updated = {key: value for key, value in current.items() if key not in _LEGACY_TRADE_FIELDS}
             updated["last_price"] = price
             updated["last_market_data_at"] = timestamp
             updated["quote_state"] = "LIVE"
@@ -491,7 +491,7 @@ def update_market_state(trade_id: str, *, last_price: float | None = None,
         current = _cache.get(trade_id)
         if not current:
             raise KeyError(trade_id)
-        updated = dict(current)
+        updated = {key: value for key, value in current.items() if key not in _LEGACY_TRADE_FIELDS}
         if last_price is not None:
             updated["last_price"] = last_price
         updated["last_market_data_at"] = last_market_data_at or _now()
