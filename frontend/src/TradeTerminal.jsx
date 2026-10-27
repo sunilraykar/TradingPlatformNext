@@ -280,7 +280,7 @@ export default function TradeTerminal() {
     const left = a[sortConfig.key];
     const right = b[sortConfig.key];
     let comparison;
-    if (['quantity', 'open_quantity', 'entry_price', 'average_entry_price', 'last_price', 'stop_loss', 'target', 'realized_pnl', 'unrealized_pnl', 'average_exit_price'].includes(sortConfig.key)) {
+    if (['quantity', 'open_quantity', 'entry_price', 'average_entry_price', 'last_price', 'stop_loss', 'target', 'realized_pnl', 'unrealized_pnl', 'average_exit_price', 'display_pnl'].includes(sortConfig.key)) {
       const leftNumber = Number(left ?? (sortConfig.key === 'open_quantity' ? a.quantity : 0));
       const rightNumber = Number(right ?? (sortConfig.key === 'open_quantity' ? b.quantity : 0));
       comparison = leftNumber - rightNumber;
@@ -300,7 +300,7 @@ export default function TradeTerminal() {
       ['Strategy', 'strategy'], ['Notes', 'notes'], ['Created At', 'created_at'], ['Updated At', 'updated_at'],
     ];
     const csv = [columns.map(([label]) => csvCell(label)).join(','), ...displayedTrades.map((trade) => columns.map(([, key]) => {
-      const value = key === 'display_pnl' ? (isTerminalStatus(trade.status) ? trade.realized_pnl : trade.unrealized_pnl ?? trade.realized_pnl) : trade[key];
+      const value = key === 'display_pnl' ? trade.display_pnl : trade[key];
       return csvCell(value ?? (key === 'open_quantity' ? trade.quantity : ''));
     }).join(','))].join('\r\n');
     const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8;' });
