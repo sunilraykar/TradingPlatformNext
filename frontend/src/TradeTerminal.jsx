@@ -14,24 +14,12 @@ const fmt = (value) => value === null || value === undefined || value === '' ? '
   typeof value === 'number' ? value.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : String(value);
 const calculateTradePnl = (trade) => {
   const terminal = isTerminalStatus(trade.status);
-  // Closed trades use the realized value persisted by the close flow. Recomputing
-  // from display prices can erase a valid realized P&L when historical price fields
-  // are incomplete or have been normalized independently.
-  if (terminal) {
-    const realizedRaw = trade.realized_pnl;
-    if (realizedRaw !== null && realizedRaw !== undefined && realizedRaw !== '') {
-      const realized = Number(realizedRaw);
-      if (Number.isFinite(realized)) return realized;
-    }
-  }
   const entryRaw = trade.average_entry_price ?? trade.entry_price;
   const freshness = terminal ? null : quoteFreshness(trade);
-  // Do not present a market P&L calculated from an expired quote as current.
   if (!terminal && freshness?.stale) return null;
   const markRaw = terminal
     ? (trade.average_exit_price ?? trade.exit_price)
     : trade.last_price;
-  // One canonical trade quantity is used consistently for display and P&L.
   const quantityRaw = trade.quantity;
   const entry = Number(entryRaw);
   const mark = Number(markRaw);
@@ -273,16 +261,14 @@ export default function TradeTerminal() {
     }
     const rawEntryPrice = trade.average_entry_price ?? trade.entry_price;
     const entryPrice = rawEntryPrice === null || rawEntryPrice === undefined || rawEntryPrice === '' ? NaN : Number(rawEntryPrice);
-    const qty = Number(trade.open_quantity ?? trade.quantity ?? 0);
+    const qty = Number(trade.quantity ?? 0);
     const directionFactor = String(trade.direction).toUpperCase() === 'SELL' ? -1 : 1;
     const changes = {
       status: 'CLOSED', exit_price: exitPrice, average_exit_price: exitPrice,
-      closed_quantity: qty, original_quantity: Number(trade.original_quantity ?? trade.quantity ?? qty),
-      open_quantity: 0, unrealized_pnl: 0,
+      quantity: qty,
       exit_reason: 'Manual paper close',
       exit_method: closeOrderType === 'MARKET' ? 'PAPER_MARKET_SIMULATION' : 'PAPER_LIMIT_SIMULATION',
     };
-    if (Number.isFinite(entryPrice)) changes.realized_pnl = (exitPrice - entryPrice) * qty * directionFactor;
     try {
       await request(`/trades/${encodeURIComponent(trade.trade_id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) });
       setCloseTrade(null);
@@ -294,9 +280,9 @@ export default function TradeTerminal() {
     const left = a[sortConfig.key];
     const right = b[sortConfig.key];
     let comparison;
-    if (['quantity', 'open_quantity', 'entry_price', 'average_entry_price', 'last_price', 'stop_loss', 'target', 'realized_pnl', 'unrealized_pnl', 'average_exit_price', 'display_pnl'].includes(sortConfig.key)) {
-      const leftNumber = Number(left ?? (sortConfig.key === 'open_quantity' ? a.quantity : 0));
-      const rightNumber = Number(right ?? (sortConfig.key === 'open_quantity' ? b.quantity : 0));
+    if (['quantity', 'entry_price', 'average_entry_price', 'last_price', 'stop_loss', 'target', 'average_exit_price', 'display_pnl'].includes(sortConfig.key)) {
+      const leftNumber = Number(left ?? 0);
+      const rightNumber = Number(right ?? 0);
       comparison = leftNumber - rightNumber;
     } else {
       comparison = String(left ?? '').localeCompare(String(right ?? ''), undefined, { numeric: true, sensitivity: 'base' });
@@ -307,7 +293,7 @@ export default function TradeTerminal() {
   const exportVisibleTrades = () => {
     const columns = [
       ['Trade ID', 'trade_id'], ['Mode', 'execution_mode'], ['Underlying', 'underlying'], ['Instrument', 'instrument_symbol'],
-      ['Exchange', 'exchange'], ['Side', 'direction'], ['Quantity', 'quantity'], ['Open Quantity', 'open_quantity'],
+      ['Exchange', 'exchange'], ['Side', 'direction'], ['Qty', 'quantity'],
       ['Entry Price', 'average_entry_price'], ['Last Price', 'last_price'], ['Stop Loss', 'stop_loss'], ['Target', 'target'],
       ['Calculated P&L', 'display_pnl'], ['Exit Price', 'average_exit_price'],
       ['Exit Reason', 'exit_reason'], ['Exit Method', 'exit_method'], ['Status', 'status'], ['Source', 'source'],
@@ -315,7 +301,7 @@ export default function TradeTerminal() {
     ];
     const csv = [columns.map(([label]) => csvCell(label)).join(','), ...displayedTrades.map((trade) => columns.map(([, key]) => {
       const value = key === 'display_pnl' ? trade.display_pnl : trade[key];
-      return csvCell(value ?? (key === 'open_quantity' ? trade.quantity : ''));
+      return csvCell(value ?? '');
     }).join(','))].join('\r\n');
     const blob = new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -327,9 +313,8 @@ export default function TradeTerminal() {
   };
 
   const pnlSummary = visibleTrades.reduce((summary, trade) => {
-    const realized = Number(trade.realized_pnl || 0);
-    const unrealized = Number(trade.unrealized_pnl || 0);
-    const total = realized + (isTerminalStatus(trade.status) ? 0 : unrealized);
+    const total = calculateTradePnl(trade);
+    if (total === null) return;
     if (total > 0) summary.profit += total;
     if (total < 0) summary.loss += Math.abs(total);
     summary.net += total;
@@ -353,10 +338,9 @@ export default function TradeTerminal() {
         <div className="trade-modal-heading"><div><h2 id="trade-details-title">Trade details</h2><p>{detailsTrade.exchange || '—'}:{detailsTrade.instrument_symbol} · {detailsTrade.execution_mode} · {detailsTrade.status}</p></div><button className="button secondary" type="button" onClick={() => setDetailsTrade(null)}>✕</button></div>
         <div className="trade-details-grid">
           {[
-            ['Direction', detailsTrade.direction], ['Quantity', detailsTrade.quantity], ['Open quantity', detailsTrade.open_quantity ?? detailsTrade.quantity],
+            ['Direction', detailsTrade.direction], ['Qty', detailsTrade.quantity],
             ['Entry price', detailsTrade.average_entry_price ?? detailsTrade.entry_price], ['Last price', detailsTrade.last_price],
-            ['Stop loss', detailsTrade.stop_loss], ['Target', detailsTrade.target], ['Realized P&L', detailsTrade.realized_pnl],
-            ['P&L', isTerminalStatus(detailsTrade.status) ? detailsTrade.realized_pnl : (detailsTrade.unrealized_pnl ?? detailsTrade.realized_pnl)], ['Exit price', detailsTrade.average_exit_price ?? detailsTrade.exit_price],
+            ['Stop loss', detailsTrade.stop_loss], ['Target', detailsTrade.target], ['Calculated P&L', calculateTradePnl(detailsTrade)], ['Exit price', detailsTrade.average_exit_price ?? detailsTrade.exit_price],
             ['Exit reason', detailsTrade.exit_reason], ['Exit method', detailsTrade.exit_method], ['Source', detailsTrade.source],
             ['Strategy', detailsTrade.strategy], ['Quote status', quoteFreshness(detailsTrade).label],
             ['Created', detailsTrade.created_at ? new Date(detailsTrade.created_at).toLocaleString() : '—'],
@@ -369,7 +353,7 @@ export default function TradeTerminal() {
     </div>}
     {closeTrade && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCloseTrade(null); }}>
       <div className="panel trade-create-form trade-create-modal" role="dialog" aria-modal="true" aria-labelledby="close-trade-title">
-        <div className="trade-modal-heading"><div><h2 id="close-trade-title">Close paper trade</h2><p>{closeTrade.instrument_symbol} · {fmt(closeTrade.open_quantity ?? closeTrade.quantity)} units</p></div><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>✕</button></div>
+        <div className="trade-modal-heading"><div><h2 id="close-trade-title">Close paper trade</h2><p>{closeTrade.instrument_symbol} · {fmt(closeTrade.quantity)} units</p></div><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>✕</button></div>
         <div className="trade-close-order-choices">
           <span className="trade-filter-label">Exit order type</span>
           <div className="trade-filter-buttons">
