@@ -14,6 +14,16 @@ const fmt = (value) => value === null || value === undefined || value === '' ? '
   typeof value === 'number' ? value.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : String(value);
 const calculateTradePnl = (trade) => {
   const terminal = isTerminalStatus(trade.status);
+  // Closed trades use the realized value persisted by the close flow. Recomputing
+  // from display prices can erase a valid realized P&L when historical price fields
+  // are incomplete or have been normalized independently.
+  if (terminal) {
+    const realizedRaw = trade.realized_pnl;
+    if (realizedRaw !== null && realizedRaw !== undefined && realizedRaw !== '') {
+      const realized = Number(realizedRaw);
+      if (Number.isFinite(realized)) return realized;
+    }
+  }
   const entryRaw = trade.average_entry_price ?? trade.entry_price;
   const freshness = terminal ? null : quoteFreshness(trade);
   // Do not present a market P&L calculated from an expired quote as current.
