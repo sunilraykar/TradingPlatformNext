@@ -15,6 +15,9 @@ const fmt = (value) => value === null || value === undefined || value === '' ? '
 const calculateTradePnl = (trade) => {
   const terminal = isTerminalStatus(trade.status);
   const entryRaw = trade.average_entry_price ?? trade.entry_price;
+  const freshness = terminal ? null : quoteFreshness(trade);
+  // Do not present a market P&L calculated from an expired quote as current.
+  if (!terminal && freshness?.stale) return null;
   const markRaw = terminal
     ? (trade.average_exit_price ?? trade.exit_price)
     : trade.last_price;
