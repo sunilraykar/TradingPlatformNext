@@ -415,7 +415,10 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
         # The backend is authoritative for realized P&L. Never trust a client-
         # supplied realized_pnl: derive it from the persisted entry/exit prices,
         # trade side, and quantity actually closed.
-        if str(updated.get("status", "")).upper() == "CLOSED":
+        if (
+            str(updated.get("status", "")).upper() == "CLOSED"
+            and str(updated.get("execution_mode", "PAPER")).upper() == "PAPER"
+        ):
             exit_price = updated.get("average_exit_price") or updated.get("exit_price")
             entry_price = updated.get("average_entry_price") or updated.get("entry_price")
             closed_quantity = (
