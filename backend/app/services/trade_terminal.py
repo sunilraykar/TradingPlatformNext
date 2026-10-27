@@ -370,14 +370,6 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
                 continue
             updated = dict(current)
             updated["last_price"] = price
-            entry = updated.get("average_entry_price", updated.get("entry_price"))
-            quantity = int(updated.get("quantity", 0) or 0)
-            try:
-                entry = float(entry)
-                direction = -1 if str(updated.get("direction", "BUY")).upper() == "SELL" else 1
-                updated["unrealized_pnl"] = (price - entry) * quantity * direction
-            except (TypeError, ValueError):
-                pass
             updated["last_market_data_at"] = timestamp
             updated["quote_state"] = "LIVE"
             _cache[trade_id] = updated
@@ -502,8 +494,6 @@ def update_market_state(trade_id: str, *, last_price: float | None = None,
         updated = dict(current)
         if last_price is not None:
             updated["last_price"] = last_price
-        if unrealized_pnl is not None:
-            updated["unrealized_pnl"] = unrealized_pnl
         updated["last_market_data_at"] = last_market_data_at or _now()
         updated["updated_at"] = _now()
         _cache[trade_id] = updated
@@ -575,7 +565,7 @@ def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, A
             "underlying": row.get("name") or row.get("underlying") or symbol,
             "instrument_symbol": symbol, "exchange": exchange, "product": product,
             "direction": "BUY" if quantity > 0 else "SELL",
-            "quantity": abs(quantity), "open_quantity": abs(quantity),
+            "quantity": abs(quantity),
             "average_entry_price": row.get("average_price"),
             "last_price": row.get("last_price"), "broker_pnl": row.get("pnl"),
             "status": "OPEN",
@@ -594,9 +584,9 @@ def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, A
         if old is None:
             now = _now()
             trade = {
-                **incoming, "created_at": now, "updated_at": now,
-                "version": 1, "realized_pnl": None, "unrealized_pnl": None,
-                "persistence_state": "PENDING",
+                **{key: value for key, value in incoming.items() if key not in _LEGACY_TRADE_FIELDS},
+                "created_at": now, "updated_at": now,
+                "version": 1, "persistence_state": "PENDING",
             }
             with _lock:
                 _cache[trade["trade_id"]] = trade
@@ -608,7 +598,7 @@ def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, A
             created += 1
             continue
 
-        material = any(old.get(field) != incoming.get(field) for field in ("quantity", "open_quantity", "status", "direction", "average_entry_price"))
+        material = any(old.get(field) != incoming.get(field) for field in ("quantity", "status", "direction", "average_entry_price"))
         # Quote/P&L fields are refreshed in cache but are not durable per-poll writes.
         with _lock:
             current = dict(_cache[old["trade_id"]])
@@ -633,7 +623,7 @@ def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, A
     for key, old in existing.items():
         if key in live_keys or not _is_active(old):
             continue
-        current = update_trade(old["trade_id"], {"status": "CLOSED", "open_quantity": 0}, event_type="BROKER_POSITION_FLATTENED")
+        current = update_trade(old["trade_id"], {"status": "CLOSED"}, event_type="BROKER_POSITION_FLATTENED")
         current["persistence_state"] = "PERSISTED"
         closed += 1
     # Newly reconciled broker positions are added after startup, so the
