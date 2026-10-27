@@ -399,6 +399,18 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
         if current.get("execution_mode") == "LIVE" and not event_type.startswith("BROKER_"):
             raise ValueError("Live trade lifecycle is controlled by broker reconciliation; manual updates are blocked.")
         updated = dict(current)
+        # Preserve the quantity being closed before callers zero the remaining
+        # quantity. Historical records may have quantity=0 after closure.
+        closing_status = str(changes.get("status", current.get("status", ""))).upper()
+        if closing_status in {"CLOSED", "CANCELLED", "EXPIRED"} and "closed_quantity" not in changes:
+            prior_open_quantity = current.get("open_quantity")
+            prior_quantity = current.get("quantity")
+            try:
+                candidate = float(prior_open_quantity if prior_open_quantity is not None else prior_quantity or 0)
+            except (TypeError, ValueError):
+                candidate = 0
+            if candidate > 0:
+                changes = {**changes, "closed_quantity": candidate}
         updated.update(changes)
         # Persist a final realized P&L whenever a paper trade is closed. Keep a
         # caller-supplied realized_pnl when provided; otherwise derive it from
