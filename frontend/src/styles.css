@@ -202,6 +202,10 @@
 .trade-terminal-table-scroll{max-height:calc(100vh - 350px);min-height:220px;overflow:auto}
 .trade-terminal-table{min-width:1500px;font-size:11px}
 .trade-terminal-table td{white-space:nowrap;max-width:260px}
+/* Trade Terminal P&L colors must override the generic .kite-data-table td color. */
+.trade-terminal-table td.holding-pnl-positive{color:#55dfa8;font-weight:750;background:rgba(39,197,138,.08)}
+.trade-terminal-table td.holding-pnl-negative{color:#ff8793;font-weight:750;background:rgba(255,101,119,.08)}
+.trade-terminal-table td.holding-pnl-zero{color:#b7c3d5;font-weight:650;background:transparent}
 .trade-terminal-table td:nth-child(4),.trade-terminal-table td:nth-child(14){max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .trade-mode-pill{display:inline-block;padding:4px 7px;border-radius:5px;font-size:10px;font-weight:800}
 .trade-mode-pill.paper{background:#173c34;color:#8be0bc}
