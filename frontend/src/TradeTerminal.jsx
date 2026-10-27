@@ -19,7 +19,7 @@ const calculateTradePnl = (trade) => {
     ? (trade.average_exit_price ?? trade.exit_price)
     : trade.last_price;
   const quantityRaw = terminal
-    ? (trade.quantity ?? trade.closed_quantity)
+    ? (trade.closed_quantity ?? trade.original_quantity ?? trade.quantity)
     : (trade.open_quantity ?? trade.quantity);
   const entry = Number(entryRaw);
   const mark = Number(markRaw);
@@ -264,7 +264,9 @@ export default function TradeTerminal() {
     const qty = Number(trade.open_quantity ?? trade.quantity ?? 0);
     const directionFactor = String(trade.direction).toUpperCase() === 'SELL' ? -1 : 1;
     const changes = {
-      status: 'CLOSED', exit_price: exitPrice, average_exit_price: exitPrice, open_quantity: 0, unrealized_pnl: 0,
+      status: 'CLOSED', exit_price: exitPrice, average_exit_price: exitPrice,
+      closed_quantity: qty, original_quantity: Number(trade.original_quantity ?? trade.quantity ?? qty),
+      open_quantity: 0, unrealized_pnl: 0,
       exit_reason: 'Manual paper close',
       exit_method: closeOrderType === 'MARKET' ? 'PAPER_MARKET_SIMULATION' : 'PAPER_LIMIT_SIMULATION',
     };
