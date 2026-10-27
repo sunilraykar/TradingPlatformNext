@@ -373,6 +373,47 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
             changed.append(updated)
     for trade in changed:
         publish({"type": "trade_quote", "trade_id": trade["trade_id"], "trade": trade})
+        # Target exits are driven by every incoming LTP tick, without quote-age
+        # gates. For real broker positions, do not mark the trade closed locally:
+        # that requires a confirmed broker exit order/fill.
+        if str(trade.get("execution_mode") or "PAPER").upper() != "PAPER":
+            continue
+        try:
+            target = float(trade.get("target") or trade.get("target_price") or 0)
+            quantity = int(trade.get("quantity") or 0)
+            entry = float(trade.get("average_entry_price") or trade.get("entry_price") or 0)
+            direction = str(trade.get("direction") or "BUY").upper()
+        except (TypeError, ValueError, OverflowError):
+            continue
+        if target <= 0 or quantity <= 0 or entry <= 0 or direction not in {"BUY", "SELL"}:
+            continue
+        breached = price >= target if direction == "BUY" else price <= target
+        if not breached:
+            continue
+        try:
+            # Re-read immediately before closing so duplicate ticks cannot close twice.
+            current = get_trade(str(trade["trade_id"]))
+            if not current or not _is_active(current):
+                continue
+            trade_terminal_exit = update_trade(
+                str(trade["trade_id"]),
+                {
+                    "status": "CLOSED",
+                    "exit_price": price,
+                    "average_exit_price": price,
+                    "exit_method": "TARGET",
+                    "auto_exit": True,
+                    "auto_exit_at": timestamp,
+                    "auto_exit_reason": "TARGET_BREACHED",
+                },
+                event_type="TARGET_EXIT",
+            )
+            logger.info(
+                "Trade target reached; PAPER trade closed trade_id=%s target=%s ltp=%s qty=%s",
+                trade["trade_id"], target, price, quantity,
+            )
+        except (KeyError, RuntimeError, ValueError):
+            logger.exception("Target exit failed for trade %s", trade.get("trade_id"))
     return len(changed)
 
 
