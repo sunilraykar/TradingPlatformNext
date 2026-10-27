@@ -400,6 +400,25 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
             raise ValueError("Live trade lifecycle is controlled by broker reconciliation; manual updates are blocked.")
         updated = dict(current)
         updated.update(changes)
+        # Persist a final realized P&L whenever a paper trade is closed. Keep a
+        # caller-supplied realized_pnl when provided; otherwise derive it from
+        # the actual exit price, entry price, closed quantity, and trade side.
+        if str(updated.get("status", "")).upper() in {"CLOSED", "CANCELLED", "EXPIRED"}:
+            supplied_realized = changes.get("realized_pnl")
+            if supplied_realized is None:
+                exit_price = updated.get("average_exit_price", updated.get("exit_price"))
+                entry_price = updated.get("average_entry_price", updated.get("entry_price"))
+                closed_quantity = updated.get("closed_quantity", updated.get("quantity", 0))
+                try:
+                    exit_value = float(exit_price)
+                    entry_value = float(entry_price)
+                    quantity_value = float(closed_quantity or 0)
+                    direction_factor = -1 if str(updated.get("direction", "BUY")).upper() == "SELL" else 1
+                    if exit_value > 0 and entry_value > 0 and quantity_value > 0:
+                        updated["realized_pnl"] = (exit_value - entry_value) * quantity_value * direction_factor
+                except (TypeError, ValueError):
+                    pass
+            updated["unrealized_pnl"] = 0
         updated["version"] = int(current.get("version", 1)) + 1
         updated["updated_at"] = _now()
         updated["persistence_state"] = "PENDING"
