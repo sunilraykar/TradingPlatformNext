@@ -813,6 +813,7 @@ function AutoTrenderHistoricalData() {
   const [result, setResult] = useState({ snapshots: [], total: 0 });
   const [selected, setSelected] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState('FINNIFTY');
+  const [showIntradayDetails, setShowIntradayDetails] = useState(false);
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
