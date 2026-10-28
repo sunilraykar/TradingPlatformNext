@@ -247,12 +247,18 @@ export default function TradeTerminal() {
     // latest trade state so WebSocket/cache-sync quote updates are not lost
     // while the dialog is open.
     const trade = trades.find((item) => item.trade_id === closeTrade.trade_id) || closeTrade;
-    const exitPrice = closeOrderType === 'MARKET'
-      ? Number(trade.last_price)
+    const cachedLtp = trade.last_price === null || trade.last_price === undefined || trade.last_price === ''
+      ? NaN
+      : Number(trade.last_price);
+    // If no quote is available, let the user manually enter the simulated
+    // exit price instead of trapping the paper trade behind the missing LTP.
+    const useManualFallback = closeOrderType === 'MARKET' && (!Number.isFinite(cachedLtp) || cachedLtp <= 0);
+    const exitPrice = closeOrderType === 'MARKET' && !useManualFallback
+      ? cachedLtp
       : Number(closeLimitPrice);
     if (!Number.isFinite(exitPrice) || exitPrice <= 0) {
       setError(closeOrderType === 'MARKET'
-        ? 'No valid last price is available for this trade. Refresh quotes before closing.'
+        ? 'Enter a manual exit price below because no quote is currently available.'
         : 'Enter a valid positive limit price.');
       return;
     }
@@ -264,7 +270,9 @@ export default function TradeTerminal() {
       status: 'CLOSED', exit_price: exitPrice, average_exit_price: exitPrice,
       quantity: qty,
       exit_reason: 'Manual paper close',
-      exit_method: closeOrderType === 'MARKET' ? 'PAPER_MARKET_SIMULATION' : 'PAPER_LIMIT_SIMULATION',
+      exit_method: closeOrderType === 'MARKET' && Number.isFinite(cachedLtp) && cachedLtp > 0
+        ? 'PAPER_MARKET_SIMULATION'
+        : closeOrderType === 'LIMIT' ? 'PAPER_LIMIT_SIMULATION' : 'PAPER_MANUAL_PRICE_SIMULATION',
     };
     try {
       await request(`/trades/${encodeURIComponent(trade.trade_id)}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(changes) });
@@ -358,9 +366,9 @@ export default function TradeTerminal() {
             <button className={closeOrderType === 'LIMIT' ? 'trade-filter-button active' : 'trade-filter-button'} type="button" onClick={() => setCloseOrderType('LIMIT')}>Limit Price</button>
           </div>
         </div>
-        {closeOrderType === 'MARKET'
-          ? <div className="trade-selected-instrument">Simulated exit price from latest cached quote: <strong>{fmt(trades.find((item) => item.trade_id === closeTrade.trade_id)?.last_price ?? closeTrade.last_price)}</strong><p className="trade-paper-notice">This does not place a market order or guarantee an executable fill. Check quote freshness before confirming.</p></div>
-          : <label className="settings-control"><span>Limit price *</span><input autoFocus type="number" min="0.01" step="any" required value={closeLimitPrice} onChange={(e) => setCloseLimitPrice(e.target.value)} placeholder="Enter limit price" /></label>}
+        {closeOrderType === 'MARKET' && Number.isFinite(Number(trades.find((item) => item.trade_id === closeTrade.trade_id)?.last_price ?? closeTrade.last_price)) && Number(trades.find((item) => item.trade_id === closeTrade.trade_id)?.last_price ?? closeTrade.last_price) > 0
+          ? <div className="trade-selected-instrument">Simulated exit price from latest cached quote: <strong>{fmt(trades.find((item) => item.trade_id === closeTrade.trade_id)?.last_price ?? closeTrade.last_price)}</strong><p className="trade-paper-notice">This records a simulated exit; no broker order is placed.</p></div>
+          : <label className="settings-control"><span>{closeOrderType === 'MARKET' ? 'Manual exit price (quote unavailable) *' : 'Limit price *'}</span><input autoFocus type="number" min="0.01" step="any" required value={closeLimitPrice} onChange={(e) => setCloseLimitPrice(e.target.value)} placeholder="Enter exit price" />{closeOrderType === 'MARKET' && <p className="trade-paper-notice">No cached LTP is available. Enter the price at which you want to record this paper-trade exit.</p>}</label>}
         <div className="settings-actions"><span className="trade-paper-label">PAPER MODE · no broker order will be placed</span><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>Cancel</button><button className="button primary" type="button" onClick={updateStatus}>Confirm close</button></div>
       </div>
     </div>}
