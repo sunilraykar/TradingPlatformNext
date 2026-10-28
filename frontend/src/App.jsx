@@ -1409,7 +1409,7 @@ export default function App() {
               <td className={row.buffer === null ? '' : row.buffer > 0 ? 'cell-positive' : row.buffer < 0 ? 'cell-negative' : ''}>{row.buffer === null ? '—' : number(row.buffer, 3)}</td>
               <td><span className={'signal-tag enter-tag ' + row.enter.toLowerCase()}>{row.enter}</span></td>
             </tr>)}
-            {!calculatedRows.length && <tr><td colSpan="14" className="empty-cell">{loading ? 'Loading market data…' : 'No intraday records returned.'}</td></tr>}</tbody>
+            {!calculatedRows.length && <tr><td colSpan={showIntradayDetails ? 14 : 10} className="empty-cell">{loading ? 'Loading market data…' : 'No intraday records returned.'}</td></tr>}</tbody>
           </table></div>
           <div className="panel-footer">Calculated from the current API response and persisted to MySQL by index, trading date, interval, and time. Showing latest {Math.min(calculatedRows.length, 100)} records.</div>
         </article>
