@@ -155,7 +155,7 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
-function PriceVwapChart({ rows }) {
+function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25' }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
@@ -188,13 +188,21 @@ function PriceVwapChart({ rows }) {
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
-    <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
+    <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
     <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
       <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart from 09:30 to 15:30" preserveAspectRatio="none">
         <line x1="12" x2="708" y1="34" y2="34" className="zero-line" />
         <line x1="12" x2="708" y1="118" y2="118" className="zero-line" />
         <line x1="12" x2="708" y1="202" y2="202" className="zero-line" />
+        {[{ time: entryStartTime, label: 'Entry start', color: '#38bdf8' }, { time: entryEndTime, label: 'Entry cutoff', color: '#fbbf24' }].map((marker) => {
+          const minutes = parseMinutes(marker.time);
+          if (minutes === null || minutes < sessionStart || minutes > sessionEnd) return null;
+          return <g key={marker.label}>
+            <line x1={x(minutes)} x2={x(minutes)} y1="20" y2="202" stroke={marker.color} strokeWidth="1.5" strokeDasharray="3 4" />
+            <text x={Math.min(704, Math.max(16, x(minutes) + 4))} y="14" fill={marker.color} fontSize="10">{marker.label} {marker.time}</text>
+          </g>;
+        })}
         <polyline points={pathFor('price')} className="price-line" />
         <polyline points={pathFor('vwap')} className="vwap-line" />
         {usable.map((row, i) => <g key={`${row.time}-${i}`} className="price-vwap-point" onMouseEnter={() => setHoveredRow(row)} onFocus={() => setHoveredRow(row)} tabIndex="0">
@@ -986,7 +994,7 @@ export default function App() {
   const [selectedContract, setSelectedContract] = useState(null);
   const [contractLoading, setContractLoading] = useState(false);
   const [contractError, setContractError] = useState('');
-  const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.3 });
+  const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.3, autoTrenderEntryStartTime: '10:00', autoTrenderEntryEndTime: '15:25' });
 
   const refresh = useCallback(async () => {
     // Prevent overlapping 1-second polls from returning out of order and
@@ -1039,6 +1047,8 @@ export default function App() {
         callPcr: saved.callPcr ?? 1,
         putPcr: saved.putPcr ?? 1,
         vwapPriceDifferenceBuffer: saved.vwapPriceDifferenceBuffer ?? 0.3,
+        autoTrenderEntryStartTime: saved.autoTrenderEntryStartTime ?? '10:00',
+        autoTrenderEntryEndTime: saved.autoTrenderEntryEndTime ?? '15:25',
       });
     } else {
       setError((prev) => prev || 'Unable to refresh AutoTrender thresholds from Settings.');
@@ -1240,7 +1250,7 @@ export default function App() {
           <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
               <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><div className="chart-header-right"><div className="chart-enter-card"><span>Enter</span><strong className={'latest-enter ' + (calculatedRowsDescending[0]?.enter || 'wait').toLowerCase()}>{calculatedRowsDescending[0]?.enter || '—'}</strong></div><span className="data-count">{calculatedRows.filter((row) => row.price !== null || row.vwap !== null).length} points</span></div></div>
-              <PriceVwapChart rows={calculatedRows} />
+              <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} />
             </div>
             <aside className="latest-candle-card">
               <div className="latest-record-grid">
