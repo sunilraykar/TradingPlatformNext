@@ -588,18 +588,9 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
             if key not in _LEGACY_TRADE_FIELDS
         }
         updated.update(changes)
-        closing_status = str(updated.get("status", "")).upper()
-        if closing_status == "CLOSED" and str(updated.get("execution_mode", "PAPER")).upper() == "PAPER":
-            exit_price = updated.get("average_exit_price") or updated.get("exit_price")
-            entry_price = updated.get("average_entry_price") or updated.get("entry_price")
-            quantity = updated.get("quantity")
-            try:
-                if float(exit_price) <= 0 or float(entry_price) <= 0 or float(quantity) <= 0:
-                    raise ValueError("Closing a trade requires positive entry, exit, and quantity")
-            except (TypeError, ValueError) as exc:
-                raise ValueError(
-                    "Cannot close trade without valid entry price, exit price, side, and quantity"
-                ) from exc
+        # Paper trades are simulations: allow manual closure even when legacy
+        # records lack entry metadata. Missing entry data may limit P&L reporting,
+        # but must not prevent the user from closing the trade.
         updated["version"] = int(current.get("version", 1)) + 1
         updated["updated_at"] = _now()
         updated["persistence_state"] = "PENDING"
