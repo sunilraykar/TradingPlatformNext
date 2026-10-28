@@ -918,8 +918,7 @@ function AutoTrenderHistoricalData() {
   const last = Math.min((page + 1) * pageSize, result.total || 0);
 
   return <section className="historical-viewer">
-    <div className="panel-header">
-      <div><div className="eyebrow">AUTOTRENDER / MYSQL ARCHIVE</div><h2>Historical Data</h2></div>
+    <div className="historical-toolbar">
       <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh history'}</button>
     </div>
     <div className="index-switch historical-index-switch" aria-label="Select historical index">
