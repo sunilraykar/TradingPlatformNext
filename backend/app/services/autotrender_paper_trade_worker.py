@@ -325,9 +325,9 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
         premium = 0
     if premium <= 0:
         raise ValueError("missing_positive_live_option_premium")
-    quote_time = quote.get("timestamp") or quote.get("last_trade_time")
-    if not _quote_timestamp_is_fresh(quote_time):
-        raise ValueError("missing_or_stale_live_option_premium")
+    # Do not block AutoTrender paper entries because Kite quote timestamps are
+    # missing or stale. Keep the positive-premium check above because the
+    # trade still needs a usable entry price.
     quantity = int(chosen.get("lot_size") or 0)
     if quantity <= 0:
         raise ValueError("invalid_option_lot_size")
