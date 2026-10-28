@@ -47,9 +47,9 @@ export default function TradeTerminal() {
   const [trades, setTrades] = useState([]);
   const [terminal, setTerminal] = useState({});
   const [mode, setMode] = useState('ALL');
-  const [status, setStatus] = useState('ALL');
+  const [status, setStatus] = useState('OPEN');
   const [sourceFilter, setSourceFilter] = useState('ALL');
-  const [underlyingFilter, setUnderlyingFilter] = useState('ALL');
+  const [underlyingFilter, setUnderlyingFilter] = useState('INDICES');
   const [symbolLetter, setSymbolLetter] = useState('ALL');
   const [tradeDate, setTradeDate] = useState('');
   const [dateFilter, setDateFilter] = useState('TODAY');
