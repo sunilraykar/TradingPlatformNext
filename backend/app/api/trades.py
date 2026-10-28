@@ -270,6 +270,23 @@ async def trade_terminal_stream_socket(websocket: WebSocket) -> None:
         trade_terminal_stream.disconnect(websocket)
 
 
+@router.post("/subscribe-open-market-data")
+def subscribe_open_terminal_market_data() -> dict[str, Any]:
+    """Re-resolve and register Kite WebSocket subscriptions for all active terminal trades."""
+    try:
+        result = trade_terminal.subscribe_open_trades()
+        market = live_market_data.status()
+        diagnostics = terminal_market_data_status()
+        return {
+            "result": result,
+            "websocket": market,
+            "active_count": diagnostics["active_count"],
+            "active_terminal_trades": diagnostics["active_terminal_trades"],
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Unable to register active trade subscriptions") from exc
+
+
 @router.get("/market-data-status")
 def terminal_market_data_status() -> dict[str, Any]:
     """Diagnose live subscriptions for active Terminal trades; no database writes."""
