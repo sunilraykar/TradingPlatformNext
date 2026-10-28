@@ -12,6 +12,18 @@ const INDEX_LABELS = {
   bankex: 'BANKEX',
 };
 
+function isAutoTrenderMarketWindowOpen(now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  const minutesSinceMidnight = Number(values.hour) * 60 + Number(values.minute);
+  return minutesSinceMidnight >= 9 * 60 + 30;
+}
+
 async function api(path, options = {}) {
   const response = await fetch(`${API}/api/v1${path}`, {
     ...options,
@@ -326,14 +338,28 @@ function CacheViewer() {
       { key: 'autotrend:' + symbol.toLowerCase() + ':intraday', index: symbol, kind: 'Intraday', path: '/autotrender/indices/' + symbol + '/intraday?mins=5' },
       { key: 'autotrend:' + symbol.toLowerCase() + ':oi-graph', index: symbol, kind: 'Open-interest graph', path: '/autotrender/indices/' + symbol + '/oi-graph' },
     ]);
-    const results = await Promise.allSettled([api('/autotrender/cache/content'), ...indexSources.map((source) => api(source.path))]);
+    const marketWindowOpen = isAutoTrenderMarketWindowOpen();
+    const results = await Promise.allSettled([
+      api('/autotrender/cache/content'),
+      ...(marketWindowOpen ? indexSources.map((source) => api(source.path)) : []),
+    ]);
     if (results[0].status === 'fulfilled') { setSnapshot(results[0].value); setError(''); }
     else setError(results[0].reason?.message || 'Unable to read backend cache contents.');
-    setMarketEntries(indexSources.map((source, i) => {
-      const result = results[i + 1];
-      const data = result.status === 'fulfilled' ? maskSensitive(result.value) : null;
-      return { key: source.key, source: 'AutoTrender API response · ' + source.kind, index: source.index, fetched_at: result.status === 'fulfilled' ? fetchedAt : null, record_count: result.status === 'fulfilled' ? countRecords(data) : 0, data, error: result.status === 'rejected' ? (result.reason?.message || 'Request failed') : '' };
-    }));
+    setMarketEntries(marketWindowOpen
+      ? indexSources.map((source, i) => {
+          const result = results[i + 1];
+          const data = result.status === 'fulfilled' ? maskSensitive(result.value) : null;
+          return { key: source.key, source: 'AutoTrender API response · ' + source.kind, index: source.index, fetched_at: result.status === 'fulfilled' ? fetchedAt : null, record_count: result.status === 'fulfilled' ? countRecords(data) : 0, data, error: result.status === 'rejected' ? (result.reason?.message || 'Request failed') : '' };
+        })
+      : indexSources.map((source) => ({
+          key: source.key,
+          source: 'AutoTrender API response · ' + source.kind,
+          index: source.index,
+          fetched_at: null,
+          record_count: 0,
+          data: null,
+          error: 'Not requested before 09:30 Asia/Kolkata.',
+        })));
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -879,9 +905,12 @@ export default function App() {
     const requestedIndex = index;
     setLoading(true);
     setError('');
+    const marketWindowOpen = isAutoTrenderMarketWindowOpen();
     const results = await Promise.allSettled([
-      api(`/autotrender/indices/${index}/intraday?mins=${mins}`),
-      api(`/autotrender/indices/${index}/oi-graph`),
+      ...(marketWindowOpen ? [
+        api(`/autotrender/indices/${index}/intraday?mins=${mins}`),
+        api(`/autotrender/indices/${index}/oi-graph`),
+      ] : []),
       api('/autotrender/auth/status'),
       api('/autotrender/cache/status'),
       api('/autotrender/index-price'),
@@ -895,20 +924,23 @@ export default function App() {
       refreshInFlight.current = false;
       return;
     }
-    if (results[0].status === 'fulfilled') setIntraday(results[0].value);
-    else setError((prev) => prev || `Intraday: ${results[0].reason.message}`);
-    if (results[1].status === 'fulfilled') setOi(results[1].value);
-    else setError((prev) => prev || `OI graph: ${results[1].reason.message}`);
-    if (results[2].status === 'fulfilled') setAuth(results[2].value);
-    if (results[3].status === 'fulfilled') setCache(results[3].value);
-    if (results[4].status === 'fulfilled') {
+    const resultOffset = marketWindowOpen ? 2 : 0;
+    if (marketWindowOpen) {
+      if (results[0].status === 'fulfilled') setIntraday(results[0].value);
+      else setError((prev) => prev || `Intraday: ${results[0].reason.message}`);
+      if (results[1].status === 'fulfilled') setOi(results[1].value);
+      else setError((prev) => prev || `OI graph: ${results[1].reason.message}`);
+    }
+    if (results[resultOffset].status === 'fulfilled') setAuth(results[resultOffset].value);
+    if (results[resultOffset + 1].status === 'fulfilled') setCache(results[resultOffset + 1].value);
+    if (results[resultOffset + 2].status === 'fulfilled') {
       // Price data is independent from the selector: upstream may omit indices
       // from this response, but all five requested indices must remain selectable.
       setIndexPrices(results[4].value);
     }
-    if (results[6].status === 'fulfilled') setKiteIndexQuotes(results[6].value);
-    if (results[5].status === 'fulfilled') {
-      const saved = results[5].value.settings || {};
+    if (results[resultOffset + 4].status === 'fulfilled') setKiteIndexQuotes(results[resultOffset + 4].value);
+    if (results[resultOffset + 3].status === 'fulfilled') {
+      const saved = results[resultOffset + 3].value.settings || {};
       const configuredMinutes = Number(saved.autoTrenderIntradayMinutes ?? 3);
       setMins([1, 3, 5, 10, 15, 30, 60].includes(configuredMinutes) ? configuredMinutes : 3);
       setAutotrendSettings({
