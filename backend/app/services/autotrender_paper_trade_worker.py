@@ -51,6 +51,67 @@ _AUTH: AutoTrenderAuth | None = None
 _LAST_CYCLE: dict[str, Any] = {"state": "not_started", "last_cycle_at": None, "indices": {}, "poll_interval_seconds": DEFAULT_POLL_SECONDS}
 _LAST_SIGNAL_BY_INDEX: dict[str, str] = {}
 
+_ENTRY_CONDITION_LOG_TABLE_READY = False
+
+
+def _log_entry_condition(
+    *,
+    index: str | None,
+    state: str,
+    reason: str,
+    signal_timestamp: str | None = None,
+    direction: str | None = None,
+    signal_row: dict[str, Any] | None = None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    """Persist every failed/skipped automatic-entry decision in MySQL.
+
+    Logging is deliberately best-effort: a logging failure must never stop the
+    signal worker from evaluating other indices or creating an otherwise valid trade.
+    """
+    global _ENTRY_CONDITION_LOG_TABLE_READY
+    try:
+        engine = get_engine()
+        with engine.begin() as connection:
+            if not _ENTRY_CONDITION_LOG_TABLE_READY:
+                connection.execute(text("""
+                    CREATE TABLE IF NOT EXISTS trade_entry_condition_logs (
+                        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                        occurred_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                        source VARCHAR(40) NOT NULL DEFAULT 'AUTOTRENDER',
+                        underlying VARCHAR(40) NULL,
+                        state VARCHAR(40) NOT NULL,
+                        reason VARCHAR(255) NOT NULL,
+                        signal_timestamp VARCHAR(80) NULL,
+                        direction VARCHAR(20) NULL,
+                        signal_data LONGTEXT NULL,
+                        details LONGTEXT NULL,
+                        INDEX idx_entry_condition_occurred_at (occurred_at),
+                        INDEX idx_entry_condition_underlying_time (underlying, occurred_at),
+                        INDEX idx_entry_condition_reason (reason)
+                    ) ENGINE=InnoDB
+                """))
+                _ENTRY_CONDITION_LOG_TABLE_READY = True
+            connection.execute(text("""
+                INSERT INTO trade_entry_condition_logs
+                    (source, underlying, state, reason, signal_timestamp, direction, signal_data, details)
+                VALUES
+                    ('AUTOTRENDER', :underlying, :state, :reason, :signal_timestamp,
+                     :direction, :signal_data, :details)
+            """), {
+                "underlying": index,
+                "state": str(state)[:40],
+                "reason": str(reason)[:255],
+                "signal_timestamp": signal_timestamp,
+                "direction": direction,
+                "signal_data": json.dumps(signal_row, default=str, separators=(",", ":")) if signal_row is not None else None,
+                "details": json.dumps(details, default=str, separators=(",", ":")) if details is not None else None,
+            })
+    except Exception:
+        logger.exception("Could not persist failed entry condition index=%s state=%s reason=%s", index, state, reason)
+
+
+
 
 def _decode(value: Any) -> Any:
     if isinstance(value, str):
@@ -382,6 +443,8 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             "poll_interval_seconds": DEFAULT_POLL_SECONDS,
         }
         _LAST_CYCLE = result
+        _log_entry_condition(index=None, state="cycle_error", reason="settings_unavailable",
+                             details={"error": "SQLAlchemyError"})
         return result
 
     poll_interval_seconds = _poll_interval_seconds(settings.get("autoTrenderWorkerIntervalSeconds"))
@@ -395,9 +458,11 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             "poll_interval_seconds": poll_interval_seconds,
         }
         _LAST_CYCLE = result
+        _log_entry_condition(index=None, state="entry_blocked", reason=window_reason,
+                             details={"current_time": current.isoformat()})
         return result
 
-    outcomes: dict[str, Any] = {}
+    outcomes: dict[str, Any] = {};
     for index in enabled_indices(settings.get("autoTrenderDashboardIndices")):
         if index not in INDEX_CATEGORIES:
             continue
@@ -406,6 +471,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             row = latest_intraday_row(payload)
             if row is None:
                 outcomes[index] = {"state": "skipped", "reason": "no_intraday_row"}
+                _log_entry_condition(index=index, state="skipped", reason="no_intraday_row")
                 continue
             # Signal timestamp age/missing/format checks must not reject a signal.
             # Preserve a parseable source timestamp for deduplication; otherwise use
@@ -417,6 +483,8 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             signal_id = signal_timestamp.isoformat()
             if _LAST_SIGNAL_BY_INDEX.get(index) == signal_id:
                 outcomes[index] = {"state": "skipped", "reason": "duplicate_signal"}
+                _log_entry_condition(index=index, state="skipped", reason="duplicate_signal",
+                                     signal_timestamp=signal_id, signal_row=row)
                 continue
             evaluation: Evaluation = evaluate_signal(
                 row,
@@ -449,13 +517,26 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                 "strength_difference": evaluation.strength_difference,
                 "vwap_difference_percent": evaluation.vwap_difference_percent,
             }
+            if state != "paper_trade_created":
+                _log_entry_condition(
+                    index=index, state=state, reason=reason, signal_timestamp=signal_id,
+                    direction=evaluation.direction, signal_row=row,
+                    details={
+                        "eligible": evaluation.eligible,
+                        "strength_difference": evaluation.strength_difference,
+                        "vwap_difference_percent": evaluation.vwap_difference_percent,
+                    },
+                )
             logger.info(
                 "AutoTrender evaluation index=%s eligible=%s direction=%s reason=%s trade_id=%s",
                 index, evaluation.eligible, evaluation.direction, reason, trade_id,
             )
         except Exception as exc:  # isolate a failed index so other indices still evaluate
             logger.exception("AutoTrender worker failed for index %s", index)
-            outcomes[index] = {"state": "error", "reason": type(exc).__name__}
+            reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
+            outcomes[index] = {"state": "error", "reason": reason}
+            _log_entry_condition(index=index, state="error", reason=reason,
+                                 details={"exception_type": type(exc).__name__})
 
     result = {
         "state": "running",
