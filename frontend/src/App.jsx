@@ -850,6 +850,15 @@ function AutoTrenderHistoricalData() {
       setDetailLoading(false);
     }
   };
+  // With the snapshot list removed from the UI, automatically open the newest
+  // saved snapshot after the archive request completes. Navigation then moves
+  // through the available saved dates instead of remaining disabled.
+  useEffect(() => {
+    const snapshots = result.snapshots || [];
+    if (loading || selected || detailLoading || snapshots.length === 0) return;
+    const newest = snapshots[0];
+    if (newest?.snapshot_id) openSnapshot(newest);
+  }, [result.snapshots, loading, selected, detailLoading]);
   useEffect(() => {
     if (!selected?.trading_date || !selectedIndex) {
       setCalculatedHistory({ rows: [], total: 0 });
