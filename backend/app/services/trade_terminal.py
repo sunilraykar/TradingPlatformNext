@@ -216,6 +216,25 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     if quantity <= 0:
         raise ValueError("quantity must be greater than zero")
     idempotency_key = str(payload.get("idempotency_key") or uuid.uuid4())
+
+    # Snapshot the configured target/stop-loss strategy on each new trade.
+    # Keep it separate from the entry strategy/source label.
+    if not payload.get("trailing_strategy"):
+        try:
+            with get_engine().connect() as conn:
+                configured = conn.execute(
+                    text("SELECT setting_value FROM app_settings WHERE setting_key = :key"),
+                    {"key": "ui.targetStopLossStrategy"},
+                ).scalar_one_or_none()
+            if isinstance(configured, str):
+                try:
+                    configured = json.loads(configured)
+                except (TypeError, ValueError):
+                    pass
+            payload = {**payload, "trailing_strategy": str(configured or "M-TTTS")}
+        except SQLAlchemyError:
+            logger.exception("Unable to read configured target/stop-loss strategy; refusing to create trade without a strategy snapshot")
+            raise RuntimeError("Unable to read Target & Stop Loss Strategy from Settings; trade was not created")
     with _lock:
         for existing in _cache.values():
             if existing.get("idempotency_key") == idempotency_key:
