@@ -393,6 +393,109 @@ def refresh_open_trade_quotes_from_cache() -> int:
     return refreshed
 
 
+def _distance_value(value: Any, unit: Any, reference: float) -> float:
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        amount = 0.0
+    if str(unit or "POINTS").upper() in {"PERCENTAGE", "PERCENT", "%"}:
+        return max(0.0, reference * amount / 100.0)
+    return max(0.0, amount)
+
+
+def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str) -> None:
+    """Apply the trade's entry-time target/stop strategy to a fresh PAPER quote."""
+    if str(trade.get("execution_mode") or "PAPER").upper() != "PAPER":
+        return
+    try:
+        entry = float(trade.get("average_entry_price") or trade.get("entry_price") or 0)
+        quantity = int(trade.get("open_quantity", trade.get("quantity", 0)) or 0)
+        direction = str(trade.get("direction") or "BUY").upper()
+        if entry <= 0 or quantity <= 0 or direction not in {"BUY", "SELL"}:
+            return
+        config = trade.get("target_stop_loss_settings") or {}
+        strategy = str(trade.get("trailing_strategy") or config.get("targetStopLossStrategy") or "L-FT-FSL")
+        if strategy not in {"L-FT-FSL", "M-FT-TSL", "M-TTTS", "H-PT-TSL"}:
+            logger.error("Trade %s has unsupported target/stop strategy %s; risk manager skipped", trade.get("trade_id"), strategy)
+            return
+        target = float(trade.get("target") or trade.get("target_price") or 0)
+        stop = float(trade.get("stop_loss") or 0)
+        favorable = float(trade.get("favorable_price") or entry)
+        trailing_active = bool(trade.get("trailing_active"))
+        is_buy = direction == "BUY"
+        favorable_now = price > favorable if is_buy else price < favorable
+        if favorable_now:
+            favorable = price
+
+        distance = _distance_value(config.get("trailingDistance", 5), config.get("trailingDistanceType", "POINTS"), favorable)
+        target_step = _distance_value(config.get("trailingTarget", 10), config.get("trailingTargetType", "POINTS"), target or entry)
+        updates: dict[str, Any] = {}
+        stop_breached = False
+        target_breached = bool(target > 0 and (price >= target if is_buy else price <= target))
+
+        if strategy == "L-FT-FSL":
+            stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
+            if target_breached:
+                updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
+                                "exit_method": "TARGET", "auto_exit": True, "auto_exit_at": timestamp,
+                                "auto_exit_reason": "TARGET_BREACHED"})
+            elif stop_breached:
+                updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
+                                "exit_method": "STOP_LOSS", "auto_exit": True, "auto_exit_at": timestamp,
+                                "auto_exit_reason": "STOP_LOSS_BREACHED"})
+        elif strategy == "M-FT-TSL":
+            if distance > 0:
+                candidate = favorable - distance if is_buy else favorable + distance
+                if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
+                    stop = candidate
+                    updates["stop_loss"] = round(stop, 4)
+            stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
+            if target_breached:
+                updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
+                                "exit_method": "TARGET", "auto_exit": True, "auto_exit_at": timestamp,
+                                "auto_exit_reason": "TARGET_BREACHED"})
+            elif stop_breached:
+                updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
+                                "exit_method": "TRAILING_STOP", "auto_exit": True, "auto_exit_at": timestamp,
+                                "auto_exit_reason": "TRAILING_STOP_BREACHED"})
+        elif strategy == "M-TTTS":
+            if target_breached:
+                trailing_active = True
+            if trailing_active and distance > 0:
+                candidate = favorable - distance if is_buy else favorable + distance
+                if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
+                    stop = candidate
+                    updates["stop_loss"] = round(stop, 4)
+            updates["trailing_active"] = trailing_active
+            stop_breached = trailing_active and bool(stop > 0 and (price <= stop if is_buy else price >= stop))
+            if stop_breached:
+                updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
+                                "exit_method": "TRAILING_STOP", "auto_exit": True, "auto_exit_at": timestamp,
+                                "auto_exit_reason": "TARGET_TRIGGERED_TRAILING_STOP_BREACHED"})
+        elif strategy == "H-PT-TSL":
+            if distance > 0:
+                candidate = favorable - distance if is_buy else favorable + distance
+                if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
+                    stop = candidate
+                    updates["stop_loss"] = round(stop, 4)
+            if target_breached and target_step > 0:
+                target = target + target_step if is_buy else target - target_step
+                updates["target"] = round(target, 4)
+                updates["trailing_active"] = True
+            stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
+            if stop_breached:
+                updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
+                                "exit_method": "TRAILING_STOP", "auto_exit": True, "auto_exit_at": timestamp,
+                                "auto_exit_reason": "PROGRESSIVE_TRAILING_STOP_BREACHED"})
+
+        if favorable != float(trade.get("favorable_price") or entry):
+            updates["favorable_price"] = favorable
+        if updates:
+            update_trade(str(trade["trade_id"]), updates, event_type="TARGET_STOP_STRATEGY")
+    except (TypeError, ValueError, OverflowError):
+        logger.exception("Could not evaluate target/stop strategy for trade %s", trade.get("trade_id"))
+
+
 def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
     """Update matching open trades in memory and push changed rows; never touches MySQL."""
     token = quote.get("instrument_token")
@@ -420,47 +523,16 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
             changed.append(updated)
     for trade in changed:
         publish({"type": "trade_quote", "trade_id": trade["trade_id"], "trade": trade})
-        # Target exits are driven by every incoming LTP tick, without quote-age
-        # gates. For real broker positions, do not mark the trade closed locally:
-        # that requires a confirmed broker exit order/fill.
+        # Live broker positions must be closed only after confirmed broker fills.
+        # PAPER trades use the selected entry-time strategy for target/stop management.
         if str(trade.get("execution_mode") or "PAPER").upper() != "PAPER":
             continue
         try:
-            target = float(trade.get("target") or trade.get("target_price") or 0)
-            quantity = int(trade.get("quantity") or 0)
-            entry = float(trade.get("average_entry_price") or trade.get("entry_price") or 0)
-            direction = str(trade.get("direction") or "BUY").upper()
-        except (TypeError, ValueError, OverflowError):
-            continue
-        if target <= 0 or quantity <= 0 or entry <= 0 or direction not in {"BUY", "SELL"}:
-            continue
-        breached = price >= target if direction == "BUY" else price <= target
-        if not breached:
-            continue
-        try:
-            # Re-read immediately before closing so duplicate ticks cannot close twice.
             current = get_trade(str(trade["trade_id"]))
-            if not current or not _is_active(current):
-                continue
-            trade_terminal_exit = update_trade(
-                str(trade["trade_id"]),
-                {
-                    "status": "CLOSED",
-                    "exit_price": price,
-                    "average_exit_price": price,
-                    "exit_method": "TARGET",
-                    "auto_exit": True,
-                    "auto_exit_at": timestamp,
-                    "auto_exit_reason": "TARGET_BREACHED",
-                },
-                event_type="TARGET_EXIT",
-            )
-            logger.info(
-                "Trade target reached; PAPER trade closed trade_id=%s target=%s ltp=%s qty=%s",
-                trade["trade_id"], target, price, quantity,
-            )
+            if current and _is_active(current):
+                _manage_paper_trade_risk(current, price, timestamp)
         except (KeyError, RuntimeError, ValueError):
-            logger.exception("Target exit failed for trade %s", trade.get("trade_id"))
+            logger.exception("Target/stop strategy evaluation failed for trade %s", trade.get("trade_id"))
     return len(changed)
 
 
