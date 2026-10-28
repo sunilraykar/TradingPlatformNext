@@ -231,6 +231,44 @@ async def persist_index_intraday(index: str, request: Request) -> dict:
     return {"index": normalized_index, "trading_date": trading_date.isoformat(), "saved": len(records), "interval_minutes": mins}
 
 
+@router.get("/indices/{index}/intraday/history")
+def historical_intraday_rows(
+    index: str,
+    trading_date: Annotated[date, Query()],
+    mins: Annotated[int, Query(ge=1, le=60)] = 5,
+) -> dict:
+    """Return persisted calculated intraday rows for an index and trading date."""
+    normalized_index = index.upper()
+    if normalized_index not in _INDEX_CATEGORIES:
+        raise HTTPException(status_code=404, detail="Unsupported AutoTrender index")
+    _ensure_intraday_table()
+    with get_engine().connect() as connection:
+        rows = connection.execute(text("""
+            SELECT row_time AS time, call_value AS call, put_value AS put,
+                   diff_value AS diff, pcr_value AS pcr, price_value AS price,
+                   vwap_value AS vwap, vwap_signal AS vwapSignal,
+                   option_signal AS optionSignal, call_strength AS callStrength,
+                   put_strength AS putStrength, strength_diff AS strengthDiff,
+                   vwap_price_buffer_pct AS buffer, enter_signal AS enter,
+                   raw_row AS rawRow
+            FROM autotrender_intraday_rows
+            WHERE trading_date = :trading_date AND index_name = :index_name
+              AND interval_minutes = :mins
+            ORDER BY row_time DESC
+        """), {"trading_date": trading_date, "index_name": normalized_index, "mins": mins}).mappings().all()
+    result = []
+    for row in rows:
+        item = dict(row)
+        raw = item.pop("rawRow", None)
+        if isinstance(raw, str):
+            try:
+                item["rawRow"] = json.loads(raw)
+            except ValueError:
+                item["rawRow"] = raw
+        result.append({key: (value.isoformat() if hasattr(value, "isoformat") else value) for key, value in item.items()})
+    return {"index": normalized_index, "trading_date": trading_date.isoformat(), "interval_minutes": mins, "total": len(result), "rows": result}
+
+
 @router.get("/indices/{index}/oi-graph")
 def index_oi_graph(index: str, request: Request) -> dict:
     """Return AutoTrender change-in-open-interest graph data for a supported index."""
