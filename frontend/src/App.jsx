@@ -998,18 +998,30 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
       : [...new Set(displayRows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(normalizeColumn(key)) && !['lastquantity', 'lastqty', 'lasquantity'].includes(normalizeColumn(key))).slice(0, 18);
   const formatCell = (value, key) => {
     if (value === null || value === undefined || value === '') return '—';
-    // Historical AutoTrender payload cells may be wrapped as { value, colorCode }.
-    // Show the human-readable value rather than leaking the raw JSON object.
-    if (typeof value === 'object') {
-      const unwrapped = scalarValue(value);
-      if (unwrapped === null || unwrapped === undefined || unwrapped === '') return '—';
-      value = unwrapped;
+    // AutoTrender may wrap values in objects such as { value, colorCode }.
+    value = typeof value === 'object' ? scalarValue(value) : value;
+    if (value === null || value === undefined || value === '') return '—';
+    const numericColumns = new Set(['call','put','diff','pcr','price','vwap','callstrength','putstrength','strengthdiff','vwappricebufferpct','buffer','day_change','day_change_percentage','last_price','close_price','average_price','invested_amount','current_amount','pnl','open','high','low','close']);
+    const normalizedKey = normalizeColumn(key);
+    if (numericColumns.has(normalizedKey)) {
+      const parsed = numericValue(value);
+      if (parsed !== null) {
+        const digits = ['pcr','callstrength','putstrength','strengthdiff','vwappricebufferpct','buffer','day_change_percentage'].includes(normalizedKey) ? 2 : 2;
+        const formatted = parsed.toLocaleString('en-IN', { maximumFractionDigits: digits });
+        return ['callstrength','putstrength','vwappricebufferpct','buffer','day_change_percentage'].includes(normalizedKey) ? `${formatted}%` : formatted;
+      }
     }
-    if (typeof value === 'number') {
-      const formatted = value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
-      return key === 'day_change_percentage' ? `${formatted}%` : formatted;
+    if (normalizedKey === 'day_change_percentage' && !String(value).endsWith('%')) return `${value}%`;
+    return String(value);
+  };
+  const renderCell = (value, key) => {
+    const normalizedKey = normalizeColumn(key);
+    const signal = signalValue(value);
+    if (['vwapsignal','optionsignal','enter'].includes(normalizedKey) && signal) {
+      const css = signal === 'BUY' ? 'signal-buy' : signal === 'SELL' ? 'signal-sell' : signal === 'WAIT' ? 'wait' : '';
+      return <span className={`signal-tag ${normalizedKey === 'enter' ? 'enter-tag ' : ''}${css}`}>{signal}</span>;
     }
-    return key === 'day_change_percentage' && !String(value).endsWith('%') ? `${value}%` : String(value);
+    return formatCell(value, key);
   };
   const compareValues = (left, right) => {
     if (left === null || left === undefined || left === '') return right === null || right === undefined || right === '' ? 0 : 1;
@@ -1028,7 +1040,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
   const toggleSort = (key) => setSortConfig((current) => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }));
   const isSymbol = (key) => normalizeColumn(key) === 'tradingsymbol';
   const heading = (key) => ({ tradingsymbol: 'Symbol', price: 'Price', average_price: 'Average Price', last_price: 'Last Price', close_price: 'Close Price', pnl: 'PnL', day_change: 'Day Change', day_change_percentage: 'Day Change Percentage', invested_amount: 'Invested Amount', current_amount: 'Current Amount' })[key] || (isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' '));
-  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{formatCell(row[key], key)}</td>)}</tr>; })}</tbody></table></div>;
+  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{renderCell(row[key], key)}</td>)}</tr>; })}</tbody></table></div>;
 }
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
