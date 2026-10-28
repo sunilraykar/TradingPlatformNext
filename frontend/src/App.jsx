@@ -940,7 +940,13 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     : [...new Set(displayRows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(normalizeColumn(key)) && !['lastquantity', 'lastqty', 'lasquantity'].includes(normalizeColumn(key))).slice(0, 18);
   const formatCell = (value, key) => {
     if (value === null || value === undefined || value === '') return '—';
-    if (typeof value === 'object') return JSON.stringify(value);
+    // Historical AutoTrender payload cells may be wrapped as { value, colorCode }.
+    // Show the human-readable value rather than leaking the raw JSON object.
+    if (typeof value === 'object') {
+      const unwrapped = scalarValue(value);
+      if (unwrapped === null || unwrapped === undefined || unwrapped === '') return '—';
+      value = unwrapped;
+    }
     if (typeof value === 'number') {
       const formatted = value.toLocaleString('en-IN', { maximumFractionDigits: 2 });
       return key === 'day_change_percentage' ? `${formatted}%` : formatted;
