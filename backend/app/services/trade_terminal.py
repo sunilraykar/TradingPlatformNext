@@ -271,10 +271,14 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
                     payload["target"] = round(target_value, 4)
                 stop_value = float(payload.get("stop_loss") or 0)
                 initial_distance = _distance_value(config.get("trailingDistance", 5), config.get("trailingDistanceType", "POINTS"), entry_value)
-                if stop_value <= 0 and initial_distance > 0:
+                # M-TTTS intentionally has no initial stop-loss. Its stop is
+                # created only after the first target is reached and trailing activates.
+                if strategy != "M-TTTS" and stop_value <= 0 and initial_distance > 0:
                     direction = str(payload.get("direction") or "BUY").upper()
                     initial_stop = entry_value - initial_distance if direction == "BUY" else entry_value + initial_distance
                     payload["stop_loss"] = round(max(0.0, initial_stop), 4)
+                elif strategy == "M-TTTS":
+                    payload["stop_loss"] = None
         except (TypeError, ValueError, OverflowError):
             raise ValueError("Entry price and target/stop settings must be valid numbers")
     except SQLAlchemyError:
