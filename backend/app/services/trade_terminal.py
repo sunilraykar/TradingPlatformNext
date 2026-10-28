@@ -463,11 +463,11 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
             stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
             if target_breached:
                 updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
-                                "exit_method": "TARGET", "auto_exit": True, "auto_exit_at": timestamp,
+                                "exit_method": "TARGET", "exit_reason": "Target reached", "auto_exit": True, "auto_exit_at": timestamp,
                                 "auto_exit_reason": "TARGET_BREACHED"})
             elif stop_breached:
                 updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
-                                "exit_method": "STOP_LOSS", "auto_exit": True, "auto_exit_at": timestamp,
+                                "exit_method": "STOP_LOSS", "exit_reason": "Stop loss breached", "auto_exit": True, "auto_exit_at": timestamp,
                                 "auto_exit_reason": "STOP_LOSS_BREACHED"})
         elif strategy == "M-FT-TSL":
             if distance > 0:
@@ -478,11 +478,11 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
             stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
             if target_breached:
                 updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
-                                "exit_method": "TARGET", "auto_exit": True, "auto_exit_at": timestamp,
+                                "exit_method": "TARGET", "exit_reason": "Target reached", "auto_exit": True, "auto_exit_at": timestamp,
                                 "auto_exit_reason": "TARGET_BREACHED"})
             elif stop_breached:
                 updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
-                                "exit_method": "TRAILING_STOP", "auto_exit": True, "auto_exit_at": timestamp,
+                                "exit_method": "TRAILING_STOP", "exit_reason": "Trailing stop breached", "auto_exit": True, "auto_exit_at": timestamp,
                                 "auto_exit_reason": "TRAILING_STOP_BREACHED"})
         elif strategy == "M-TTTS":
             # Target-Triggered Trailing Stop: the first target activates trailing
@@ -509,7 +509,7 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
             stop_breached = trailing_active and bool(stop > 0 and (price <= stop if is_buy else price >= stop))
             if stop_breached:
                 updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
-                                "exit_method": "TRAILING_STOP", "auto_exit": True, "auto_exit_at": timestamp,
+                                "exit_method": "TRAILING_STOP", "exit_reason": "Target-triggered trailing stop breached", "auto_exit": True, "auto_exit_at": timestamp,
                                 "auto_exit_reason": "TARGET_TRIGGERED_TRAILING_STOP_BREACHED"})
         elif strategy == "H-PT-TSL":
             if distance > 0:
@@ -524,7 +524,7 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
             stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
             if stop_breached:
                 updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
-                                "exit_method": "TRAILING_STOP", "auto_exit": True, "auto_exit_at": timestamp,
+                                "exit_method": "TRAILING_STOP", "exit_reason": "Progressive trailing stop breached", "auto_exit": True, "auto_exit_at": timestamp,
                                 "auto_exit_reason": "PROGRESSIVE_TRAILING_STOP_BREACHED"})
 
         if favorable != float(trade.get("favorable_price") or entry):
@@ -772,7 +772,10 @@ def reconcile_live_positions(position_rows: list[dict[str, Any]]) -> dict[str, A
     for key, old in existing.items():
         if key in live_keys or not _is_active(old):
             continue
-        current = update_trade(old["trade_id"], {"status": "CLOSED"}, event_type="BROKER_POSITION_FLATTENED")
+        current = update_trade(old["trade_id"], {
+            "status": "CLOSED",
+            "exit_reason": old.get("exit_reason") or "Broker position flattened during reconciliation",
+        }, event_type="BROKER_POSITION_FLATTENED")
         current["persistence_state"] = "PERSISTED"
         closed += 1
     # Newly reconciled broker positions are added after startup, so the
