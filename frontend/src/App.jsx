@@ -371,6 +371,14 @@ function CacheViewer() {
     setLoading(false);
   }, []);
   useEffect(() => { load(); }, [load]);
+
+  // Open the newest available snapshot automatically; date navigation then
+  // loads each selected day's snapshot without a separate table selection.
+  useEffect(() => {
+    if (!selected && !detailLoading && result.snapshots?.length) {
+      openSnapshot(result.snapshots[0]);
+    }
+  }, [result.snapshots, selected, detailLoading]);
   const entries = [...((snapshot?.entries || []).map((entry) => ({ ...entry, data: maskSensitive(entry.data), group: 'Backend memory cache' }))), ...marketEntries];
   const rowsFor = (data) => {
     if (Array.isArray(data)) return data;
@@ -865,38 +873,31 @@ function AutoTrenderHistoricalData() {
       <div><div className="eyebrow">AUTOTRENDER / MYSQL ARCHIVE</div><h2>Historical Data</h2><p className="settings-intro">Daily snapshots of the complete AutoTrender Index Price cache, scheduled for 15:30 IST.</p></div>
       <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh history'}</button>
     </div>
-    <section className="metric-grid historical-summary">
-      <div className="metric"><span>STORED SNAPSHOTS</span><strong>{Number(result.total || 0).toLocaleString('en-IN')}</strong></div>
-      <div className="metric"><span>ARCHIVE</span><strong>MySQL</strong></div>
-      <div className="metric"><span>SCHEDULE</span><strong>15:30 IST</strong></div>
-    </section>
-    <div className="control-panel historical-filters">
-      <label>From date<input type="date" value={startDate} max={endDate || undefined} onChange={(e) => { setStartDate(e.target.value); setPage(0); setSelected(null); }} /></label>
-      <label>To date<input type="date" value={endDate} min={startDate || undefined} onChange={(e) => { setEndDate(e.target.value); setPage(0); setSelected(null); }} /></label>
-      <button type="button" className="button secondary" onClick={() => { setStartDate(''); setEndDate(''); setPage(0); setSelected(null); }}>Clear dates</button>
-    </div>
     <div className="index-switch historical-index-switch" aria-label="Select historical index">
       {DEFAULT_INDICES.concat(['MIDCPNIFTY', 'BANKEX']).filter((value, position, values) => values.indexOf(value) === position).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
     </div>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
-    <section className="panel historical-table-panel"><div className="panel-header"><div><div className="eyebrow">AUTOTRENDER / ARCHIVE</div><h2>Daily snapshots</h2></div><span className="data-count">{result.total ? 'Showing ' + first.toLocaleString('en-IN') + '–' + last.toLocaleString('en-IN') : 'No snapshots found'}{loading ? ' · Loading…' : ''}</span></div>
-    <div className="table-scroll"><table className="kite-data-table">
-      <thead><tr><th>Trading date</th><th>Captured at (IST)</th><th>Stored at (IST)</th><th>Payload size</th><th>Details</th></tr></thead>
-      <tbody>{(result.snapshots || []).map((snapshot) => <tr key={snapshot.snapshot_id}>
-        <td><strong>{snapshot.trading_date || '—'}</strong></td>
-        <td>{formatDateTime(snapshot.captured_at)}</td><td>{formatDateTime(snapshot.created_at)}</td>
-        <td>{snapshot.payload_bytes == null ? '—' : Number(snapshot.payload_bytes).toLocaleString('en-IN') + ' bytes'}</td>
-        <td><button type="button" className="button secondary" onClick={() => openSnapshot(snapshot)} disabled={detailLoading}>{selected?.snapshot_id === snapshot.snapshot_id ? 'Selected' : 'View payload'}</button></td>
-      </tr>)}
-      {!result.snapshots?.length && <tr><td colSpan="5" className="empty-cell">{loading ? 'Loading saved snapshots…' : 'No saved snapshots match these dates. The archive will appear after a successful daily save.'}</td></tr>}</tbody>
-    </table></div>
-    <div className="instrument-pagination"><span>Page {page + 1} of {Math.max(1, Math.ceil((result.total || 0) / pageSize))}</span><div>
-      <button type="button" className="button secondary" disabled={page === 0 || loading} onClick={() => { setPage((current) => Math.max(0, current - 1)); setSelected(null); }}>Previous</button>
-      <button type="button" className="button secondary" disabled={loading || (page + 1) * pageSize >= (result.total || 0)} onClick={() => { setPage((current) => current + 1); setSelected(null); }}>Next</button>
-    </div></div></section>
+    <section className="panel historical-date-navigation">
+      <button type="button" className="button secondary" aria-label="Previous available date" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) >= (result.snapshots || []).length - 1} onClick={() => {
+        const dates = result.snapshots || [];
+        const index = dates.findIndex((item) => item.trading_date === selected?.trading_date);
+        if (index >= 0 && dates[index + 1]) openSnapshot(dates[index + 1]);
+      }}>‹</button>
+      <div className="historical-selected-date">
+        <span className="eyebrow">SELECTED TRADING DATE</span>
+        <strong>{selected?.trading_date ? new Date(selected.trading_date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }) : loading ? 'Loading dates…' : 'No saved dates'}</strong>
+      </div>
+      <button type="button" className="button secondary" aria-label="Next available date" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) <= 0} onClick={() => {
+        const dates = result.snapshots || [];
+        const index = dates.findIndex((item) => item.trading_date === selected?.trading_date);
+        if (index > 0 && dates[index - 1]) openSnapshot(dates[index - 1]);
+      }}>›</button>
+      <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh'}</button>
+    </section>
+    {selected && <div className="historical-date-caption">Showing saved records for {selected.trading_date} · {selectedIndex}</div>}
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="panel historical-payload">
-      <div className="panel-header"><div><div className="eyebrow">SNAPSHOT #{selected.snapshot_id}</div><h3>Stored AutoTrender payload</h3><p className="settings-intro">Trading date {selected.trading_date || '—'} · SHA-256 {selected.payload_hash || '—'}</p></div><button type="button" className="button secondary" onClick={() => setSelected(null)}>Close</button></div>
+      <div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h3>Historical records</h3><p className="settings-intro">Trading date {selected.trading_date || '—'} · Captured {formatDateTime(selected.captured_at)}</p></div></div>
       <div className="metric-grid historical-live-metrics">
         <Metric label="INDEX" value={selectedIndex} />
         <Metric label="CAPTURED" value={formatDateTime(selected.captured_at)} />
