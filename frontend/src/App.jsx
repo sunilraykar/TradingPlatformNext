@@ -808,6 +808,8 @@ function AutoTrenderHistoricalData() {
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
+  const [calculatedHistory, setCalculatedHistory] = useState({ rows: [], total: 0 });
+  const [calculatedHistoryLoading, setCalculatedHistoryLoading] = useState(false);
   const pageSize = 50;
 
   const load = useCallback(async () => {
@@ -840,6 +842,20 @@ function AutoTrenderHistoricalData() {
       setDetailLoading(false);
     }
   };
+  useEffect(() => {
+    if (!selected?.trading_date || !selectedIndex) {
+      setCalculatedHistory({ rows: [], total: 0 });
+      return;
+    }
+    let active = true;
+    setCalculatedHistoryLoading(true);
+    api('/autotrender/indices/' + encodeURIComponent(selectedIndex) + '/intraday/history?trading_date=' + encodeURIComponent(selected.trading_date) + '&mins=' + encodeURIComponent(selected.payload?.capture_interval_minutes || 5))
+      .then((data) => { if (active) setCalculatedHistory(data); })
+      .catch((e) => { if (active) { setCalculatedHistory({ rows: [], total: 0 }); console.error('Unable to load persisted calculated intraday history:', e); } })
+      .finally(() => { if (active) setCalculatedHistoryLoading(false); });
+    return () => { active = false; };
+  }, [selected?.trading_date, selectedIndex, selected?.payload?.capture_interval_minutes]);
+
   const formatDateTime = (value) => value ? new Date(/[zZ]|[+-]\\d{2}:?\\d{2}$/.test(value) ? value : value + '+05:30').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
   const first = result.total ? page * pageSize + 1 : 0;
   const last = Math.min((page + 1) * pageSize, result.total || 0);
@@ -890,6 +906,14 @@ function AutoTrenderHistoricalData() {
       </div>
       <section className="content-grid historical-dataset-grid">
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div></div><KiteDataTable rows={(() => { const data = selected.payload?.indices?.[selectedIndex]?.intraday; if (!data || data.error) return []; const candidate = data.data ?? data.rows ?? data.result; return Array.isArray(candidate) ? candidate : Array.isArray(data) ? data : candidate && typeof candidate === 'object' ? [candidate] : []; })()} emptyText={selected.payload?.indices?.[selectedIndex]?.intraday?.error || 'No tabular intraday rows in this saved snapshot.'} /></article>
+
+        <article className="panel historical-calculated-intraday-panel">
+          <div className="panel-header"><div><div className="eyebrow">HISTORICAL / MYSQL</div><h2>Calculated intraday data</h2><p className="settings-intro">Persisted calculated values for {selectedIndex} on {selected.trading_date || '—'}.</p></div><span className="data-count">{calculatedHistoryLoading ? 'Loading…' : (calculatedHistory.total || 0) + ' rows'}</span></div>
+          <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>Call</th><th>Put</th><th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th><th>VWAP Signal</th><th>Option Signal</th><th>Call Strength (%)</th><th>Put Strength (%)</th><th>Call-Put Strength Diff</th><th>VWAP-Price Buffer (%)</th><th>Enter</th></tr></thead><tbody>
+            {(calculatedHistory.rows || []).map((row, i) => <tr key={row.time || i}><td>{row.time || '—'}</td><td>{row.call ?? '—'}</td><td>{row.put ?? '—'}</td><td>{row.diff ?? '—'}</td><td>{row.pcr ?? '—'}</td><td>{row.price ?? '—'}</td><td>{row.vwap ?? '—'}</td><td>{row.vwapSignal || '—'}</td><td>{row.optionSignal || '—'}</td><td>{row.callStrength ?? '—'}</td><td>{row.putStrength ?? '—'}</td><td>{row.strengthDiff ?? '—'}</td><td>{row.buffer ?? '—'}</td><td>{row.enter || '—'}</td></tr>)}
+            {!calculatedHistory.rows?.length && <tr><td colSpan="14" className="empty-cell">{calculatedHistoryLoading ? 'Loading persisted calculated rows…' : 'No calculated rows saved for this index/date yet. These records are saved after the live-data persistence fix is running.'}</td></tr>}
+          </tbody></table></div>
+        </article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
       </section>
       <details className="historical-raw-payload"><summary>View complete saved JSON payload · SHA-256 {selected.payload_hash || '—'}</summary><pre>{JSON.stringify(selected.payload, null, 2)}</pre></details>
