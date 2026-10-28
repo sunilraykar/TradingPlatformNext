@@ -936,7 +936,7 @@ export default function App() {
     if (results[resultOffset + 2].status === 'fulfilled') {
       // Price data is independent from the selector: upstream may omit indices
       // from this response, but all five requested indices must remain selectable.
-      setIndexPrices(results[4].value);
+      setIndexPrices(results[resultOffset + 2].value);
     }
     if (results[resultOffset + 4].status === 'fulfilled') setKiteIndexQuotes(results[resultOffset + 4].value);
     if (results[resultOffset + 3].status === 'fulfilled') {
