@@ -899,15 +899,7 @@ function AutoTrenderHistoricalData() {
       </div>
     </section>
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
-    {selected && <section className="panel historical-payload">
-      <div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h3>Historical records</h3><p className="settings-intro">Trading date {selected.trading_date || '—'} · Captured {formatDateTime(selected.captured_at)}</p></div></div>
-      <div className="metric-grid historical-live-metrics">
-        <Metric label="INDEX" value={selectedIndex} />
-        <Metric label="CAPTURED" value={formatDateTime(selected.captured_at)} />
-        <Metric label="INTRADAY INTERVAL" value={selected.payload?.capture_interval_minutes ? selected.payload.capture_interval_minutes + ' min' : '—'} />
-        <Metric label="PRICE CACHE" value={selected.payload?.index_price?.data?.[selectedIndex.toLowerCase()]?.price ?? selected.payload?.index_price?.data?.[selectedIndex.toLowerCase()]?.ltp ?? '—'} />
-        <Metric label="OI GRAPH" value={selected.payload?.indices?.[selectedIndex]?.oi_graph ? 'Available' : 'Not captured'} />
-      </div>
+    {selected && <section className="historical-records-content">
       <section className="content-grid historical-dataset-grid">
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2><p className="settings-intro">Original AutoTrender fields combined with persisted calculated signals from MySQL.</p><span className="data-count">{calculatedHistoryLoading ? 'Loading calculated fields…' : (calculatedHistory.total || 0) + ' calculated rows'}</span></div></div><KiteDataTable columnsOverride={['time','call','put','diff','pcr','price','vwap','vwapSignal','optionSignal','callStrength','putStrength','strengthDiff','vwapPriceBufferPct','enter']} rows={(() => {
           const data = selected.payload?.indices?.[selectedIndex]?.intraday;
