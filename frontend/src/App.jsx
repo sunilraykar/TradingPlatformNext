@@ -687,7 +687,49 @@ function SettingsPanel() {
         {fieldControl(['kiteStrikeCount','Strikes Each Side','select',10,'Number of strikes on either side.',['5|5','10|10','15|15','20|20','30|30']])}
       </div></>}
       {tab === 'symbol-whitelist' && <><h2>Option Chain Symbol Whitelist / Blacklist</h2><p className="settings-intro">Maintain symbols explicitly allowed or excluded from the option-chain universe. Separate symbols with commas.</p>{fieldControl(['optionChainSymbolWhitelistText','Whitelist Symbols','text',(value('optionChainSymbolWhitelist') || []).join(', '),'Comma-separated allow-list.'])}{fieldControl(['optionChainSymbolBlacklistText','Blacklist Symbols','text',(value('optionChainSymbolBlacklist') || []).join(', '),'Comma-separated block-list.'])}<div className="settings-grid">{fieldControl(['optionChainSymbolLetter','Filter by Initial Letter','select','ALL','','ALL|All letters;A|A;B|B;C|C;D|D;E|E;F|F;G|G;H|H;I|I;J|J;K|K;L|L;M|M;N|N;O|O;P|P;Q|Q;R|R;S|S;T|T;U|U;V|V;W|W;X|X;Y|Y;Z|Z'])}{fieldControl(['optionChainSymbolStatus','Symbol Status Filter','select','ALL','','ALL|All;ACTIVE|Active;INACTIVE|Inactive'])}</div></>}
-      {tab === 'autotrend' && <><h2>AutoTrender</h2><div className="settings-grid">{SETTINGS_FIELDS.autotrend.map(fieldControl)}</div><div className="settings-check-grid">{Object.entries(value('autoTrenderDashboardIndices') || {}).map(([name, enabled]) => <label className="settings-toggle" key={name}><input type="checkbox" checked={Boolean(enabled)} onChange={(e) => change('autoTrenderDashboardIndices', { ...(value('autoTrenderDashboardIndices') || {}), [name]: e.target.checked })} /><span><strong>{name}</strong><small>Show on AutoTrender dashboard</small></span></label>)}</div></>}
+      {tab === 'autotrend' && <>
+        <h2>AutoTrender</h2>
+        <p className="settings-intro">Configure refresh behavior, data freshness, signal qualification, entry timing, and the indices shown on the dashboard.</p>
+        <div className="autotrend-settings-sections" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+          <section className="panel autotrend-settings-card">
+            <div className="panel-header"><div><div className="eyebrow">01 · PROCESSING</div><h3>Refresh &amp; Evaluation</h3></div></div>
+            <div className="settings-grid">
+              {fieldControl(SETTINGS_FIELDS.autotrend[0])}
+              {fieldControl(SETTINGS_FIELDS.autotrend[2])}
+            </div>
+            <p className="settings-intro">Controls how often the dashboard refreshes and how frequently the backend evaluates signals. These intervals are independent.</p>
+          </section>
+          <section className="panel autotrend-settings-card">
+            <div className="panel-header"><div><div className="eyebrow">02 · DATA QUALITY</div><h3>Data Window &amp; Signal Freshness</h3></div></div>
+            <div className="settings-grid">
+              {fieldControl(SETTINGS_FIELDS.autotrend[1])}
+              {fieldControl(SETTINGS_FIELDS.autotrend[3])}
+            </div>
+            <p className="settings-intro">Defines the requested intraday lookback window and the maximum age accepted for a signal.</p>
+          </section>
+          <section className="panel autotrend-settings-card">
+            <div className="panel-header"><div><div className="eyebrow">03 · QUALIFICATION</div><h3>Signal Filters &amp; Thresholds</h3></div></div>
+            <div className="settings-grid">
+              {fieldControl(SETTINGS_FIELDS.autotrend[4])}
+              {fieldControl(SETTINGS_FIELDS.autotrend[5])}
+              {fieldControl(SETTINGS_FIELDS.autotrend[6])}
+              {fieldControl(SETTINGS_FIELDS.autotrend[7])}
+            </div>
+          </section>
+          <section className="panel autotrend-settings-card">
+            <div className="panel-header"><div><div className="eyebrow">04 · ENTRY CONTROL</div><h3>Trading Session &amp; Entry Window</h3></div></div>
+            <div className="settings-grid">
+              {fieldControl(SETTINGS_FIELDS.autotrend[8])}
+              {fieldControl(SETTINGS_FIELDS.autotrend[9])}
+            </div>
+            <p className="settings-intro">The start time is inclusive; the cutoff is exclusive. Times are interpreted in India Standard Time (IST).</p>
+          </section>
+          <section className="panel autotrend-settings-card">
+            <div className="panel-header"><div><div className="eyebrow">05 · DASHBOARD</div><h3>Indices to Display</h3></div></div>
+            <div className="settings-check-grid">{Object.entries(value('autoTrenderDashboardIndices') || {}).map(([name, enabled]) => <label className="settings-toggle" key={name}><input type="checkbox" checked={Boolean(enabled)} onChange={(e) => change('autoTrenderDashboardIndices', { ...(value('autoTrenderDashboardIndices') || {}), [name]: e.target.checked })} /><span><strong>{name}</strong><small>Show on AutoTrender dashboard</small></span></label>)}</div>
+          </section>
+        </div>
+      </>}
       {tab === 'websocket' && <><h2>WebSocket</h2><p className="settings-intro">Connection status is runtime information. Subscription configuration is shown separately from secret credentials.</p><div className="settings-grid">{fieldControl(['kiteWebsocketEnabled','Enable Kite WebSocket startup','boolean',true,'Start the live quote feed when a valid Kite session is restored.'])}{fieldControl(['websocketReconnectSeconds','Reconnect Backoff (seconds)','number','5','Configured reconnect delay.','1'])}{fieldControl(['websocketMode','Subscription Mode','select','quote','','ltp|LTP;quote|Quote;full|Full'])}</div><div className="settings-ui-only-note">Live status is displayed in the top header. API keys, API secrets and access tokens must remain in backend environment configuration and encrypted session storage.</div></>}
       {tab === 'active-trades' && <><h2>Active Trades</h2><div className="settings-grid">{SETTINGS_FIELDS['active-trades'].map(fieldControl)}</div><div className="settings-ui-only-note">Global defaults apply to new trades. Existing trades should retain their entry-time strategy snapshot.</div></>}
       {tab === 'market-session' && <><h2>Market Session</h2><div className="settings-grid">{SETTINGS_FIELDS['market-session'].map(fieldControl)}{fieldControl(['kiteAutoLoginEnabled','Automatic Kite Login','boolean',true,'Open the broker login flow when no valid session is available.'])}{fieldControl(['kiteSessionResetEnabled','Daily Kite Session Reset','boolean',true,'Expire the stored session at the configured time.'])}{fieldControl(['kiteSessionResetTime','Session Reset Time','time','23:00','Time uses the configured timezone.'])}{fieldControl(['kiteSessionResetTimezone','Session Reset Timezone','select','Asia/Kolkata','','Asia/Kolkata|Asia/Kolkata;UTC|UTC'])}</div></>}
