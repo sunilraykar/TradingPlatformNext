@@ -272,7 +272,9 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
                 stop_value = float(payload.get("stop_loss") or 0)
                 initial_distance = _distance_value(config.get("trailingDistance", 5), config.get("trailingDistanceType", "POINTS"), entry_value)
                 if stop_value <= 0 and initial_distance > 0:
-                    payload["stop_loss"] = round(max(0.0, entry_value - initial_distance), 4)
+                    direction = str(payload.get("direction") or "BUY").upper()
+                    initial_stop = entry_value - initial_distance if direction == "BUY" else entry_value + initial_distance
+                    payload["stop_loss"] = round(max(0.0, initial_stop), 4)
         except (TypeError, ValueError, OverflowError):
             raise ValueError("Entry price and target/stop settings must be valid numbers")
     except SQLAlchemyError:
