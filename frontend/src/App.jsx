@@ -874,7 +874,7 @@ function AutoTrenderHistoricalData() {
       <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh history'}</button>
     </div>
     <div className="index-switch historical-index-switch" aria-label="Select historical index">
-      {DEFAULT_INDICES.concat(['MIDCPNIFTY', 'BANKEX']).filter((value, position, values) => values.indexOf(value) === position).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
+      {DEFAULT_INDICES.filter((value, position, values) => values.indexOf(value) === position && !['MIDCPNIFTY', 'BANKEX'].includes(value)).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
     </div>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
     <section className="panel historical-date-navigation" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(240px, 2fr) 1fr', alignItems: 'center', gap: '16px', width: '100%', boxSizing: 'border-box', minHeight: '92px', padding: '18px 24px', margin: '14px 0' }}>
