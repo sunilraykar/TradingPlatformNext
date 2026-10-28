@@ -180,8 +180,7 @@ export default function TradeTerminal() {
   };
 
   const sources = [...new Set(trades.map((trade) => trade.source).filter(Boolean))].sort();
-  const underlyings = [...new Set(trades.map((trade) => trade.underlying).filter(Boolean))].sort();
-  const tradesMatchingOtherFilters = trades.filter((trade) => {
+  const tradesMatchingBaseFilters = trades.filter((trade) => {
     const created = new Date(trade.created_at || trade.updated_at || 0);
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -193,18 +192,21 @@ export default function TradeTerminal() {
       (sourceFilter === 'AUTOTRENDER' && normalizedSource.includes('AUTO'));
     const statusValue = String(trade.status || '').toUpperCase();
     const statusMatches = status === 'ALL' || (status === 'OPEN' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(statusValue)) || statusValue === status;
-    const underlyingMatches = underlyingFilter === 'ALL' ||
-      (underlyingFilter === 'INDICES' && ['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(String(trade.underlying || '').toUpperCase())) ||
-      (underlyingFilter === 'OTHER'
-        ? !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(String(trade.underlying || '').toUpperCase())
-        : String(trade.underlying || '') === underlyingFilter);
     const dateMatches = dateFilter === 'ALL' ||
       (dateFilter === 'TODAY' && created >= startOfToday) ||
       (dateFilter === 'WEEK' && created >= startOfWeek) ||
       (dateFilter === 'MONTH' && created >= startOfMonth) ||
       (dateFilter === 'CUSTOM' && !!tradeDate && String(trade.created_at || '').slice(0, 10) === tradeDate);
-    return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches &&
-      underlyingMatches && dateMatches;
+    return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches && dateMatches;
+  });
+  const underlyings = [...new Set(tradesMatchingBaseFilters.map((trade) => String(trade.underlying || '').trim()).filter(Boolean))].sort();
+  const tradesMatchingOtherFilters = tradesMatchingBaseFilters.filter((trade) => {
+    const underlyingValue = String(trade.underlying || '').toUpperCase();
+    return underlyingFilter === 'ALL' ||
+      (underlyingFilter === 'INDICES' && ['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(underlyingValue)) ||
+      (underlyingFilter === 'OTHER'
+        ? !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(underlyingValue)
+        : String(trade.underlying || '') === underlyingFilter);
   });
   const symbolLetters = [...new Set(tradesMatchingOtherFilters.flatMap((trade) =>
     [trade.instrument_symbol, trade.underlying]
