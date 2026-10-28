@@ -910,26 +910,39 @@ function AutoTrenderHistoricalData() {
           if (!data || data.error) return [];
           const candidate = data.data ?? data.rows ?? data.result;
           const originalRows = Array.isArray(candidate) ? candidate : Array.isArray(data) ? data : candidate && typeof candidate === 'object' ? [candidate] : [];
+          const normalizedRows = originalRows.map((row) => ({
+            ...row,
+            time: row.time ?? row.Time ?? row.mtime ?? row.Mtime ?? '—',
+            call: row.call ?? row.Call ?? null,
+            put: row.put ?? row.Put ?? null,
+            diff: row.diff ?? row.Diff ?? null,
+            pcr: row.pcr ?? row.Pcr ?? row.PCR ?? null,
+            price: row.price ?? row.Price ?? null,
+            vwap: row.vwap ?? row.Vwap ?? row.vWap ?? row.VWAP ?? null,
+            vwapSignal: row.vwapSignal ?? row.VwapSignal ?? row.vWapSignal ?? row.VWapSignal ?? null,
+            optionSignal: row.optionSignal ?? row.OptionSignal ?? null,
+          }));
+          // Calculate derived columns from the saved snapshot itself. Older
+          // snapshots predate the MySQL calculated-row table, so relying only
+          // on a database time-match leaves those columns blank.
+          const derivedByTime = new Map(buildIntradayRows(normalizedRows).map((row) => [String(row.time || '').trim(), row]));
           const calculatedByTime = new Map((calculatedHistory.rows || []).map((row) => [String(row.time || '').trim(), row]));
-          return originalRows.map((row) => {
-            const rowTime = String(row.time ?? row.Time ?? row.mtime ?? row.Mtime ?? '').trim();
-            const calculated = calculatedByTime.get(rowTime);
+          return normalizedRows.map((row) => {
+            const key = String(row.time || '').trim();
+            const derived = derivedByTime.get(key) || {};
+            const calculated = calculatedByTime.get(key) || {};
             return {
               ...row,
-              time: row.time ?? row.Time ?? row.mtime ?? row.Mtime ?? '—',
-              call: row.call ?? row.Call ?? null,
-              put: row.put ?? row.Put ?? null,
-              diff: row.diff ?? row.Diff ?? null,
-              pcr: calculated?.pcr ?? row.pcr ?? row.Pcr ?? null,
-              price: calculated?.price ?? row.price ?? row.Price ?? null,
-              vwap: calculated?.vwap ?? row.vwap ?? row.Vwap ?? null,
-              vwapSignal: calculated?.vwapSignal ?? row.vwapSignal ?? row.VwapSignal ?? null,
-              optionSignal: calculated?.optionSignal ?? row.optionSignal ?? row.OptionSignal ?? null,
-              callStrength: calculated?.callStrength ?? null,
-              putStrength: calculated?.putStrength ?? null,
-              strengthDiff: calculated?.strengthDiff ?? null,
-              vwapPriceBufferPct: calculated?.buffer ?? null,
-              enter: calculated?.enter ?? null,
+              pcr: calculated.pcr ?? derived.pcr ?? row.pcr,
+              price: calculated.price ?? derived.price ?? row.price,
+              vwap: calculated.vwap ?? derived.vwap ?? row.vwap,
+              vwapSignal: calculated.vwapSignal ?? derived.vwapSignal ?? row.vwapSignal,
+              optionSignal: calculated.optionSignal ?? derived.optionSignal ?? row.optionSignal,
+              callStrength: calculated.callStrength ?? derived.callStrength ?? null,
+              putStrength: calculated.putStrength ?? derived.putStrength ?? null,
+              strengthDiff: calculated.strengthDiff ?? derived.strengthDiff ?? null,
+              vwapPriceBufferPct: calculated.buffer ?? derived.buffer ?? null,
+              enter: calculated.enter ?? derived.enter ?? null,
             };
           });
         })()} emptyText={selected.payload?.indices?.[selectedIndex]?.intraday?.error || 'No tabular intraday rows in this saved snapshot.'} /></article>
