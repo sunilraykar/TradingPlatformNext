@@ -105,6 +105,132 @@ def index_intraday(
     )
 
 
+def _ensure_intraday_table() -> None:
+    """Create the durable calculated AutoTrender intraday table if needed."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS autotrender_intraday_rows (
+        row_id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        trading_date DATE NOT NULL,
+        index_name VARCHAR(24) NOT NULL,
+        interval_minutes INT NOT NULL,
+        row_time VARCHAR(32) NOT NULL,
+        call_value DECIMAL(18, 4) NULL,
+        put_value DECIMAL(18, 4) NULL,
+        diff_value DECIMAL(18, 4) NULL,
+        pcr_value DECIMAL(18, 6) NULL,
+        price_value DECIMAL(18, 4) NULL,
+        vwap_value DECIMAL(18, 4) NULL,
+        vwap_signal VARCHAR(16) NULL,
+        option_signal VARCHAR(16) NULL,
+        call_strength DECIMAL(12, 6) NULL,
+        put_strength DECIMAL(12, 6) NULL,
+        strength_diff DECIMAL(12, 6) NULL,
+        vwap_price_buffer_pct DECIMAL(12, 6) NULL,
+        enter_signal VARCHAR(16) NULL,
+        raw_row JSON NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_autotrender_intraday_point (trading_date, index_name, interval_minutes, row_time),
+        KEY ix_autotrender_intraday_date_index (trading_date, index_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """
+    with get_engine().begin() as connection:
+        connection.execute(text(ddl))
+
+
+def _number_or_none(value):
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+@router.post("/indices/{index}/intraday/persist")
+async def persist_index_intraday(index: str, request: Request) -> dict:
+    """Persist every calculated intraday row for the selected index and interval."""
+    normalized_index = index.upper()
+    if normalized_index not in _INDEX_CATEGORIES:
+        raise HTTPException(status_code=404, detail="Unsupported AutoTrender index")
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail="A JSON body is required") from exc
+    if not isinstance(body, dict) or not isinstance(body.get("rows"), list):
+        raise HTTPException(status_code=400, detail="Request must contain a rows array")
+    mins = body.get("mins", 5)
+    if not isinstance(mins, int) or mins < 1 or mins > 60:
+        raise HTTPException(status_code=400, detail="mins must be an integer from 1 to 60")
+    rows = body["rows"]
+    if len(rows) > 2000:
+        raise HTTPException(status_code=413, detail="Too many intraday rows in one request")
+    trading_date = datetime.now(INDIA_TZ).date()
+    if not rows:
+        return {"index": normalized_index, "trading_date": trading_date.isoformat(), "saved": 0}
+    _ensure_intraday_table()
+    records = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        row_time = str(row.get("time") or "").strip()
+        if not row_time:
+            continue
+        records.append({
+            "trading_date": trading_date,
+            "index_name": normalized_index,
+            "interval_minutes": mins,
+            "row_time": row_time[:32],
+            "call_value": _number_or_none(row.get("call")),
+            "put_value": _number_or_none(row.get("put")),
+            "diff_value": _number_or_none(row.get("diff")),
+            "pcr_value": _number_or_none(row.get("pcr")),
+            "price_value": _number_or_none(row.get("price")),
+            "vwap_value": _number_or_none(row.get("vwap")),
+            "vwap_signal": str(row.get("vwapSignal") or "")[:16] or None,
+            "option_signal": str(row.get("optionSignal") or "")[:16] or None,
+            "call_strength": _number_or_none(row.get("callStrength")),
+            "put_strength": _number_or_none(row.get("putStrength")),
+            "strength_diff": _number_or_none(row.get("strengthDiff")),
+            "vwap_price_buffer_pct": _number_or_none(row.get("buffer")),
+            "enter_signal": str(row.get("enter") or "")[:16] or None,
+            "raw_row": json.dumps(row, ensure_ascii=False, default=str),
+        })
+    if not records:
+        return {"index": normalized_index, "trading_date": trading_date.isoformat(), "saved": 0}
+    statement = text("""
+        INSERT INTO autotrender_intraday_rows (
+            trading_date, index_name, interval_minutes, row_time,
+            call_value, put_value, diff_value, pcr_value, price_value, vwap_value,
+            vwap_signal, option_signal, call_strength, put_strength, strength_diff,
+            vwap_price_buffer_pct, enter_signal, raw_row
+        ) VALUES (
+            :trading_date, :index_name, :interval_minutes, :row_time,
+            :call_value, :put_value, :diff_value, :pcr_value, :price_value, :vwap_value,
+            :vwap_signal, :option_signal, :call_strength, :put_strength, :strength_diff,
+            :vwap_price_buffer_pct, :enter_signal, :raw_row
+        ) AS incoming
+        ON DUPLICATE KEY UPDATE
+            call_value = incoming.call_value,
+            put_value = incoming.put_value,
+            diff_value = incoming.diff_value,
+            pcr_value = incoming.pcr_value,
+            price_value = incoming.price_value,
+            vwap_value = incoming.vwap_value,
+            vwap_signal = incoming.vwap_signal,
+            option_signal = incoming.option_signal,
+            call_strength = incoming.call_strength,
+            put_strength = incoming.put_strength,
+            strength_diff = incoming.strength_diff,
+            vwap_price_buffer_pct = incoming.vwap_price_buffer_pct,
+            enter_signal = incoming.enter_signal,
+            raw_row = incoming.raw_row
+    """)
+    with get_engine().begin() as connection:
+        connection.execute(statement, records)
+    return {"index": normalized_index, "trading_date": trading_date.isoformat(), "saved": len(records), "interval_minutes": mins}
+
+
 @router.get("/indices/{index}/oi-graph")
 def index_oi_graph(index: str, request: Request) -> dict:
     """Return AutoTrender change-in-open-interest graph data for a supported index."""
