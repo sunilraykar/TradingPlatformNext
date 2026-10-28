@@ -864,6 +864,46 @@ function AutoTrenderHistoricalData() {
     return () => { active = false; };
   }, [selected?.trading_date, selectedIndex, selected?.payload?.capture_interval_minutes]);
 
+  const historicalIntradayRows = useMemo(() => {
+    const data = selected?.payload?.indices?.[selectedIndex]?.intraday;
+    if (!data || data.error) return [];
+    const candidate = data.data ?? data.rows ?? data.result;
+    const sourceRows = Array.isArray(candidate) ? candidate : Array.isArray(data) ? data : candidate && typeof candidate === 'object' ? [candidate] : [];
+    const normalizedRows = sourceRows.map((row) => ({
+      ...row,
+      time: row.time ?? row.Time ?? row.mtime ?? row.Mtime ?? '—',
+      call: row.call ?? row.Call ?? null,
+      put: row.put ?? row.Put ?? null,
+      diff: row.diff ?? row.Diff ?? null,
+      pcr: row.pcr ?? row.Pcr ?? row.PCR ?? null,
+      price: row.price ?? row.Price ?? null,
+      vwap: row.vwap ?? row.Vwap ?? row.vWap ?? row.VWAP ?? null,
+      vwapSignal: row.vwapSignal ?? row.VwapSignal ?? row.vWapSignal ?? row.VWapSignal ?? null,
+      optionSignal: row.optionSignal ?? row.OptionSignal ?? null,
+    }));
+    const derivedByTime = new Map(buildIntradayRows(normalizedRows).map((row) => [String(row.time || '').trim(), row]));
+    const calculatedByTime = new Map((calculatedHistory.rows || []).map((row) => [String(row.time || '').trim(), row]));
+    return normalizedRows.map((row) => {
+      const key = String(row.time || '').trim();
+      const derived = derivedByTime.get(key) || {};
+      const calculated = calculatedByTime.get(key) || {};
+      return {
+        ...row,
+        pcr: calculated.pcr ?? derived.pcr ?? row.pcr,
+        price: calculated.price ?? derived.price ?? row.price,
+        vwap: calculated.vwap ?? derived.vwap ?? row.vwap,
+        vwapSignal: calculated.vwapSignal ?? derived.vwapSignal ?? row.vwapSignal,
+        optionSignal: calculated.optionSignal ?? derived.optionSignal ?? row.optionSignal,
+        callStrength: calculated.callStrength ?? derived.callStrength ?? null,
+        putStrength: calculated.putStrength ?? derived.putStrength ?? null,
+        strengthDiff: calculated.strengthDiff ?? derived.strengthDiff ?? null,
+        buffer: calculated.buffer ?? derived.buffer ?? null,
+        vwapPriceBufferPct: calculated.buffer ?? derived.buffer ?? null,
+        enter: calculated.enter ?? derived.enter ?? null,
+      };
+    });
+  }, [selected, selectedIndex, calculatedHistory.rows]);
+
   const formatDateTime = (value) => value ? new Date(/[zZ]|[+-]\\d{2}:?\\d{2}$/.test(value) ? value : value + '+05:30').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
   const first = result.total ? page * pageSize + 1 : 0;
   const last = Math.min((page + 1) * pageSize, result.total || 0);
@@ -901,47 +941,32 @@ function AutoTrenderHistoricalData() {
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="historical-records-content">
       <section className="content-grid historical-dataset-grid">
-        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2><p className="settings-intro">Original AutoTrender fields combined with persisted calculated signals from MySQL.</p><span className="data-count">{calculatedHistoryLoading ? 'Loading calculated fields…' : (calculatedHistory.total || 0) + ' calculated rows'}</span></div></div><KiteDataTable columnsOverride={['time','call','put','diff','pcr','price','vwap','vwapSignal','optionSignal','callStrength','putStrength','strengthDiff','vwapPriceBufferPct','enter']} rows={(() => {
-          const data = selected.payload?.indices?.[selectedIndex]?.intraday;
-          if (!data || data.error) return [];
-          const candidate = data.data ?? data.rows ?? data.result;
-          const originalRows = Array.isArray(candidate) ? candidate : Array.isArray(data) ? data : candidate && typeof candidate === 'object' ? [candidate] : [];
-          const normalizedRows = originalRows.map((row) => ({
-            ...row,
-            time: row.time ?? row.Time ?? row.mtime ?? row.Mtime ?? '—',
-            call: row.call ?? row.Call ?? null,
-            put: row.put ?? row.Put ?? null,
-            diff: row.diff ?? row.Diff ?? null,
-            pcr: row.pcr ?? row.Pcr ?? row.PCR ?? null,
-            price: row.price ?? row.Price ?? null,
-            vwap: row.vwap ?? row.Vwap ?? row.vWap ?? row.VWAP ?? null,
-            vwapSignal: row.vwapSignal ?? row.VwapSignal ?? row.vWapSignal ?? row.VWapSignal ?? null,
-            optionSignal: row.optionSignal ?? row.OptionSignal ?? null,
-          }));
-          // Calculate derived columns from the saved snapshot itself. Older
-          // snapshots predate the MySQL calculated-row table, so relying only
-          // on a database time-match leaves those columns blank.
-          const derivedByTime = new Map(buildIntradayRows(normalizedRows).map((row) => [String(row.time || '').trim(), row]));
-          const calculatedByTime = new Map((calculatedHistory.rows || []).map((row) => [String(row.time || '').trim(), row]));
-          return normalizedRows.map((row) => {
-            const key = String(row.time || '').trim();
-            const derived = derivedByTime.get(key) || {};
-            const calculated = calculatedByTime.get(key) || {};
-            return {
-              ...row,
-              pcr: calculated.pcr ?? derived.pcr ?? row.pcr,
-              price: calculated.price ?? derived.price ?? row.price,
-              vwap: calculated.vwap ?? derived.vwap ?? row.vwap,
-              vwapSignal: calculated.vwapSignal ?? derived.vwapSignal ?? row.vwapSignal,
-              optionSignal: calculated.optionSignal ?? derived.optionSignal ?? row.optionSignal,
-              callStrength: calculated.callStrength ?? derived.callStrength ?? null,
-              putStrength: calculated.putStrength ?? derived.putStrength ?? null,
-              strengthDiff: calculated.strengthDiff ?? derived.strengthDiff ?? null,
-              vwapPriceBufferPct: calculated.buffer ?? derived.buffer ?? null,
-              enter: calculated.enter ?? derived.enter ?? null,
-            };
-          });
-        })()} emptyText={selected.payload?.indices?.[selectedIndex]?.intraday?.error || 'No tabular intraday rows in this saved snapshot.'} /></article>
+        <article className="panel price-vwap-panel historical-price-vwap-panel">
+          <div className="price-vwap-layout">
+            <div className="price-vwap-graph-column">
+              <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2><p className="settings-intro">Price, VWAP, signal markers, hover details, and entry-window markers for the selected saved date.</p></div><span className="data-count">{historicalIntradayRows.filter((row) => row.price != null || row.vwap != null).length} points</span></div>
+              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows)} entryStartTime="10:00" entryEndTime="15:30" />
+            </div>
+            <aside className="latest-candle-card">
+              <div className="latest-record-grid">
+                <div><span>Call</span><strong>{number(historicalIntradayRows[0]?.call)}</strong></div>
+                <div><span>Put</span><strong>{number(historicalIntradayRows[0]?.put)}</strong></div>
+                <div><span>Diff</span><strong>{number(historicalIntradayRows[0]?.diff)}</strong></div>
+                <div><span>PCR</span><strong>{number(historicalIntradayRows[0]?.pcr, 2)}</strong></div>
+                <div><span>Price</span><strong>{number(historicalIntradayRows[0]?.price)}</strong></div>
+                <div><span>VWAP</span><strong>{number(historicalIntradayRows[0]?.vwap)}</strong></div>
+                <div><span>VWAP Signal</span><strong className="latest-signal">{historicalIntradayRows[0]?.vwapSignal || '—'}</strong></div>
+                <div><span>Option Signal</span><strong className="latest-signal">{historicalIntradayRows[0]?.optionSignal || '—'}</strong></div>
+                <div><span>Call Strength</span><strong>{historicalIntradayRows[0]?.callStrength == null ? '—' : number(historicalIntradayRows[0].callStrength) + '%'}</strong></div>
+                <div><span>Put Strength</span><strong>{historicalIntradayRows[0]?.putStrength == null ? '—' : number(historicalIntradayRows[0].putStrength) + '%'}</strong></div>
+                <div><span>Strength Diff</span><strong>{historicalIntradayRows[0]?.strengthDiff == null ? '—' : number(historicalIntradayRows[0].strengthDiff)}</strong></div>
+                <div><span>Buffer (%)</span><strong>{historicalIntradayRows[0]?.buffer == null ? '—' : number(historicalIntradayRows[0].buffer, 3) + '%'}</strong></div>
+              </div>
+              {!historicalIntradayRows.length && <div className="chart-empty">No historical intraday records returned for this date.</div>}
+            </aside>
+          </div>
+        </article>
+        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2><p className="settings-intro">Original AutoTrender fields combined with persisted calculated signals from MySQL.</p><span className="data-count">{calculatedHistoryLoading ? 'Loading calculated fields…' : (calculatedHistory.total || 0) + ' calculated rows'}</span></div></div><KiteDataTable columnsOverride={['time','call','put','diff','pcr','price','vwap','vwapSignal','optionSignal','callStrength','putStrength','strengthDiff','vwapPriceBufferPct','enter']} rows={historicalIntradayRows} /></article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
       </section>
       <details className="historical-raw-payload"><summary>View complete saved JSON payload · SHA-256 {selected.payload_hash || '—'}</summary><pre>{JSON.stringify(selected.payload, null, 2)}</pre></details>
