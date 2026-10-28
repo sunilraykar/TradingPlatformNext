@@ -342,6 +342,7 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
         "idempotency_key": idempotency_key, "execution_mode": "PAPER", "source": "AUTOTRENDER",
         "strategy": "AutoTrender " + direction + " " + option_type, "underlying": index,
         "instrument_symbol": str(chosen["tradingsymbol"]), "exchange": exchange,
+        "instrument_token": int(chosen["instrument_token"]),
         "direction": "BUY", "quantity": quantity, "entry_price": premium, "target": target,
         "notes": "AutoTrender signal=" + direction + "; signal_timestamp=" + signal_timestamp.isoformat()
             + "; spot=" + str(spot) + "; option=" + option_type + "; expiry=" + str(chosen["expiry"])
