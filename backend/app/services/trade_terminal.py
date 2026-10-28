@@ -217,24 +217,52 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("quantity must be greater than zero")
     idempotency_key = str(payload.get("idempotency_key") or uuid.uuid4())
 
-    # Snapshot the configured target/stop-loss strategy on each new trade.
-    # Keep it separate from the entry strategy/source label.
-    if not payload.get("trailing_strategy"):
-        try:
-            with get_engine().connect() as conn:
-                configured = conn.execute(
-                    text("SELECT setting_value FROM app_settings WHERE setting_key = :key"),
-                    {"key": "ui.targetStopLossStrategy"},
-                ).scalar_one_or_none()
-            if isinstance(configured, str):
+    # Snapshot the complete target/stop-loss configuration at entry. Later Settings
+    # edits affect new trades only; an open trade keeps its risk-management rules.
+    try:
+        setting_keys = (
+            "targetStopLossStrategy", "defaultTargetPercent", "defaultTargetType",
+            "trailingDistance", "trailingDistanceType", "trailingTarget", "trailingTargetType",
+        )
+        with get_engine().connect() as conn:
+            rows = conn.execute(
+                text("SELECT setting_key, setting_value FROM app_settings WHERE setting_key IN "
+                     "(:k0, :k1, :k2, :k3, :k4, :k5, :k6)"),
+                {f"k{i}": "ui." + key for i, key in enumerate(setting_keys)},
+            ).mappings().all()
+        config: dict[str, Any] = {
+            "targetStopLossStrategy": "M-TTTS",
+            "defaultTargetPercent": 10,
+            "defaultTargetType": "PERCENTAGE",
+            "trailingDistance": 5,
+            "trailingDistanceType": "POINTS",
+            "trailingTarget": 10,
+            "trailingTargetType": "POINTS",
+        }
+        for row in rows:
+            value = row["setting_value"]
+            if isinstance(value, str):
                 try:
-                    configured = json.loads(configured)
+                    value = json.loads(value)
                 except (TypeError, ValueError):
                     pass
-            payload = {**payload, "trailing_strategy": str(configured or "M-TTTS")}
-        except SQLAlchemyError:
-            logger.exception("Unable to read configured target/stop-loss strategy; refusing to create trade without a strategy snapshot")
-            raise RuntimeError("Unable to read Target & Stop Loss Strategy from Settings; trade was not created")
+            config[str(row["setting_key"])[3:]] = value
+        strategy = str(payload.get("trailing_strategy") or config["targetStopLossStrategy"])
+        if strategy not in {"L-FT-FSL", "M-FT-TSL", "M-TTTS", "H-PT-TSL"}:
+            raise ValueError("Unsupported Target & Stop Loss Strategy in Settings")
+        payload = {
+            **payload,
+            "trailing_strategy": strategy,
+            "target_stop_loss_settings": {
+                **config,
+                "targetStopLossStrategy": strategy,
+            },
+            "trailing_active": False,
+            "favorable_price": payload.get("entry_price"),
+        }
+    except SQLAlchemyError:
+        logger.exception("Unable to read target/stop-loss settings; refusing to create trade without a strategy snapshot")
+        raise RuntimeError("Unable to read Target & Stop Loss Strategy from Settings; trade was not created")
     with _lock:
         for existing in _cache.values():
             if existing.get("idempotency_key") == idempotency_key:
