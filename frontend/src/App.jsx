@@ -1130,6 +1130,25 @@ export default function App() {
     if (typeof left === 'number' && typeof right === 'number') return right - left;
     return String(right).localeCompare(String(left), undefined, { numeric: true });
   }), [calculatedRows]);
+  useEffect(() => {
+    if (!calculatedRows.length) return;
+    let cancelled = false;
+    const persistRows = async () => {
+      try {
+        await api('/autotrender/indices/' + encodeURIComponent(index) + '/intraday/persist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mins, rows: calculatedRows }),
+        });
+      } catch (e) {
+        // Persistence failures must not break live market-data display.
+        if (!cancelled) console.error('Unable to persist calculated AutoTrender intraday rows:', e);
+      }
+    };
+    persistRows();
+    return () => { cancelled = true; };
+  }, [index, mins, calculatedRows]);
+
   const latest = intradayRows[intradayRows.length - 1] || {};
 
   // Contract direction must come from the final configured Intraday Price & VWAP entry decision,
