@@ -485,13 +485,26 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
                                 "exit_method": "TRAILING_STOP", "auto_exit": True, "auto_exit_at": timestamp,
                                 "auto_exit_reason": "TRAILING_STOP_BREACHED"})
         elif strategy == "M-TTTS":
+            # Target-Triggered Trailing Stop: the first target activates trailing
+            # but does not close the trade. Thereafter, each reached target advances
+            # by the configured target step while the stop trails the best price.
             if target_breached:
                 trailing_active = True
-            if trailing_active and distance > 0:
-                candidate = favorable - distance if is_buy else favorable + distance
-                if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
-                    stop = candidate
-                    updates["stop_loss"] = round(stop, 4)
+
+            if trailing_active:
+                if target_step > 0 and target > 0:
+                    # Advance through each target level crossed by this quote. This
+                    # avoids losing target steps when quotes jump over a level.
+                    while price >= target if is_buy else price <= target:
+                        target = target + target_step if is_buy else target - target_step
+                        updates["target"] = round(target, 4)
+
+                if distance > 0:
+                    candidate = favorable - distance if is_buy else favorable + distance
+                    if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
+                        stop = candidate
+                        updates["stop_loss"] = round(stop, 4)
+
             updates["trailing_active"] = trailing_active
             stop_breached = trailing_active and bool(stop > 0 and (price <= stop if is_buy else price >= stop))
             if stop_breached:
