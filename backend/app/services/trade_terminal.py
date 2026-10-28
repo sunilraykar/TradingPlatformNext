@@ -260,6 +260,21 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
             "trailing_active": False,
             "favorable_price": payload.get("entry_price"),
         }
+        try:
+            entry_value = float(payload.get("entry_price") or 0)
+            if entry_value > 0:
+                target_value = float(payload.get("target") or 0)
+                target_amount = float(config.get("defaultTargetPercent", 10))
+                target_unit = str(config.get("defaultTargetType") or "PERCENTAGE").upper()
+                if target_value <= 0:
+                    target_value = entry_value + (entry_value * target_amount / 100 if target_unit in {"PERCENTAGE", "PERCENT", "%"} else target_amount)
+                    payload["target"] = round(target_value, 4)
+                stop_value = float(payload.get("stop_loss") or 0)
+                initial_distance = _distance_value(config.get("trailingDistance", 5), config.get("trailingDistanceType", "POINTS"), entry_value)
+                if stop_value <= 0 and initial_distance > 0:
+                    payload["stop_loss"] = round(max(0.0, entry_value - initial_distance), 4)
+        except (TypeError, ValueError, OverflowError):
+            raise ValueError("Entry price and target/stop settings must be valid numbers")
     except SQLAlchemyError:
         logger.exception("Unable to read target/stop-loss settings; refusing to create trade without a strategy snapshot")
         raise RuntimeError("Unable to read Target & Stop Loss Strategy from Settings; trade was not created")
