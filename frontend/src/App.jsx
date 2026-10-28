@@ -940,8 +940,7 @@ function AutoTrenderHistoricalData() {
     </section>
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="historical-records-content">
-      <section className="content-grid historical-dataset-grid">
-        <article className="panel price-vwap-panel historical-price-vwap-panel">
+      <article className="panel price-vwap-panel historical-price-vwap-panel">
           <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
               <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2><p className="settings-intro">Price, VWAP, signal markers, hover details, and entry-window markers for the selected saved date.</p></div><span className="data-count">{historicalIntradayRows.filter((row) => row.price != null || row.vwap != null).length} points</span></div>
@@ -966,6 +965,7 @@ function AutoTrenderHistoricalData() {
             </aside>
           </div>
         </article>
+      <section className="content-grid historical-dataset-grid">
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2><p className="settings-intro">Original AutoTrender fields combined with persisted calculated signals from MySQL.</p><span className="data-count">{calculatedHistoryLoading ? 'Loading calculated fields…' : (calculatedHistory.total || 0) + ' calculated rows'}</span></div></div><KiteDataTable columnsOverride={['time','call','put','diff','pcr','price','vwap','vwapSignal','optionSignal','callStrength','putStrength','strengthDiff','vwapPriceBufferPct','enter']} rows={historicalIntradayRows} /></article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
       </section>
