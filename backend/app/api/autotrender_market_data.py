@@ -244,7 +244,7 @@ def historical_intraday_rows(
     _ensure_intraday_table()
     with get_engine().connect() as connection:
         rows = connection.execute(text("""
-            SELECT row_time AS time, call_value AS call, put_value AS put,
+            SELECT row_time AS time, call_value AS `call`, put_value AS `put`,
                    diff_value AS diff, pcr_value AS pcr, price_value AS price,
                    vwap_value AS vwap, vwap_signal AS vwapSignal,
                    option_signal AS optionSignal, call_strength AS callStrength,
