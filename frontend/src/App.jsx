@@ -905,7 +905,7 @@ function AutoTrenderHistoricalData() {
         <Metric label="OI GRAPH" value={selected.payload?.indices?.[selectedIndex]?.oi_graph ? 'Available' : 'Not captured'} />
       </div>
       <section className="content-grid historical-dataset-grid">
-        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2><p className="settings-intro">Original AutoTrender fields combined with persisted calculated signals from MySQL.</p><span className="data-count">{calculatedHistoryLoading ? 'Loading calculated fields…' : (calculatedHistory.total || 0) + ' calculated rows'}</span></div></div><KiteDataTable rows={(() => {
+        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2><p className="settings-intro">Original AutoTrender fields combined with persisted calculated signals from MySQL.</p><span className="data-count">{calculatedHistoryLoading ? 'Loading calculated fields…' : (calculatedHistory.total || 0) + ' calculated rows'}</span></div></div><KiteDataTable columnsOverride={['time','call','put','diff','pcr','price','vwap','vwapSignal','optionSignal','callStrength','putStrength','strengthDiff','vwapPriceBufferPct','enter']} rows={(() => {
           const data = selected.payload?.indices?.[selectedIndex]?.intraday;
           if (!data || data.error) return [];
           const candidate = data.data ?? data.rows ?? data.result;
@@ -914,19 +914,23 @@ function AutoTrenderHistoricalData() {
           return originalRows.map((row) => {
             const rowTime = String(row.time ?? row.Time ?? row.mtime ?? row.Mtime ?? '').trim();
             const calculated = calculatedByTime.get(rowTime);
-            return calculated ? {
+            return {
               ...row,
-              pcr: calculated.pcr,
-              price: calculated.price,
-              vwap: calculated.vwap,
-              vwapSignal: calculated.vwapSignal,
-              optionSignal: calculated.optionSignal,
-              callStrength: calculated.callStrength,
-              putStrength: calculated.putStrength,
-              strengthDiff: calculated.strengthDiff,
-              vwapPriceBufferPct: calculated.buffer,
-              enter: calculated.enter,
-            } : row;
+              time: row.time ?? row.Time ?? row.mtime ?? row.Mtime ?? '—',
+              call: row.call ?? row.Call ?? null,
+              put: row.put ?? row.Put ?? null,
+              diff: row.diff ?? row.Diff ?? null,
+              pcr: calculated?.pcr ?? row.pcr ?? row.Pcr ?? null,
+              price: calculated?.price ?? row.price ?? row.Price ?? null,
+              vwap: calculated?.vwap ?? row.vwap ?? row.Vwap ?? null,
+              vwapSignal: calculated?.vwapSignal ?? row.vwapSignal ?? row.VwapSignal ?? null,
+              optionSignal: calculated?.optionSignal ?? row.optionSignal ?? row.OptionSignal ?? null,
+              callStrength: calculated?.callStrength ?? null,
+              putStrength: calculated?.putStrength ?? null,
+              strengthDiff: calculated?.strengthDiff ?? null,
+              vwapPriceBufferPct: calculated?.buffer ?? null,
+              enter: calculated?.enter ?? null,
+            };
           });
         })()} emptyText={selected.payload?.indices?.[selectedIndex]?.intraday?.error || 'No tabular intraday rows in this saved snapshot.'} /></article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
@@ -936,7 +940,7 @@ function AutoTrenderHistoricalData() {
   </section>;
 }
 
-function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false }) {
+function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false, columnsOverride = null }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
   const normalizeColumn = (key) => String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -974,9 +978,11 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     'day_change_percentage', 'open', 'high', 'low', 'close',
     'invested_amount', 'current_amount',
   ];
-  const columns = holdingsMode
-    ? holdingsColumns.filter((key) => !hidden.has(normalizeColumn(key)))
-    : [...new Set(displayRows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(normalizeColumn(key)) && !['lastquantity', 'lastqty', 'lasquantity'].includes(normalizeColumn(key))).slice(0, 18);
+  const columns = columnsOverride
+    ? columnsOverride.filter((key) => !hidden.has(normalizeColumn(key)))
+    : holdingsMode
+      ? holdingsColumns.filter((key) => !hidden.has(normalizeColumn(key)))
+      : [...new Set(displayRows.flatMap((row) => Object.keys(row || {})))].filter((key) => !hidden.has(normalizeColumn(key)) && !['lastquantity', 'lastqty', 'lasquantity'].includes(normalizeColumn(key))).slice(0, 18);
   const formatCell = (value, key) => {
     if (value === null || value === undefined || value === '') return '—';
     // Historical AutoTrender payload cells may be wrapped as { value, colorCode }.
