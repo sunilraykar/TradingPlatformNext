@@ -918,9 +918,7 @@ function AutoTrenderHistoricalData() {
   const last = Math.min((page + 1) * pageSize, result.total || 0);
 
   return <section className="historical-viewer">
-    <div className="historical-toolbar">
-      <button type="button" className="button secondary" onClick={load} disabled={loading}>{loading ? 'Loading…' : '↻ Refresh history'}</button>
-    </div>
+
     <div className="index-switch historical-index-switch" aria-label="Select historical index">
       {DEFAULT_INDICES.filter((value, position, values) => values.indexOf(value) === position && !['MIDCPNIFTY', 'BANKEX'].includes(value)).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
     </div>
