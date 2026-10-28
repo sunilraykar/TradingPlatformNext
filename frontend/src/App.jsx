@@ -735,7 +735,7 @@ function SettingsPanel() {
       {tab === 'market-session' && <>
         <h2>Market Session</h2>
         <p className="settings-intro">Configure the trading session boundaries and manage the daily Kite authentication session separately.</p>
-        <div className="market-session-settings-sections" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 30%) minmax(0, 1fr)', alignItems: 'start', gap: '16px' }}>
+        <div className="market-session-settings-sections" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 0.8fr) minmax(0, 1.2fr)', alignItems: 'start', gap: '16px', width: '100%', minWidth: 0 }}>
           <section className="panel market-session-settings-card" style={{ width: '100%', minWidth: 0 }}>
             <div className="panel-header"><div><div className="eyebrow">01 · TRADING HOURS</div><h3>Market Session Times</h3></div></div>
             <div className="settings-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
@@ -743,7 +743,7 @@ function SettingsPanel() {
             </div>
             <p className="settings-intro">Defines the configured market-session start and end times in IST.</p>
           </section>
-          <section className="panel market-session-settings-card">
+          <section className="panel market-session-settings-card" style={{ width: '100%', minWidth: 0 }}>
             <div className="panel-header"><div><div className="eyebrow">02 · AUTHENTICATION</div><h3>Kite Session Management</h3></div></div>
             <div className="settings-grid">
               {fieldControl(['kiteAutoLoginEnabled','Automatic Kite Login','boolean',true,'Open the broker login flow when no valid session is available.'])}
