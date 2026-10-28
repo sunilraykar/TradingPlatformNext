@@ -736,9 +736,9 @@ function SettingsPanel() {
         <h2>Market Session</h2>
         <p className="settings-intro">Configure the trading session boundaries and manage the daily Kite authentication session separately.</p>
         <div className="market-session-settings-sections" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-          <section className="panel market-session-settings-card">
+          <section className="panel market-session-settings-card" style={{ width: '30%', maxWidth: '30%', justifySelf: 'start' }}>
             <div className="panel-header"><div><div className="eyebrow">01 · TRADING HOURS</div><h3>Market Session Times</h3></div></div>
-            <div className="settings-grid" style={{ gridTemplateColumns: 'minmax(0, 30%)' }}>
+            <div className="settings-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
               {SETTINGS_FIELDS['market-session'].map(fieldControl)}
             </div>
             <p className="settings-intro">Defines the configured market-session start and end times in IST.</p>
