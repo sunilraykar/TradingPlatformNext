@@ -343,7 +343,7 @@ export default function TradeTerminal() {
     <div className="trade-terminal-metrics" style={{ gap: 8 }}>
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Filtered trades</span><strong style={{ fontSize: "1rem" }}>{fmt(visibleTrades.length)}</strong></div>
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Open in filter</span><strong style={{ fontSize: "1rem" }}>{fmt(visibleTrades.filter((trade) => !isTerminalStatus(trade.status)).length)}</strong></div>
-      <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Pending persistence</span><strong style={{ fontSize: "1rem" }} className={terminal.persistence_degraded ? 'negative' : 'positive'}>{fmt(terminal.dirty_trades ?? 0)}</strong></div>
+
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Total Profit</span><strong style={{ fontSize: "1rem" }} className="holding-pnl-positive">{fmt(pnlSummary.profit)}</strong></div>
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Total Loss</span><strong style={{ fontSize: "1rem" }} className="holding-pnl-negative">{fmt(pnlSummary.loss)}</strong></div>
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Net P&amp;L</span><strong style={{ fontSize: "1rem" }} className={pnlSummary.net >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(pnlSummary.net)}</strong></div>
