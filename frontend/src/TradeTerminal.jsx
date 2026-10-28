@@ -308,7 +308,7 @@ export default function TradeTerminal() {
 
   const pnlSummary = visibleTrades.reduce((summary, trade) => {
     const total = calculateTradePnl(trade);
-    if (total === null) return;
+    if (total === null) return summary;
     if (total > 0) summary.profit += total;
     if (total < 0) summary.loss += Math.abs(total);
     summary.net += total;
