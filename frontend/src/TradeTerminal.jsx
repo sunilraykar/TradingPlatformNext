@@ -181,7 +181,7 @@ export default function TradeTerminal() {
 
   const sources = [...new Set(trades.map((trade) => trade.source).filter(Boolean))].sort();
   const underlyings = [...new Set(trades.map((trade) => trade.underlying).filter(Boolean))].sort();
-  const symbolLetters = [...new Set(trades.map((trade) => String(trade.instrument_symbol || '').trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
+  const symbolLetters = [...new Set(trades.flatMap((trade) => [trade.instrument_symbol, trade.underlying].map((value) => String(value || '').trim().charAt(0).toUpperCase())).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
   const visibleTrades = trades.filter((trade) => {
     const created = new Date(trade.created_at || trade.updated_at || 0);
     const now = new Date();
@@ -205,7 +205,7 @@ export default function TradeTerminal() {
       (dateFilter === 'MONTH' && created >= startOfMonth) ||
       (dateFilter === 'CUSTOM' && !!tradeDate && String(trade.created_at || '').slice(0, 10) === tradeDate);
     return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches &&
-      underlyingMatches && (symbolLetter === 'ALL' || String(trade.instrument_symbol || '').trim().toUpperCase().startsWith(symbolLetter)) && dateMatches;
+      underlyingMatches && (symbolLetter === 'ALL' || String(trade.instrument_symbol || '').trim().toUpperCase().startsWith(symbolLetter) || String(trade.underlying || '').trim().toUpperCase().startsWith(symbolLetter)) && dateMatches;
   });
 
   const create = async (event) => {
