@@ -731,7 +731,34 @@ function SettingsPanel() {
         </div>
       </>}
       {tab === 'websocket' && <><h2>WebSocket</h2><p className="settings-intro">Connection status is runtime information. Subscription configuration is shown separately from secret credentials.</p><div className="settings-grid">{fieldControl(['kiteWebsocketEnabled','Enable Kite WebSocket startup','boolean',true,'Start the live quote feed when a valid Kite session is restored.'])}{fieldControl(['websocketReconnectSeconds','Reconnect Backoff (seconds)','number','5','Configured reconnect delay.','1'])}{fieldControl(['websocketMode','Subscription Mode','select','quote','','ltp|LTP;quote|Quote;full|Full'])}</div><div className="settings-ui-only-note">Live status is displayed in the top header. API keys, API secrets and access tokens must remain in backend environment configuration and encrypted session storage.</div></>}
-      {tab === 'active-trades' && <><h2>Active Trades</h2><div className="settings-grid">{SETTINGS_FIELDS['active-trades'].map(fieldControl)}</div><div className="settings-ui-only-note">Global defaults apply to new trades. Existing trades should retain their entry-time strategy snapshot.</div></>}
+      {tab === 'active-trades' && <>
+        <h2>Active Trades</h2>
+        <p className="settings-intro">Configure trade exit controls and the default target/stop-loss behavior for new trades.</p>
+        <div className="market-session-settings-sections" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 0.8fr) minmax(0, 1.2fr)', alignItems: 'start', gap: '16px', width: '100%', minWidth: 0 }}>
+          <section className="panel market-session-settings-card" style={{ width: '100%', minWidth: 0 }}>
+            <div className="panel-header"><div><div className="eyebrow">01 · EXIT CONTROLS</div><h3>Trade Exit Settings</h3></div></div>
+            <div className="settings-grid" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
+              {fieldControl(SETTINGS_FIELDS['active-trades'][0])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][8])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][9])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][10])}
+            </div>
+          </section>
+          <section className="panel market-session-settings-card" style={{ width: '100%', minWidth: 0 }}>
+            <div className="panel-header"><div><div className="eyebrow">02 · RISK MANAGEMENT</div><h3>Target &amp; Stop Loss Defaults</h3></div></div>
+            <div className="settings-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+              {fieldControl(SETTINGS_FIELDS['active-trades'][1])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][2])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][3])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][4])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][5])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][6])}
+              {fieldControl(SETTINGS_FIELDS['active-trades'][7])}
+            </div>
+            <div className="settings-ui-only-note">Global defaults apply to new trades. Existing trades should retain their entry-time strategy snapshot.</div>
+          </section>
+        </div>
+      </>}
       {tab === 'market-session' && <>
         <h2>Market Session</h2>
         <p className="settings-intro">Configure the trading session boundaries and manage the daily Kite authentication session separately.</p>
