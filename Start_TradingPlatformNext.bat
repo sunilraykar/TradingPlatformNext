@@ -30,25 +30,26 @@ if not exist "%FRONTEND_DIR%\node_modules" (
     exit /b 1
 )
 
-if exist "%BACKEND_DIR%\.venv\Scripts\python.exe" (
-    set "BACKEND_COMMAND=""%BACKEND_DIR%\.venv\Scripts\python.exe"""
-) else (
-    where py >nul 2>&1
-    if not errorlevel 1 (
-        set "BACKEND_COMMAND=py -3.11"
-    ) else (
-        set "BACKEND_COMMAND=python"
-    )
-)
-
 echo Starting TradingPlatformNext...
 echo Backend API: http://127.0.0.1:8000
 echo Frontend UI: http://127.0.0.1:5173
 echo.
 
-start "TradingPlatformNext Backend" cmd /k "cd /d ""%BACKEND_DIR%"" && %BACKEND_COMMAND% -m uvicorn app.main:app --reload"
+REM Launch the backend using the virtual-environment interpreter when available.
+if exist "%BACKEND_DIR%\.venv\Scripts\python.exe" (
+    start "TradingPlatformNext Backend" cmd /k "cd /d ""%BACKEND_DIR%"" && ""%BACKEND_DIR%\.venv\Scripts\python.exe"" -m uvicorn app.main:app --reload"
+) else (
+    where py >nul 2>&1
+    if not errorlevel 1 (
+        start "TradingPlatformNext Backend" cmd /k "cd /d ""%BACKEND_DIR%"" && py -3.11 -m uvicorn app.main:app --reload"
+    ) else (
+        start "TradingPlatformNext Backend" cmd /k "cd /d ""%BACKEND_DIR%"" && python -m uvicorn app.main:app --reload"
+    )
+)
+
+REM Launch the frontend in a separate command window.
 start "TradingPlatformNext Frontend" cmd /k "cd /d ""%FRONTEND_DIR%"" && npm run dev"
 
 echo Startup commands launched in separate windows.
-echo Check the backend window for Python dependency or database errors.
+echo Check each window for startup errors.
 endlocal
