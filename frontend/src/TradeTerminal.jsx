@@ -243,7 +243,10 @@ export default function TradeTerminal() {
 
   const updateStatus = async () => {
     if (!closeTrade) return;
-    const trade = closeTrade;
+    // The close dialog initially receives a snapshot of the row. Prefer the
+    // latest trade state so WebSocket/cache-sync quote updates are not lost
+    // while the dialog is open.
+    const trade = trades.find((item) => item.trade_id === closeTrade.trade_id) || closeTrade;
     const exitPrice = closeOrderType === 'MARKET'
       ? Number(trade.last_price)
       : Number(closeLimitPrice);
@@ -356,7 +359,7 @@ export default function TradeTerminal() {
           </div>
         </div>
         {closeOrderType === 'MARKET'
-          ? <div className="trade-selected-instrument">Simulated exit price from latest cached quote: <strong>{fmt(closeTrade.last_price)}</strong><p className="trade-paper-notice">This does not place a market order or guarantee an executable fill. Check quote freshness before confirming.</p></div>
+          ? <div className="trade-selected-instrument">Simulated exit price from latest cached quote: <strong>{fmt(trades.find((item) => item.trade_id === closeTrade.trade_id)?.last_price ?? closeTrade.last_price)}</strong><p className="trade-paper-notice">This does not place a market order or guarantee an executable fill. Check quote freshness before confirming.</p></div>
           : <label className="settings-control"><span>Limit price *</span><input autoFocus type="number" min="0.01" step="any" required value={closeLimitPrice} onChange={(e) => setCloseLimitPrice(e.target.value)} placeholder="Enter limit price" /></label>}
         <div className="settings-actions"><span className="trade-paper-label">PAPER MODE · no broker order will be placed</span><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>Cancel</button><button className="button primary" type="button" onClick={updateStatus}>Confirm close</button></div>
       </div>
