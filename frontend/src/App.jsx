@@ -732,7 +732,29 @@ function SettingsPanel() {
       </>}
       {tab === 'websocket' && <><h2>WebSocket</h2><p className="settings-intro">Connection status is runtime information. Subscription configuration is shown separately from secret credentials.</p><div className="settings-grid">{fieldControl(['kiteWebsocketEnabled','Enable Kite WebSocket startup','boolean',true,'Start the live quote feed when a valid Kite session is restored.'])}{fieldControl(['websocketReconnectSeconds','Reconnect Backoff (seconds)','number','5','Configured reconnect delay.','1'])}{fieldControl(['websocketMode','Subscription Mode','select','quote','','ltp|LTP;quote|Quote;full|Full'])}</div><div className="settings-ui-only-note">Live status is displayed in the top header. API keys, API secrets and access tokens must remain in backend environment configuration and encrypted session storage.</div></>}
       {tab === 'active-trades' && <><h2>Active Trades</h2><div className="settings-grid">{SETTINGS_FIELDS['active-trades'].map(fieldControl)}</div><div className="settings-ui-only-note">Global defaults apply to new trades. Existing trades should retain their entry-time strategy snapshot.</div></>}
-      {tab === 'market-session' && <><h2>Market Session</h2><div className="settings-grid">{SETTINGS_FIELDS['market-session'].map(fieldControl)}{fieldControl(['kiteAutoLoginEnabled','Automatic Kite Login','boolean',true,'Open the broker login flow when no valid session is available.'])}{fieldControl(['kiteSessionResetEnabled','Daily Kite Session Reset','boolean',true,'Expire the stored session at the configured time.'])}{fieldControl(['kiteSessionResetTime','Session Reset Time','time','23:00','Time uses the configured timezone.'])}{fieldControl(['kiteSessionResetTimezone','Session Reset Timezone','select','Asia/Kolkata','','Asia/Kolkata|Asia/Kolkata;UTC|UTC'])}</div></>}
+      {tab === 'market-session' && <>
+        <h2>Market Session</h2>
+        <p className="settings-intro">Configure the trading session boundaries and manage the daily Kite authentication session separately.</p>
+        <div className="market-session-settings-sections" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+          <section className="panel market-session-settings-card">
+            <div className="panel-header"><div><div className="eyebrow">01 · TRADING HOURS</div><h3>Market Session Times</h3></div></div>
+            <div className="settings-grid">
+              {SETTINGS_FIELDS['market-session'].map(fieldControl)}
+            </div>
+            <p className="settings-intro">Defines the configured market-session start and end times in IST.</p>
+          </section>
+          <section className="panel market-session-settings-card">
+            <div className="panel-header"><div><div className="eyebrow">02 · AUTHENTICATION</div><h3>Kite Session Management</h3></div></div>
+            <div className="settings-grid">
+              {fieldControl(['kiteAutoLoginEnabled','Automatic Kite Login','boolean',true,'Open the broker login flow when no valid session is available.'])}
+              {fieldControl(['kiteSessionResetEnabled','Daily Kite Session Reset','boolean',true,'Expire the stored session at the configured time.'])}
+              {fieldControl(['kiteSessionResetTime','Session Reset Time','time','23:00','Time uses the configured timezone.'])}
+              {fieldControl(['kiteSessionResetTimezone','Session Reset Timezone','select','Asia/Kolkata','','Asia/Kolkata|Asia/Kolkata;UTC|UTC'])}
+            </div>
+            <p className="settings-intro">Control automatic login and optional daily session expiry, including the reset time and timezone.</p>
+          </section>
+        </div>
+      </>}
       {tab === 'cache-viewer' && <CacheViewer />}
       {tab === 'instruments' && <InstrumentsViewer />}
       {tab === 'live-data-cache' && <LiveDataCacheViewer />}
