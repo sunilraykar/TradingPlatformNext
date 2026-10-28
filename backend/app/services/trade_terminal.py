@@ -318,13 +318,18 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     # Resolve and subscribe immediately after acceptance. The quote path remains cache-only.
     try:
         exchange = str(trade.get("exchange") or "NFO").strip().upper()
-        with get_engine().connect() as conn:
-            row = conn.execute(text(
-                "SELECT instrument_token FROM instruments WHERE source = 'KITE' AND exchange = :exchange "
-                "AND tradingsymbol = :symbol AND is_active = TRUE ORDER BY instrument_version DESC LIMIT 1"
-            ), {"exchange": exchange, "symbol": symbol}).first()
-        if row and int(row[0]) > 0:
-            token = int(row[0])
+        # AutoTrender already resolves the exact contract from the Kite instrument
+        # master. Prefer that token so entry subscription does not depend on a
+        # second symbol lookup; retain lookup fallback for manual entries.
+        token = int(trade.get("instrument_token") or 0)
+        if token <= 0:
+            with get_engine().connect() as conn:
+                row = conn.execute(text(
+                    "SELECT instrument_token FROM instruments WHERE source = 'KITE' AND exchange = :exchange "
+                    "AND tradingsymbol = :symbol AND is_active = TRUE ORDER BY instrument_version DESC LIMIT 1"
+                ), {"exchange": exchange, "symbol": symbol}).first()
+            token = int(row[0]) if row else 0
+        if token > 0:
             # Preserve the last known price while registering the resolved token.
             # A process-local cached tick can hydrate this trade immediately.
             with _lock:
