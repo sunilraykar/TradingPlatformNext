@@ -495,7 +495,7 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
                 if target_step > 0 and target > 0:
                     # Advance through each target level crossed by this quote. This
                     # avoids losing target steps when quotes jump over a level.
-                    while price >= target if is_buy else price <= target:
+                    while (price >= target if is_buy else price <= target):
                         target = target + target_step if is_buy else target - target_step
                         updates["target"] = round(target, 4)
 
