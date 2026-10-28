@@ -905,15 +905,30 @@ function AutoTrenderHistoricalData() {
         <Metric label="OI GRAPH" value={selected.payload?.indices?.[selectedIndex]?.oi_graph ? 'Available' : 'Not captured'} />
       </div>
       <section className="content-grid historical-dataset-grid">
-        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div></div><KiteDataTable rows={(() => { const data = selected.payload?.indices?.[selectedIndex]?.intraday; if (!data || data.error) return []; const candidate = data.data ?? data.rows ?? data.result; return Array.isArray(candidate) ? candidate : Array.isArray(data) ? data : candidate && typeof candidate === 'object' ? [candidate] : []; })()} emptyText={selected.payload?.indices?.[selectedIndex]?.intraday?.error || 'No tabular intraday rows in this saved snapshot.'} /></article>
-
-        <article className="panel historical-calculated-intraday-panel">
-          <div className="panel-header"><div><div className="eyebrow">HISTORICAL / MYSQL</div><h2>Calculated intraday data</h2><p className="settings-intro">Persisted calculated values for {selectedIndex} on {selected.trading_date || '—'}.</p></div><span className="data-count">{calculatedHistoryLoading ? 'Loading…' : (calculatedHistory.total || 0) + ' rows'}</span></div>
-          <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>Call</th><th>Put</th><th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th><th>VWAP Signal</th><th>Option Signal</th><th>Call Strength (%)</th><th>Put Strength (%)</th><th>Call-Put Strength Diff</th><th>VWAP-Price Buffer (%)</th><th>Enter</th></tr></thead><tbody>
-            {(calculatedHistory.rows || []).map((row, i) => <tr key={row.time || i}><td>{row.time || '—'}</td><td>{row.call ?? '—'}</td><td>{row.put ?? '—'}</td><td>{row.diff ?? '—'}</td><td>{row.pcr ?? '—'}</td><td>{row.price ?? '—'}</td><td>{row.vwap ?? '—'}</td><td>{row.vwapSignal || '—'}</td><td>{row.optionSignal || '—'}</td><td>{row.callStrength ?? '—'}</td><td>{row.putStrength ?? '—'}</td><td>{row.strengthDiff ?? '—'}</td><td>{row.buffer ?? '—'}</td><td>{row.enter || '—'}</td></tr>)}
-            {!calculatedHistory.rows?.length && <tr><td colSpan="14" className="empty-cell">{calculatedHistoryLoading ? 'Loading persisted calculated rows…' : 'No calculated rows saved for this index/date yet. These records are saved after the live-data persistence fix is running.'}</td></tr>}
-          </tbody></table></div>
-        </article>
+        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2><p className="settings-intro">Original AutoTrender fields combined with persisted calculated signals from MySQL.</p><span className="data-count">{calculatedHistoryLoading ? 'Loading calculated fields…' : (calculatedHistory.total || 0) + ' calculated rows'}</span></div></div><KiteDataTable rows={(() => {
+          const data = selected.payload?.indices?.[selectedIndex]?.intraday;
+          if (!data || data.error) return [];
+          const candidate = data.data ?? data.rows ?? data.result;
+          const originalRows = Array.isArray(candidate) ? candidate : Array.isArray(data) ? data : candidate && typeof candidate === 'object' ? [candidate] : [];
+          const calculatedByTime = new Map((calculatedHistory.rows || []).map((row) => [String(row.time || '').trim(), row]));
+          return originalRows.map((row) => {
+            const rowTime = String(row.time ?? row.Time ?? row.mtime ?? row.Mtime ?? '').trim();
+            const calculated = calculatedByTime.get(rowTime);
+            return calculated ? {
+              ...row,
+              pcr: calculated.pcr,
+              price: calculated.price,
+              vwap: calculated.vwap,
+              vwapSignal: calculated.vwapSignal,
+              optionSignal: calculated.optionSignal,
+              callStrength: calculated.callStrength,
+              putStrength: calculated.putStrength,
+              strengthDiff: calculated.strengthDiff,
+              vwapPriceBufferPct: calculated.buffer,
+              enter: calculated.enter,
+            } : row;
+          });
+        })()} emptyText={selected.payload?.indices?.[selectedIndex]?.intraday?.error || 'No tabular intraday rows in this saved snapshot.'} /></article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
       </section>
       <details className="historical-raw-payload"><summary>View complete saved JSON payload · SHA-256 {selected.payload_hash || '—'}</summary><pre>{JSON.stringify(selected.payload, null, 2)}</pre></details>
