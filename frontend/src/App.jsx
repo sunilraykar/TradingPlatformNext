@@ -858,7 +858,7 @@ function AutoTrenderHistoricalData() {
     if (loading || selected || detailLoading || snapshots.length === 0) return;
     const newest = snapshots[0];
     if (newest?.snapshot_id) openSnapshot(newest);
-  }, [result.snapshots, loading, selected, detailLoading]);
+  }, [result.snapshots, loading]);
   useEffect(() => {
     if (!selected?.trading_date || !selectedIndex) {
       setCalculatedHistory({ rows: [], total: 0 });
