@@ -614,6 +614,13 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
             if key not in _LEGACY_TRADE_FIELDS
         }
         updated.update(changes)
+        # Freeze the end timestamp on the first transition to a terminal state.
+        # Open-trade duration remains derived from created_at and the current time.
+        terminal_statuses = {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
+        was_terminal = str(current.get("status") or "OPEN").upper() in terminal_statuses
+        is_terminal = str(updated.get("status") or "OPEN").upper() in terminal_statuses
+        if is_terminal and not was_terminal and not updated.get("closed_at"):
+            updated["closed_at"] = updated.get("auto_exit_at") or _now()
         # Paper trades are simulations: allow manual closure even when legacy
         # records lack entry metadata. Missing entry data may limit P&L reporting,
         # but must not prevent the user from closing the trade.
