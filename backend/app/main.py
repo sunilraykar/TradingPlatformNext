@@ -22,6 +22,7 @@ from app.providers.kite.registry import (
 )
 from app.services import (
     auto_exit_profitable_trades,
+    paper_option_market_close,
     autotrender_cache_snapshot,
     autotrender_paper_trade_worker,
     live_market_data,
@@ -107,6 +108,7 @@ async def lifespan(application: FastAPI):
     trade_task = asyncio.create_task(trade_terminal.run_maintenance_scheduler())
     instrument_task = asyncio.create_task(run_daily_instrument_refresh_scheduler())
     auto_exit_task = asyncio.create_task(auto_exit_profitable_trades.run_auto_exit_scheduler())
+    paper_market_close_task = asyncio.create_task(paper_option_market_close.run_market_close_scheduler())
     autotrender_worker_task = asyncio.create_task(autotrender_paper_trade_worker.run_scheduler())
     autotrender_snapshot_task = asyncio.create_task(
         autotrender_cache_snapshot.run_daily_snapshot_scheduler(application.state.autotrender_cache, application.state.autotrender_auth)
