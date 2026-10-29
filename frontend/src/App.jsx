@@ -188,7 +188,6 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
-    <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
     <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
       <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart from 09:30 to 15:30" preserveAspectRatio="none">
@@ -226,6 +225,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       </div>}
       <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
+    <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
     <div className="series-summary price-vwap-summary">
     </div>
   </>;
@@ -1402,7 +1402,6 @@ export default function App() {
               {!calculatedRowsDescending.length && <div className="chart-empty">No intraday records returned.</div>}
             </aside>
           </div>
-          <div className="panel-footer">Price and VWAP are plotted from the selected index's intraday API records. Card shows the latest record only. No database writes.</div>
         </article>
       </section>
 
