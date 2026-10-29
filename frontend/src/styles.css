@@ -201,6 +201,11 @@
 .trade-terminal-table-panel{min-width:0}
 .trade-terminal-table-scroll{max-height:calc(100vh - 350px);min-height:220px;overflow:auto}
 .trade-terminal-table{min-width:1500px;font-size:11px}
+/* Center every Trade Terminal column except Underlying and Instrument. */
+.trade-terminal-table th:not(:nth-child(2)):not(:nth-child(3)),.trade-terminal-table td:not(:nth-child(2)):not(:nth-child(3)){text-align:center}
+.trade-terminal-table th:not(:nth-child(2)):not(:nth-child(3)) .trade-sort-header{justify-content:center}
+.trade-terminal-table th:nth-child(2),.trade-terminal-table td:nth-child(2),.trade-terminal-table th:nth-child(3),.trade-terminal-table td:nth-child(3){text-align:left}
+.trade-terminal-table th:nth-child(2) .trade-sort-header,.trade-terminal-table th:nth-child(3) .trade-sort-header{justify-content:flex-start}
 .trade-terminal-table td{white-space:nowrap;max-width:260px}
 /* Trade Terminal P&L colors must override the generic .kite-data-table td color. */
 .trade-terminal-table td.holding-pnl-positive{color:#55dfa8;font-weight:750;background:rgba(39,197,138,.08)}
