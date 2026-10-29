@@ -258,6 +258,8 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
                 "targetStopLossStrategy": strategy,
             },
             "trailing_active": False,
+            "target_trail_count": int(payload.get("target_trail_count") or 0),
+            "stop_loss_trail_count": int(payload.get("stop_loss_trail_count") or 0),
             "favorable_price": payload.get("entry_price"),
         }
         try:
@@ -473,8 +475,11 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
             if distance > 0:
                 candidate = favorable - distance if is_buy else favorable + distance
                 if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
+                    rounded_stop = round(candidate, 4)
+                    if rounded_stop != round(stop, 4):
+                        updates["stop_loss_trail_count"] = int(trade.get("stop_loss_trail_count") or 0) + 1
                     stop = candidate
-                    updates["stop_loss"] = round(stop, 4)
+                    updates["stop_loss"] = rounded_stop
             stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
             if target_breached:
                 updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
@@ -498,12 +503,16 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
                     while (price >= target if is_buy else price <= target):
                         target = target + target_step if is_buy else target - target_step
                         updates["target"] = round(target, 4)
+                        updates["target_trail_count"] = int(updates.get("target_trail_count", trade.get("target_trail_count") or 0)) + 1
 
                 if distance > 0:
                     candidate = favorable - distance if is_buy else favorable + distance
                     if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
+                        rounded_stop = round(candidate, 4)
+                        if rounded_stop != round(stop, 4):
+                            updates["stop_loss_trail_count"] = int(trade.get("stop_loss_trail_count") or 0) + 1
                         stop = candidate
-                        updates["stop_loss"] = round(stop, 4)
+                        updates["stop_loss"] = rounded_stop
 
             updates["trailing_active"] = trailing_active
             stop_breached = trailing_active and bool(stop > 0 and (price <= stop if is_buy else price >= stop))
@@ -515,11 +524,15 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
             if distance > 0:
                 candidate = favorable - distance if is_buy else favorable + distance
                 if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
+                    rounded_stop = round(candidate, 4)
+                    if rounded_stop != round(stop, 4):
+                        updates["stop_loss_trail_count"] = int(trade.get("stop_loss_trail_count") or 0) + 1
                     stop = candidate
-                    updates["stop_loss"] = round(stop, 4)
+                    updates["stop_loss"] = rounded_stop
             if target_breached and target_step > 0:
                 target = target + target_step if is_buy else target - target_step
                 updates["target"] = round(target, 4)
+                updates["target_trail_count"] = int(trade.get("target_trail_count") or 0) + 1
                 updates["trailing_active"] = True
             stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
             if stop_breached:
