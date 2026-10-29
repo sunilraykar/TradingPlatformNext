@@ -59,7 +59,7 @@ def save_selected_contract(payload: SelectedContractRequest) -> dict[str, object
     selected["index"] = index
     selected["signal"] = signal
     selected["selected_at"] = datetime.now().astimezone().isoformat()
-    key = "ui.autotrenderSelectedContract." + index
+    key = "autotrender.selected_contract." + index
     try:
         with get_engine().begin() as connection:
             connection.execute(text(
