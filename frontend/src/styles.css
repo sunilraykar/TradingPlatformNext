@@ -20,7 +20,7 @@
 /* Intraday price and VWAP chart restored alongside the calculated signal table. */
 .price-vwap-section{margin-bottom:16px}
 .price-vwap-panel{width:100%}
-.price-vwap-legend{padding-bottom:0}
+.price-vwap-legend{padding-bottom:0;justify-content:center}
 .price-vwap-legend .legend-price{background:var(--cyan)}
 .price-vwap-legend .legend-vwap{background:#b28aff}
 .price-vwap-wrap{padding-top:14px}
