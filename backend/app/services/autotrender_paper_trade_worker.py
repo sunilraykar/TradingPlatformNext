@@ -387,6 +387,19 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
         saved_index = str(saved.get("index") or "").strip().upper()
         saved_type = str(saved.get("option_type") or "").strip().upper()
         expected_type = "CE" if normalized_direction == "BUY" else "PE"
+        selection_is_fresh = False
+        try:
+            selected_at = datetime.fromisoformat(str(saved.get("selected_at") or ""))
+            if selected_at.tzinfo is None:
+                selected_at = selected_at.replace(tzinfo=IST)
+            age_seconds = (datetime.now(IST) - selected_at.astimezone(IST)).total_seconds()
+            selection_is_fresh = 0 <= age_seconds <= 300
+        except (TypeError, ValueError):
+            pass
+        try:
+            selection_expiry_is_valid = datetime.fromisoformat(str(saved.get("expiry"))).date() >= datetime.now(IST).date()
+        except (TypeError, ValueError):
+            selection_expiry_is_valid = False
         if (
             saved.get("status") == "SELECTED"
             and saved_index == normalized_index
@@ -394,7 +407,8 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
             and saved_type == expected_type
             and str(saved.get("tradingsymbol") or "").upper().startswith(normalized_index)
             and saved.get("instrument_token")
-            and saved.get("expiry")
+            and selection_expiry_is_valid
+            and selection_is_fresh
         ):
             selected = saved
     if selected is None:
