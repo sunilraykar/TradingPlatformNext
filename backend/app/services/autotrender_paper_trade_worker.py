@@ -375,7 +375,7 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
     with get_engine().connect() as connection:
         saved = connection.execute(
             text("SELECT setting_value FROM app_settings WHERE setting_key = :key LIMIT 1"),
-            {"key": "ui.autotrenderSelectedContract." + normalized_index},
+            {"key": "autotrender.selected_contract." + normalized_index},
         ).scalar()
     if isinstance(saved, str):
         try:
