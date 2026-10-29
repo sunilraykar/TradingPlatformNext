@@ -1274,7 +1274,7 @@ export default function App() {
     }
     setContractLoading(true);
     api('/kite/instruments/select-atm?index=' + encodeURIComponent(index) + '&signal=' + encodeURIComponent(contractSignal))
-      .then((result) => { if (active) { setSelectedContract(result); setContractError(''); } })
+      .then(async (result) => { if (!active) return; await api('/kite/instruments/selected-contract', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(result) }); if (active) { setSelectedContract(result); setContractError(''); } })
       .catch((e) => { if (active) { setSelectedContract(null); setContractError(e.message || 'Unable to select an option contract.'); } })
       .finally(() => { if (active) setContractLoading(false); });
     return () => { active = false; };
