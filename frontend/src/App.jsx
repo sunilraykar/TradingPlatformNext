@@ -1198,6 +1198,14 @@ export default function App() {
   }, [applicationTab, kiteTab]);
   useEffect(() => { loadKiteTab(); }, [loadKiteTab]);
 
+  const openAutoTrenderUnderlying = (value) => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (!DEFAULT_INDICES.includes(normalized)) return;
+    setIndex(normalized);
+    setAutotrenderView('live');
+    setApplicationTab('autotrender');
+  };
+
   const login = async () => {
     setLoggingIn(true);
     setError('');
@@ -1316,7 +1324,7 @@ export default function App() {
         </div>
       </header>
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <><nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav><AutoTrenderHistoricalData /></> : <>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <><nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav><AutoTrenderHistoricalData /></> : <>
       <nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
