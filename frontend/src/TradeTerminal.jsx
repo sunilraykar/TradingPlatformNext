@@ -485,6 +485,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
           <strong>Editing rules</strong><br />
           Only Stop Loss and Target can be changed for active PAPER trades. Current market price is shown for reference. The existing trailing strategy and trail counts are preserved.
         </div>
+        {error && <div className="error-banner" role="alert" style={{ marginTop: 12 }}><span>{error}</span></div>}
         <div className="settings-actions" style={{ marginTop: 18 }}><span className="trade-paper-label">PAPER MODE · no broker order will be placed</span><button className="button secondary" type="button" onClick={() => setEditTrade(null)} disabled={editSaving}>Cancel</button><button className="button primary" type="button" onClick={saveTradeLevels} disabled={editSaving}>{editSaving ? 'Updating…' : 'Update'}</button></div>
       </div>
     </div>}
