@@ -417,6 +417,14 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
         <label className="settings-control trade-notes-field"><span>Notes</span><input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} maxLength="2000" /></label>
       </div><div className="settings-actions"><span className="trade-paper-label">PAPER MODE · no broker order will be placed</span><button className="button primary" type="submit" disabled={saving}>{saving ? 'Saving…' : 'Create paper trade'}</button></div>
     </form></div>}
+    <div className="trade-column-presets">
+      <span className="trade-filter-label">Columns</span>
+      <div className="trade-filter-buttons">
+        <button type="button" className="trade-filter-button active">Basic</button>
+        <button type="button" className="trade-filter-button">AutoTrender</button>
+        <button type="button" className="trade-filter-button">Detailed</button>
+      </div>
+    </div>
     <div className="trade-terminal-filters">
       <div className="trade-filter-group"><span className="trade-filter-label">Mode</span><div className="trade-filter-buttons">{[['ALL','All'],['PAPER','Paper'],['LIVE','Live']].map(([value,label]) => <button key={value} type="button" className={mode === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setMode(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
