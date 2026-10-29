@@ -367,10 +367,38 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
     if normalized_direction not in {"BUY", "SELL"}:
         raise ValueError("invalid_option_signal_direction")
 
-    # The UI calls this same selector using the selected underlying and final
-    # intraday BUY/SELL entry decision. Do not independently re-select a strike
-    # from the signal row's spot price; that caused UI/trade contract mismatches.
-    selected = select_atm_contract(normalized_index, normalized_direction)
+    # Prefer the exact contract most recently displayed by the AutoTrender UI
+    # when its underlying and final BUY/SELL decision match this worker cycle.
+    # If the UI has not published a matching selection, fall back to the same
+    # canonical selector used by the UI (never the old independent spot-row logic).
+    selected = None
+    with get_engine().connect() as connection:
+        saved = connection.execute(
+            text("SELECT setting_value FROM app_settings WHERE setting_key = :key LIMIT 1"),
+            {"key": "ui.autotrenderSelectedContract." + normalized_index},
+        ).scalar()
+    if isinstance(saved, str):
+        try:
+            saved = json.loads(saved)
+        except (TypeError, ValueError):
+            saved = None
+    if isinstance(saved, dict):
+        saved_signal = str(saved.get("signal") or "").strip().upper()
+        saved_index = str(saved.get("index") or "").strip().upper()
+        saved_type = str(saved.get("option_type") or "").strip().upper()
+        expected_type = "CE" if normalized_direction == "BUY" else "PE"
+        if (
+            saved.get("status") == "SELECTED"
+            and saved_index == normalized_index
+            and saved_signal == normalized_direction
+            and saved_type == expected_type
+            and str(saved.get("tradingsymbol") or "").upper().startswith(normalized_index)
+            and saved.get("instrument_token")
+            and saved.get("expiry")
+        ):
+            selected = saved
+    if selected is None:
+        selected = select_atm_contract(normalized_index, normalized_direction)
     if selected.get("status") != "SELECTED":
         raise ValueError("autotrender_contract_not_selected")
 
