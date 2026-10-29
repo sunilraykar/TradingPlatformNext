@@ -21,6 +21,7 @@ from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import trade_terminal
 from app.services.autotrender_signal_evaluator import Evaluation, evaluate_signal
+from app.services.option_contract_selector import select_atm_contract
 
 logger = logging.getLogger(__name__)
 IST = ZoneInfo("Asia/Kolkata")
@@ -360,54 +361,60 @@ def _quote_timestamp_is_fresh(value: Any, now: datetime | None = None) -> bool:
 
 
 def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float) -> dict[str, Any]:
-    """Resolve nearest-strike option and create one-lot PAPER trade from live Kite premium."""
-    today = datetime.now(IST).date()
-    spot = _spot_price(row)
-    if spot is None:
-        raise ValueError("missing_positive_spot_price")
-    option_type = "CE" if direction == "BUY" else "PE"
-    exchange = "BFO" if index in {"SENSEX", "BANKEX"} else "NFO"
-    with get_engine().connect() as connection:
-        candidates = connection.execute(text(
-            "SELECT instrument_token, exchange, tradingsymbol, name, instrument_type, expiry, strike, lot_size "
-            "FROM instruments WHERE source = 'KITE' AND is_active = TRUE AND exchange = :exchange "
-            "AND instrument_type = :option_type AND expiry >= :today "
-            "AND UPPER(tradingsymbol) LIKE :symbol_prefix "
-            "ORDER BY expiry ASC, ABS(strike - :spot) ASC, instrument_version DESC"
-        ), {"exchange": exchange, "option_type": option_type, "today": today,
-            "symbol_prefix": index + "%", "spot": spot}).mappings().all()
-    if not candidates:
-        raise ValueError("no_eligible_option_contract")
-    chosen = candidates[0]
-    quote = get_kite_provider().quote(int(chosen["instrument_token"]))
+    """Create a PAPER trade using the same canonical contract selector as AutoTrender UI."""
+    normalized_index = str(index or "").strip().upper()
+    normalized_direction = str(direction or "").strip().upper()
+    if normalized_direction not in {"BUY", "SELL"}:
+        raise ValueError("invalid_option_signal_direction")
+
+    # The UI calls this same selector using the selected underlying and final
+    # intraday BUY/SELL entry decision. Do not independently re-select a strike
+    # from the signal row's spot price; that caused UI/trade contract mismatches.
+    selected = select_atm_contract(normalized_index, normalized_direction)
+    if selected.get("status") != "SELECTED":
+        raise ValueError("autotrender_contract_not_selected")
+
+    instrument_token = int(selected["instrument_token"])
+    tradingsymbol = str(selected["tradingsymbol"])
+    exchange = str(selected["exchange"])
+    option_type = str(selected["option_type"]).upper()
+    spot = float(selected["spot_price"])
+    expiry = str(selected["expiry"])
+    strike = float(selected["strike"])
+
+    expected_option_type = "CE" if normalized_direction == "BUY" else "PE"
+    if option_type != expected_option_type:
+        raise ValueError("selected_contract_option_type_mismatch")
+    if not tradingsymbol.startswith(normalized_index) or not instrument_token:
+        raise ValueError("selected_contract_underlying_mismatch")
+
+    quote = get_kite_provider().quote(instrument_token)
     try:
         premium = float(quote.get("last_price"))
     except (TypeError, ValueError):
         premium = 0
     if premium <= 0:
         raise ValueError("missing_positive_live_option_premium")
-    # Do not block AutoTrender paper entries because Kite quote timestamps are
-    # missing or stale. Keep the positive-premium check above because the
-    # trade still needs a usable entry price.
-    quantity = int(chosen.get("lot_size") or 0)
+
+    quantity = int(selected.get("lot_size") or 0)
     if quantity <= 0:
         raise ValueError("invalid_option_lot_size")
     target = round(premium * (1 + max(0.01, target_fallback_percent) / 100), 2)
-    idempotency_key = "AUTOTRENDER:" + index + ":" + signal_timestamp.isoformat()
-    active = [trade for trade in trade_terminal.list_trades(mode="PAPER", underlying=index)
+    idempotency_key = "AUTOTRENDER:" + normalized_index + ":" + signal_timestamp.isoformat()
+    active = [trade for trade in trade_terminal.list_trades(mode="PAPER", underlying=normalized_index)
               if str(trade.get("status", "OPEN")).upper() not in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
               and str(trade.get("source", "")).upper().replace("_", "") == "AUTOTRENDER"]
     if active:
         raise ValueError("active_autotrender_trade_exists_for_underlying")
     return trade_terminal.create_trade({
         "idempotency_key": idempotency_key, "execution_mode": "PAPER", "source": "AUTOTRENDER",
-        "strategy": "AutoTrender " + direction + " " + option_type, "underlying": index,
-        "instrument_symbol": str(chosen["tradingsymbol"]), "exchange": exchange,
-        "instrument_token": int(chosen["instrument_token"]),
+        "strategy": "AutoTrender " + normalized_direction + " " + option_type, "underlying": normalized_index,
+        "instrument_symbol": tradingsymbol, "exchange": exchange,
+        "instrument_token": instrument_token,
         "direction": "BUY", "quantity": quantity, "entry_price": premium, "target": target,
-        "notes": "AutoTrender signal=" + direction + "; signal_timestamp=" + signal_timestamp.isoformat()
-            + "; spot=" + str(spot) + "; option=" + option_type + "; expiry=" + str(chosen["expiry"])
-            + "; strike=" + str(chosen["strike"]),
+        "notes": "AutoTrender signal=" + normalized_direction + "; signal_timestamp=" + signal_timestamp.isoformat()
+            + "; spot=" + str(spot) + "; option=" + option_type + "; expiry=" + expiry
+            + "; strike=" + str(strike) + "; contract_selector=shared_ui_selector",
     })
 
 def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float) -> dict[str, Any]:
