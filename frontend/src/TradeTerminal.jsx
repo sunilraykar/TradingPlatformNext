@@ -42,6 +42,26 @@ const quoteFreshness = (trade) => {
   return { label: age > 30 ? `STALE · ${age}s` : `LIVE · ${age}s`, stale: age > 30 };
 };
 const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+const formatTradeDuration = (trade, now = Date.now()) => {
+  const startRaw = trade.entry_time || trade.created_at;
+  const endRaw = isTerminalStatus(trade.status)
+    ? (trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at)
+    : now;
+  if (!startRaw || !endRaw) return '—';
+  const start = new Date(startRaw).getTime();
+  const end = typeof endRaw === 'number' ? endRaw : new Date(endRaw).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return '—';
+  const totalSeconds = Math.floor((end - start) / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return days > 0
+    ? `${days}d ${hours}h ${minutes}m`
+    : hours > 0
+      ? `${hours}h ${minutes}m ${seconds}s`
+      : `${minutes}m ${seconds}s`;
+};
 const trailCount = (trade, field) => {
   const candidates = field === 'target'
     ? [trade.target_trail_count, trade.target_trailings, trade.target_trail_count_total, trade.target_trail_count]
@@ -68,6 +88,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   const [detailsTrade, setDetailsTrade] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'underlying', direction: 'asc' });
   const [columnPreset, setColumnPreset] = useState('Basic');
+  const [durationNow, setDurationNow] = useState(() => Date.now());
   const [closeOrderType, setCloseOrderType] = useState('MARKET');
   const [closeLimitPrice, setCloseLimitPrice] = useState('');
   const [symbolQuery, setSymbolQuery] = useState('');
@@ -79,6 +100,11 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   const [saving, setSaving] = useState(false);
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const [form, setForm] = useState({ instrument_symbol: '', exchange: 'NFO', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setDurationNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true); setError('');
@@ -365,7 +391,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
           {[
             ['Direction', detailsTrade.direction], ['Qty', detailsTrade.quantity],
             ['Entry price', detailsTrade.average_entry_price ?? detailsTrade.entry_price], ['Last price', detailsTrade.last_price],
-            ['Stop loss', detailsTrade.stop_loss], ['Target', detailsTrade.target], ['Calculated P&L', calculateTradePnl(detailsTrade)], ['Exit price', detailsTrade.average_exit_price ?? detailsTrade.exit_price],
+            ['Trade duration', formatTradeDuration(detailsTrade, durationNow)], ['Stop loss', detailsTrade.stop_loss], ['Target', detailsTrade.target], ['Calculated P&L', calculateTradePnl(detailsTrade)], ['Exit price', detailsTrade.average_exit_price ?? detailsTrade.exit_price],
             ['Exit reason', detailsTrade.exit_reason], ['Exit method', detailsTrade.exit_method], ['Source', detailsTrade.source],
             ['Strategy', detailsTrade.strategy], ['Trailing Strategy', detailsTrade.trailing_strategy], ['Quote status', quoteFreshness(detailsTrade).label],
             ['Created', detailsTrade.created_at ? new Date(detailsTrade.created_at).toLocaleString() : '—'],
@@ -444,8 +470,8 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       <div className="trade-filter-group"><span className="trade-filter-label">Trade date</span><div className="trade-filter-buttons">{[['ALL','All'],['TODAY','Today'],['WEEK','This Week'],['MONTH','This Month'],['CUSTOM','Custom']].map(([value,label]) => <button key={value} type="button" className={(dateFilter === value ? 'trade-filter-button active' : 'trade-filter-button')} onClick={() => setDateFilter(value)}>{label}</button>)}</div>{dateFilter === 'CUSTOM' && <input className="trade-date-custom" type="date" value={tradeDate} onChange={(e) => setTradeDate(e.target.value)} />}</div>
       <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · live updates</span>
     </div>
-    <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr>{([... [['execution_mode','Mode'],['underlying','Underlying'],['instrument_symbol','Instrument'],['direction','Side'],['quantity','Qty'],['average_entry_price','Entry'],['last_price','Last price'],['stop_loss','SL'],['target','Target'],['display_pnl','P&L'],['average_exit_price','Exit price'],['status','Status']], ...(columnPreset === 'Basic' ? [['trailing_strategy','Trailing Strategy']] : columnPreset === 'AutoTrender' ? [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy']] : [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy'],['updated_at','Updated']])]).map(([key,label]) => <th key={key}><button type="button" className="trade-sort-header" onClick={() => toggleSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button></th>)}<th>Action</th></tr></thead><tbody>
-      {displayedTrades.map((trade) => { return <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].includes(String(trade.underlying || '').trim().toUpperCase()) ? <button type="button" className="trade-symbol-link" title={`Open ${String(trade.underlying).toUpperCase()} in AutoTrender`} onClick={() => onUnderlyingSelect?.(trade.underlying)}>{fmt(trade.underlying)}</button> : fmt(trade.underlying)}</td><td><button type="button" className="trade-symbol-link" onClick={() => setDetailsTrade(trade)}>{fmt(trade.instrument_symbol)}</button></td><td>{fmt(trade.direction)}</td><td>{fmt(trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td>{fmt(trade.last_price)}</td><td><span className="trade-trail-value">{fmt(trade.stop_loss)}{trailCount(trade, 'stop_loss') > 0 && <sub title={`Stop-loss trailed ${trailCount(trade, 'stop_loss')} times`}>{trailCount(trade, 'stop_loss')}</sub>}</span></td><td><span className="trade-trail-value">{fmt(trade.target)}{trailCount(trade, 'target') > 0 && <sub title={`Target trailed ${trailCount(trade, 'target')} times`}>{trailCount(trade, 'target')}</sub>}</span></td><td className={trade.display_pnl === null ? 'holding-pnl-zero' : trade.display_pnl > 0 ? 'holding-pnl-positive' : trade.display_pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero'}>{fmt(trade.display_pnl)}</td><td>{fmt(trade.average_exit_price ?? trade.exit_price)}</td><td>{fmt(trade.status)}</td>{(columnPreset === 'Basic' ? [trade.trailing_strategy] : columnPreset === 'AutoTrender' ? [trade.source, trade.strategy, trade.trailing_strategy] : [trade.source, trade.strategy, trade.trailing_strategy, trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—']).map((value,index) => <td key={index}>{fmt(value)}</td>)}<td>{trade.execution_mode === 'PAPER' && !isTerminalStatus(trade.status) && <button className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button>}</td></tr> })}
+    <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr>{([... [['execution_mode','Mode'],['underlying','Underlying'],['instrument_symbol','Instrument'],['direction','Side'],['quantity','Qty'],['average_entry_price','Entry'],['duration','Duration'],['last_price','Last price'],['stop_loss','SL'],['target','Target'],['display_pnl','P&L'],['average_exit_price','Exit price'],['status','Status']], ...(columnPreset === 'Basic' ? [['trailing_strategy','Trailing Strategy']] : columnPreset === 'AutoTrender' ? [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy']] : [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy'],['updated_at','Updated']])]).map(([key,label]) => <th key={key}><button type="button" className="trade-sort-header" onClick={() => toggleSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button></th>)}<th>Action</th></tr></thead><tbody>
+      {displayedTrades.map((trade) => { return <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].includes(String(trade.underlying || '').trim().toUpperCase()) ? <button type="button" className="trade-symbol-link" title={`Open ${String(trade.underlying).toUpperCase()} in AutoTrender`} onClick={() => onUnderlyingSelect?.(trade.underlying)}>{fmt(trade.underlying)}</button> : fmt(trade.underlying)}</td><td><button type="button" className="trade-symbol-link" onClick={() => setDetailsTrade(trade)}>{fmt(trade.instrument_symbol)}</button></td><td>{fmt(trade.direction)}</td><td>{fmt(trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td><td title={`Entry: ${trade.entry_time || trade.created_at || 'unknown'}; End: ${isTerminalStatus(trade.status) ? (trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at || 'unknown') : 'now'}`}>{formatTradeDuration(trade, durationNow)}</td><td>{fmt(trade.last_price)}</td><td><span className="trade-trail-value">{fmt(trade.stop_loss)}{trailCount(trade, 'stop_loss') > 0 && <sub title={`Stop-loss trailed ${trailCount(trade, 'stop_loss')} times`}>{trailCount(trade, 'stop_loss')}</sub>}</span></td><td><span className="trade-trail-value">{fmt(trade.target)}{trailCount(trade, 'target') > 0 && <sub title={`Target trailed ${trailCount(trade, 'target')} times`}>{trailCount(trade, 'target')}</sub>}</span></td><td className={trade.display_pnl === null ? 'holding-pnl-zero' : trade.display_pnl > 0 ? 'holding-pnl-positive' : trade.display_pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero'}>{fmt(trade.display_pnl)}</td><td>{fmt(trade.average_exit_price ?? trade.exit_price)}</td><td>{fmt(trade.status)}</td>{(columnPreset === 'Basic' ? [trade.trailing_strategy] : columnPreset === 'AutoTrender' ? [trade.source, trade.strategy, trade.trailing_strategy] : [trade.source, trade.strategy, trade.trailing_strategy, trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—']).map((value,index) => <td key={index}>{fmt(value)}</td>)}<td>{trade.execution_mode === 'PAPER' && !isTerminalStatus(trade.status) && <button className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button>}</td></tr> })}
       {!displayedTrades.length && <tr><td colSpan="18" className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or sync live positions.'}</td></tr>}
     </tbody></table></div><div className="panel-footer">Durable lifecycle events are saved immediately. Quote and unrealized P&amp;L updates are cache-only. Live broker reconciliation is read-only and remains a separate integration step.</div></section>
   </section>;
