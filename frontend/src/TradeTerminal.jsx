@@ -85,6 +85,10 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [closeTrade, setCloseTrade] = useState(null);
+  const [editTrade, setEditTrade] = useState(null);
+  const [editStopLoss, setEditStopLoss] = useState('');
+  const [editTarget, setEditTarget] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
   const [detailsTrade, setDetailsTrade] = useState(null);
   const [sortConfig, setSortConfig] = useState({ key: 'underlying', direction: 'asc' });
   const [columnPreset, setColumnPreset] = useState('Basic');
@@ -280,6 +284,53 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
     finally { setLoading(false); }
   };
 
+  const openEditDialog = (trade) => {
+    setEditTrade(trade);
+    setEditStopLoss(trade.stop_loss == null ? '' : String(trade.stop_loss));
+    setEditTarget(trade.target == null ? '' : String(trade.target));
+    setError('');
+  };
+
+  const saveTradeLevels = async () => {
+    if (!editTrade || editSaving) return;
+    const latest = trades.find((item) => item.trade_id === editTrade.trade_id) || editTrade;
+    const sl = Number(editStopLoss);
+    const target = Number(editTarget);
+    if (!editStopLoss.trim() || !Number.isFinite(sl) || sl <= 0) { setError('Enter a valid positive Stop Loss.'); return; }
+    if (!editTarget.trim() || !Number.isFinite(target) || target <= 0) { setError('Enter a valid positive Target.'); return; }
+    const rawLtp = latest.last_price;
+    const ltp = rawLtp === null || rawLtp === undefined || rawLtp === '' ? NaN : Number(rawLtp);
+    const isBuy = String(latest.direction || 'BUY').toUpperCase() === 'BUY';
+    if (Number.isFinite(ltp) && ltp > 0) {
+      const valid = isBuy ? sl < ltp && target > ltp : target < ltp && sl > ltp;
+      if (!valid) {
+        setError(isBuy
+          ? 'For a BUY trade, Stop Loss must be below the current market price and Target must be above it.'
+          : 'For a SELL trade, Target must be below the current market price and Stop Loss must be above it.');
+        return;
+      }
+    }
+    const changes = {};
+    if (Number(latest.stop_loss ?? 0) !== sl) changes.stop_loss = sl;
+    if (Number(latest.target ?? 0) !== target) changes.target = target;
+    if (!Object.keys(changes).length) { setEditTrade(null); return; }
+    setEditSaving(true);
+    setError('');
+    try {
+      await request('/trades/' + encodeURIComponent(latest.trade_id), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(changes),
+      });
+      setEditTrade(null);
+      await refresh();
+    } catch (e) {
+      setError(e.message || 'Could not update Stop Loss and Target.');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   const openCloseDialog = (trade) => {
     setCloseTrade(trade);
     setCloseOrderType('MARKET');
@@ -402,6 +453,41 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
         {detailsTrade.execution_mode === 'PAPER' && <p className="trade-paper-notice">Paper trade only. Closing a trade records a simulated exit; no broker order is placed.</p>}
       </div>
     </div>}
+    {editTrade && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !editSaving) setEditTrade(null); }}>
+      <div className="panel trade-create-form trade-create-modal" role="dialog" aria-modal="true" aria-labelledby="edit-trade-title" style={{ width: 'min(860px, 96vw)', maxWidth: '860px' }}>
+        <div className="trade-modal-heading"><div><h2 id="edit-trade-title">Edit Trade</h2><p>{editTrade.exchange || '—'}:{editTrade.instrument_symbol}</p></div><button className="button secondary" type="button" onClick={() => setEditTrade(null)} disabled={editSaving}>✕</button></div>
+        <div className="trade-details-grid" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', marginBottom: 20 }}>
+          {[['Mode', editTrade.execution_mode], ['Underlying', editTrade.underlying], ['Instrument', editTrade.instrument_symbol], ['Side', editTrade.direction], ['Qty', editTrade.quantity]].map(([label, value]) => <div className="trade-detail-item" key={label}><span>{label}</span><strong>{fmt(value)}</strong></div>)}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 16 }}>
+          <section style={{ border: '1px solid #e6a0a0', borderLeft: '5px solid #c62828', borderRadius: 10, padding: 16, background: 'rgba(198,40,40,0.055)', minWidth: 0 }}>
+            <h3 style={{ margin: '0 0 6px', color: '#b42323' }}>Stop Loss (SL)</h3>
+            <p style={{ margin: '0 0 12px', color: 'var(--muted, #64748b)', fontSize: 13 }}>Set a new stop loss for this trade.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div><span style={{ display: 'block', fontSize: 12, color: 'var(--muted, #64748b)' }}>Current SL</span><strong style={{ fontSize: 20 }}>{fmt(editTrade.stop_loss)}</strong></div>
+              <div><span style={{ display: 'block', fontSize: 12, color: 'var(--muted, #64748b)' }}>Current Market Price</span><strong style={{ fontSize: 20 }}>{fmt(trades.find((item) => item.trade_id === editTrade.trade_id)?.last_price ?? editTrade.last_price)}</strong></div>
+            </div>
+            <label className="settings-control"><span>New SL</span><input type="number" min="0.01" step="any" value={editStopLoss} onChange={(event) => setEditStopLoss(event.target.value)} disabled={editSaving} /></label>
+            <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--muted, #64748b)' }}>SL trail count (continues): {fmt(editTrade.stop_loss_trail_count ?? 0)}</p>
+          </section>
+          <section style={{ border: '1px solid #8bc9a7', borderLeft: '5px solid #16804a', borderRadius: 10, padding: 16, background: 'rgba(22,128,74,0.055)', minWidth: 0 }}>
+            <h3 style={{ margin: '0 0 6px', color: '#16804a' }}>Target</h3>
+            <p style={{ margin: '0 0 12px', color: 'var(--muted, #64748b)', fontSize: 13 }}>Set a new target for this trade.</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div><span style={{ display: 'block', fontSize: 12, color: 'var(--muted, #64748b)' }}>Current Target</span><strong style={{ fontSize: 20 }}>{fmt(editTrade.target)}</strong></div>
+              <div><span style={{ display: 'block', fontSize: 12, color: 'var(--muted, #64748b)' }}>Current Market Price</span><strong style={{ fontSize: 20 }}>{fmt(trades.find((item) => item.trade_id === editTrade.trade_id)?.last_price ?? editTrade.last_price)}</strong></div>
+            </div>
+            <label className="settings-control"><span>New Target</span><input type="number" min="0.01" step="any" value={editTarget} onChange={(event) => setEditTarget(event.target.value)} disabled={editSaving} /></label>
+            <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--muted, #64748b)' }}>Target trail count (continues): {fmt(editTrade.target_trail_count ?? 0)}</p>
+          </section>
+        </div>
+        <div style={{ marginTop: 16, padding: 14, borderRadius: 9, background: 'rgba(59,130,246,0.10)', fontSize: 13, lineHeight: 1.6 }}>
+          <strong>Editing rules</strong><br />
+          Only Stop Loss and Target can be changed for active PAPER trades. Current market price is shown for reference. The existing trailing strategy and trail counts are preserved.
+        </div>
+        <div className="settings-actions" style={{ marginTop: 18 }}><span className="trade-paper-label">PAPER MODE · no broker order will be placed</span><button className="button secondary" type="button" onClick={() => setEditTrade(null)} disabled={editSaving}>Cancel</button><button className="button primary" type="button" onClick={saveTradeLevels} disabled={editSaving}>{editSaving ? 'Updating…' : 'Update'}</button></div>
+      </div>
+    </div>}
     {closeTrade && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCloseTrade(null); }}>
       <div className="panel trade-create-form trade-create-modal" role="dialog" aria-modal="true" aria-labelledby="close-trade-title">
         <div className="trade-modal-heading"><div><h2 id="close-trade-title">Close paper trade</h2><p>{closeTrade.instrument_symbol} · {fmt(closeTrade.quantity)} units</p></div><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>✕</button></div>
@@ -471,7 +557,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · live updates</span>
     </div>
     <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr>{([... [['execution_mode','Mode'],['underlying','Underlying'],['instrument_symbol','Instrument'],['direction','Side'],['quantity','Qty'],['average_entry_price','Entry'],...(columnPreset === 'Detailed' ? [['duration','Duration']] : []),['last_price','Last price'],['stop_loss','SL'],['target','Target'],['display_pnl','P&L'],['average_exit_price','Exit price'],['status','Status']], ...(columnPreset === 'Basic' ? [['trailing_strategy','Trailing Strategy']] : columnPreset === 'AutoTrender' ? [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy']] : [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy'],['updated_at','Updated']])]).map(([key,label]) => <th key={key}><button type="button" className="trade-sort-header" onClick={() => toggleSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button></th>)}<th>Action</th></tr></thead><tbody>
-      {displayedTrades.map((trade) => { return <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].includes(String(trade.underlying || '').trim().toUpperCase()) ? <button type="button" className="trade-symbol-link" title={`Open ${String(trade.underlying).toUpperCase()} in AutoTrender`} onClick={() => onUnderlyingSelect?.(trade.underlying)}>{fmt(trade.underlying)}</button> : fmt(trade.underlying)}</td><td><button type="button" className="trade-symbol-link" onClick={() => setDetailsTrade(trade)}>{fmt(trade.instrument_symbol)}</button></td><td>{fmt(trade.direction)}</td><td>{fmt(trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td>{columnPreset === 'Detailed' && <td title={`Entry: ${trade.entry_time || trade.created_at || 'unknown'}; End: ${isTerminalStatus(trade.status) ? (trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at || 'unknown') : 'now'}`}>{formatTradeDuration(trade, durationNow)}</td>}<td>{fmt(trade.last_price)}</td><td><span className="trade-trail-value">{fmt(trade.stop_loss)}{trailCount(trade, 'stop_loss') > 0 && <sub title={`Stop-loss trailed ${trailCount(trade, 'stop_loss')} times`}>{trailCount(trade, 'stop_loss')}</sub>}</span></td><td><span className="trade-trail-value">{fmt(trade.target)}{trailCount(trade, 'target') > 0 && <sub title={`Target trailed ${trailCount(trade, 'target')} times`}>{trailCount(trade, 'target')}</sub>}</span></td><td className={trade.display_pnl === null ? 'holding-pnl-zero' : trade.display_pnl > 0 ? 'holding-pnl-positive' : trade.display_pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero'}>{fmt(trade.display_pnl)}</td><td>{fmt(trade.average_exit_price ?? trade.exit_price)}</td><td>{fmt(trade.status)}</td>{(columnPreset === 'Basic' ? [trade.trailing_strategy] : columnPreset === 'AutoTrender' ? [trade.source, trade.strategy, trade.trailing_strategy] : [trade.source, trade.strategy, trade.trailing_strategy, trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—']).map((value,index) => <td key={index}>{fmt(value)}</td>)}<td>{trade.execution_mode === 'PAPER' && !isTerminalStatus(trade.status) && <button className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button>}</td></tr> })}
+      {displayedTrades.map((trade) => { return <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].includes(String(trade.underlying || '').trim().toUpperCase()) ? <button type="button" className="trade-symbol-link" title={`Open ${String(trade.underlying).toUpperCase()} in AutoTrender`} onClick={() => onUnderlyingSelect?.(trade.underlying)}>{fmt(trade.underlying)}</button> : fmt(trade.underlying)}</td><td><button type="button" className="trade-symbol-link" onClick={() => setDetailsTrade(trade)}>{fmt(trade.instrument_symbol)}</button></td><td>{fmt(trade.direction)}</td><td>{fmt(trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td>{columnPreset === 'Detailed' && <td title={`Entry: ${trade.entry_time || trade.created_at || 'unknown'}; End: ${isTerminalStatus(trade.status) ? (trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at || 'unknown') : 'now'}`}>{formatTradeDuration(trade, durationNow)}</td>}<td>{fmt(trade.last_price)}</td><td><span className="trade-trail-value">{fmt(trade.stop_loss)}{trailCount(trade, 'stop_loss') > 0 && <sub title={`Stop-loss trailed ${trailCount(trade, 'stop_loss')} times`}>{trailCount(trade, 'stop_loss')}</sub>}</span></td><td><span className="trade-trail-value">{fmt(trade.target)}{trailCount(trade, 'target') > 0 && <sub title={`Target trailed ${trailCount(trade, 'target')} times`}>{trailCount(trade, 'target')}</sub>}</span></td><td className={trade.display_pnl === null ? 'holding-pnl-zero' : trade.display_pnl > 0 ? 'holding-pnl-positive' : trade.display_pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero'}>{fmt(trade.display_pnl)}</td><td>{fmt(trade.average_exit_price ?? trade.exit_price)}</td><td>{fmt(trade.status)}</td>{(columnPreset === 'Basic' ? [trade.trailing_strategy] : columnPreset === 'AutoTrender' ? [trade.source, trade.strategy, trade.trailing_strategy] : [trade.source, trade.strategy, trade.trailing_strategy, trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—']).map((value,index) => <td key={index}>{fmt(value)}</td>)}<td>{trade.execution_mode === 'PAPER' && !isTerminalStatus(trade.status) && <><button type="button" className="button secondary trade-close-button" onClick={() => openEditDialog(trade)}>Edit</button><button type="button" className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button></>}</td></tr> })}
       {!displayedTrades.length && <tr><td colSpan={columnPreset === 'Basic' ? 14 : columnPreset === 'AutoTrender' ? 16 : 18} className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or sync live positions.'}</td></tr>}
     </tbody></table></div><div className="panel-footer">Durable lifecycle events are saved immediately. Quote and unrealized P&amp;L updates are cache-only. Live broker reconciliation is read-only and remains a separate integration step.</div></section>
   </section>;
