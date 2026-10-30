@@ -1,7 +1,7 @@
 import json
 from datetime import date, datetime, time
-from zoneinfo import ZoneInfo
 from typing import Annotated
+from zoneinfo import ZoneInfo
 
 import requests
 from fastapi import APIRouter, HTTPException, Query, Request
