@@ -505,3 +505,45 @@
   .historical-date-control .historical-selected-date strong{white-space:normal;font-size:12px}
   .historical-control-panel .autotrender-view-switch{order:4;margin-left:auto}
 }
+
+/* Kite account dashboard: compact account overview and structured margin cards. */
+.kite-dashboard-content{padding:0 18px 18px}
+.kite-account-summary{display:grid;grid-template-columns:minmax(240px,1.7fr) repeat(3,minmax(130px,1fr));gap:12px;margin:2px 0 12px}
+.kite-account-balance,.kite-account-stat{display:flex;flex-direction:column;justify-content:center;gap:8px;min-width:0;padding:17px 18px;border:1px solid var(--line);border-radius:10px;background:linear-gradient(145deg,#142235,#101a29)}
+.kite-account-balance span,.kite-account-stat span,.kite-dashboard-activity span{color:var(--muted);font-size:9px;font-weight:700;letter-spacing:1px}
+.kite-account-balance strong{color:var(--green);font:600 clamp(21px,2vw,28px) 'DM Mono',monospace;white-space:nowrap}
+.kite-account-balance small{color:var(--muted);font-size:10px}
+.kite-account-stat strong{font:600 21px 'DM Mono',monospace}
+.kite-dashboard-activity{display:flex;gap:12px;margin-bottom:22px}
+.kite-dashboard-activity>div{display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:170px;padding:11px 14px;border:1px solid var(--line);border-radius:8px;background:#111c2b}
+.kite-dashboard-activity strong{font:600 15px 'DM Mono',monospace}
+.kite-dashboard-section-heading{display:flex;align-items:center;justify-content:space-between;margin:0 0 11px}
+.kite-dashboard-section-heading h3{margin:0;font-size:14px}
+.kite-dashboard-section-heading p{margin:4px 0 0;color:var(--muted);font-size:10px}
+.kite-segment-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.kite-segment-card{min-width:0;padding:15px;border:1px solid var(--line);border-radius:10px;background:#111b2a}
+.kite-segment-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.kite-segment-heading h3{margin:0;font-size:13px;text-transform:capitalize}
+.kite-enabled,.kite-disabled{padding:4px 8px;border-radius:20px;font-size:9px;font-weight:700}
+.kite-enabled{color:var(--green);background:#17372f}
+.kite-disabled{color:var(--muted);background:#202a39}
+.kite-segment-primary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kite-segment-primary>div,.kite-segment-secondary{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.kite-segment-primary>div{padding:10px;border-radius:7px;background:#0d1725}
+.kite-segment-primary span,.kite-segment-secondary span{color:var(--muted);font-size:10px}
+.kite-segment-primary strong,.kite-segment-secondary strong{font:600 12px 'DM Mono',monospace;white-space:nowrap}
+.kite-segment-secondary{padding:12px 2px 3px}
+.kite-margin-details{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}
+.kite-margin-details summary{color:var(--cyan);font-size:10px;font-weight:600;cursor:pointer;list-style:none}
+.kite-margin-details summary::-webkit-details-marker{display:none}
+.kite-margin-details summary:after{content:'＋';float:right}
+.kite-margin-details[open] summary:after{content:'−'}
+.kite-margin-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:13px}
+.kite-margin-columns h4{margin:0 0 8px;color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.7px}
+.kite-margin-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #202a3a;font-size:9px}
+.kite-margin-row span{color:var(--muted);text-transform:capitalize}
+.kite-margin-row strong{font:500 10px 'DM Mono',monospace;text-align:right;overflow-wrap:anywhere}
+.kite-margin-empty{color:var(--muted);font-size:10px}
+@media(max-width:900px){.kite-account-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.kite-account-balance{grid-column:1/-1}}
+@media(max-width:620px){.kite-dashboard-content{padding:0 12px 14px}.kite-account-summary{grid-template-columns:1fr 1fr;gap:8px}.kite-account-balance{grid-column:1/-1}.kite-account-stat{padding:12px}.kite-account-stat strong{font-size:17px}.kite-dashboard-activity{flex-wrap:wrap}.kite-dashboard-activity>div{flex:1 1 130px;min-width:0}.kite-segment-grid{grid-template-columns:1fr}.kite-margin-columns{grid-template-columns:1fr}}
+
