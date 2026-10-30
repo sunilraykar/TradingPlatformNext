@@ -19,11 +19,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.db.session import get_engine
 from app.services import trade_terminal
 from app.services.auto_exit_profitable_trades import (
-    _MAX_QUOTE_AGE_SECONDS,
+    _money,
     _option_exchange,
     _quote_is_fresh,
     calculate_zerodha_option_charges,
-    _money,
 )
 
 logger = logging.getLogger(__name__)
@@ -53,7 +52,7 @@ def _enabled() -> bool:
 
 
 def run_market_close_cycle(now: datetime | None = None) -> dict[str, Any]:
-    """Close every open PAPER option trade with a fresh positive quote."""
+    """Close eligible PAPER option trades using the latest validated quote."""
     now = now or datetime.now(_IST)
     if now.tzinfo is None:
         now = now.replace(tzinfo=_IST)
@@ -65,32 +64,52 @@ def run_market_close_cycle(now: datetime | None = None) -> dict[str, Any]:
 
     closed: list[str] = []
     skipped: list[dict[str, str]] = []
-    for trade in trade_terminal.list_trades(status_filter="OPEN"):
-        trade_id = str(trade.get("trade_id") or "")
-        if str(trade.get("execution_mode") or "").upper() != "PAPER":
+    for listed_trade in trade_terminal.list_trades(status_filter="OPEN"):
+        trade_id = str(listed_trade.get("trade_id") or "")
+        if not trade_id:
             continue
-        exchange = _option_exchange(trade)
-        if exchange is None:
-            continue
-        if not _quote_is_fresh(trade, now):
-            skipped.append({"trade_id": trade_id, "reason": "missing_or_stale_quote"})
-            continue
+        # The list is only a candidate scan. All decisions and calculations use
+        # one fresh read immediately before closing, never the earlier list copy.
         try:
-            entry_raw = trade.get("average_entry_price")
+            current = trade_terminal.get_trade(trade_id)
+            if not current or str(current.get("status", "OPEN")).upper() != "OPEN":
+                skipped.append({"trade_id": trade_id, "reason": "trade_no_longer_open"})
+                continue
+            if str(current.get("execution_mode") or "").upper() != "PAPER":
+                continue
+            exchange = _option_exchange(current)
+            if exchange is None:
+                skipped.append({"trade_id": trade_id, "reason": "unsupported_instrument"})
+                continue
+            if not _quote_is_fresh(current, now):
+                skipped.append({"trade_id": trade_id, "reason": "missing_or_stale_quote"})
+                continue
+
+            entry_raw = current.get("average_entry_price")
             if entry_raw is None:
-                entry_raw = trade.get("entry_price")
+                entry_raw = current.get("entry_price")
             entry = Decimal(str(entry_raw))
-            exit_price = Decimal(str(trade.get("last_price")))
-            quantity = int(trade.get("open_quantity", trade.get("quantity", 0)) or 0)
+            exit_price = Decimal(str(current.get("last_price")))
+            quantity = int(current.get("open_quantity", current.get("quantity", 0)) or 0)
             if quantity <= 0 or entry <= 0 or exit_price <= 0:
                 raise ValueError("invalid trade price or quantity")
-            direction = str(trade.get("direction") or "BUY").upper()
+            direction = str(current.get("direction") or "BUY").upper()
             if direction not in {"BUY", "SELL"}:
                 raise ValueError("invalid trade direction")
-            buy_premium, sell_premium = (entry, exit_price) if direction == "BUY" else (exit_price, entry)
-            gross_pnl = (exit_price - entry) * quantity * (Decimal(1) if direction == "BUY" else Decimal(-1))
+
+            buy_premium, sell_premium = (
+                (entry, exit_price) if direction == "BUY" else (exit_price, entry)
+            )
+            gross_pnl = (
+                (exit_price - entry)
+                * quantity
+                * (Decimal(1) if direction == "BUY" else Decimal(-1))
+            )
             charges = calculate_zerodha_option_charges(
-                exchange=exchange, buy_premium=buy_premium, sell_premium=sell_premium, quantity=quantity,
+                exchange=exchange,
+                buy_premium=buy_premium,
+                sell_premium=sell_premium,
+                quantity=quantity,
             )
             net_pnl = _money(gross_pnl - charges["total"])
         except (TypeError, ValueError, ArithmeticError) as exc:
@@ -99,13 +118,25 @@ def run_market_close_cycle(now: datetime | None = None) -> dict[str, Any]:
             continue
 
         try:
-            current = trade_terminal.get_trade(trade_id)
-            if not current or str(current.get("status", "OPEN")).upper() != "OPEN":
+            # Refuse to close if the trade changed while calculations were prepared.
+            latest = trade_terminal.get_trade(trade_id)
+            if (
+                not latest
+                or str(latest.get("status", "OPEN")).upper() != "OPEN"
+                or str(latest.get("execution_mode") or "").upper() != "PAPER"
+            ):
                 skipped.append({"trade_id": trade_id, "reason": "trade_no_longer_open"})
                 continue
-            if not _quote_is_fresh(current, now):
+            if (
+                latest.get("last_market_data_at") != current.get("last_market_data_at")
+                or latest.get("last_price") != current.get("last_price")
+            ):
+                skipped.append({"trade_id": trade_id, "reason": "quote_changed_during_close"})
+                continue
+            if not _quote_is_fresh(latest, now):
                 skipped.append({"trade_id": trade_id, "reason": "quote_became_stale"})
                 continue
+
             trade_terminal.update_trade(
                 trade_id,
                 {

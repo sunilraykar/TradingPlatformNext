@@ -22,10 +22,10 @@ from app.providers.kite.registry import (
 )
 from app.services import (
     auto_exit_profitable_trades,
-    paper_option_market_close,
     autotrender_cache_snapshot,
     autotrender_paper_trade_worker,
     live_market_data,
+    paper_option_market_close,
     trade_terminal,
 )
 from app.services.autotrender_cache import AutoTrenderCache
@@ -117,9 +117,9 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
-        for task in (reset_task, trade_task, instrument_task, auto_exit_task, autotrender_worker_task, autotrender_snapshot_task):
+        for task in (reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task, autotrender_worker_task, autotrender_snapshot_task):
             task.cancel()
-        for task in (reset_task, trade_task, instrument_task, auto_exit_task, autotrender_worker_task, autotrender_snapshot_task):
+        for task in (reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task, autotrender_worker_task, autotrender_snapshot_task):
             with suppress(asyncio.CancelledError):
                 await task
 

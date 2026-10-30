@@ -82,3 +82,60 @@ def test_market_close_does_not_run_outside_window(monkeypatch):
 
     assert result["enabled"] is False
     assert result["reason"] == "outside_market_close_window"
+
+
+def test_market_close_uses_latest_trade_snapshot_for_exit_and_pnl(monkeypatch):
+    listed = _trade(last_price=90)
+    current = _trade(last_price=95, last_market_data_at="2026-10-26T15:27:00+05:30")
+    monkeypatch.setattr(worker, "_enabled", lambda: True)
+    monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [listed])
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: current)
+    calls = []
+    monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    result = worker.run_market_close_cycle(CLOSE)
+
+    assert result["closed"] == ["paper-1"]
+    changes = calls[0][0][1]
+    assert changes["exit_price"] == 95
+    assert changes["gross_realized_pnl"] == -250
+
+
+def test_market_close_skips_if_quote_changes_before_final_validation(monkeypatch):
+    listed = _trade(last_price=90)
+    fresh = _trade(last_price=95, last_market_data_at="2026-10-26T15:27:00+05:30")
+    monkeypatch.setattr(worker, "_enabled", lambda: True)
+    monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [listed])
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: fresh)
+    calls = []
+    monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append(args))
+
+    result = worker.run_market_close_cycle(CLOSE)
+
+    assert result["closed"] == []
+    assert result["skipped"] == [{"trade_id": "paper-1", "reason": "quote_changed_during_close"}]
+    assert calls == []
+
+
+def test_market_close_rechecks_current_trade_mode_and_status(monkeypatch):
+    live = _trade(execution_mode="LIVE")
+    monkeypatch.setattr(worker, "_enabled", lambda: True)
+    monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [_trade()])
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: live)
+    calls = []
+    monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append(args))
+
+    result = worker.run_market_close_cycle(CLOSE)
+
+    assert result["closed"] == []
+    assert calls == []
+
+
+def test_market_close_skips_weekends(monkeypatch):
+    monkeypatch.setattr(worker, "_enabled", lambda: True)
+    monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: (_ for _ in ()).throw(AssertionError("must not inspect trades")))
+
+    result = worker.run_market_close_cycle(datetime(2026, 10, 25, 15, 27, tzinfo=IST))
+
+    assert result["enabled"] is False
+    assert result["reason"] == "outside_market_close_window"
