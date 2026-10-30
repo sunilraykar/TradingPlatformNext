@@ -153,21 +153,64 @@ def persist_cache_snapshot(
     with db_engine.begin() as connection:
         existing = connection.execute(
             text(
-                "SELECT snapshot_id FROM market_snapshots "
+                "SELECT snapshot_id, payload FROM market_snapshots "
                 "WHERE snapshot_type = :snapshot_type AND snapshot_key = :snapshot_key "
-                "AND trading_date = :trading_date LIMIT 1"
+                "AND trading_date = :trading_date LIMIT 1 FOR UPDATE"
             ),
             {
                 "snapshot_type": SNAPSHOT_TYPE,
                 "snapshot_key": SNAPSHOT_KEY,
                 "trading_date": trading_date,
             },
-        ).first()
+        ).mappings().first()
         if existing:
+            old_payload = existing["payload"]
+            if isinstance(old_payload, str):
+                try:
+                    old_payload = json.loads(old_payload)
+                except (TypeError, ValueError):
+                    old_payload = {}
+            old_index_price = old_payload.get("index_price") if isinstance(old_payload, dict) else None
+            old_data = old_index_price.get("data") if isinstance(old_index_price, dict) else None
+            expected_keys = {item[2] for item in INDEX_INSTRUMENTS.values()}
+            if (
+                isinstance(old_index_price, dict)
+                and old_index_price.get("source") == "KITE"
+                and isinstance(old_data, dict)
+                and expected_keys.issubset(old_data.keys())
+            ):
+                return {
+                    "saved": False,
+                    "reason": "already_saved_for_date",
+                    "trading_date": trading_date.isoformat(),
+                }
+
+            # Replace only an incomplete/legacy snapshot, and only after all six
+            # Kite quotes and the new payload have been fetched successfully.
+            connection.execute(
+                text(
+                    "UPDATE market_snapshots SET captured_at = :captured_at, "
+                    "payload = CAST(:payload AS JSON), payload_hash = :payload_hash "
+                    "WHERE snapshot_id = :snapshot_id"
+                ),
+                {
+                    "snapshot_id": existing["snapshot_id"],
+                    "captured_at": captured.replace(tzinfo=None),
+                    "payload": serialized,
+                    "payload_hash": payload_hash,
+                },
+            )
+            logger.info("Repaired legacy/incomplete market snapshot %s for %s",
+                        existing["snapshot_id"], trading_date.isoformat())
             return {
-                "saved": False,
-                "reason": "already_saved_for_date",
+                "saved": True,
+                "repaired": True,
+                "snapshot_id": existing["snapshot_id"],
                 "trading_date": trading_date.isoformat(),
+                "record_type": SNAPSHOT_TYPE,
+                "snapshot_key": SNAPSHOT_KEY,
+                "index_price_source": "KITE",
+                "payload_bytes": len(serialized.encode("utf-8")),
             }
 
         connection.execute(
@@ -203,19 +246,33 @@ def persist_cache_snapshot(
 
 
 async def run_daily_snapshot_scheduler(auth: AutoTrenderAuth | None = None) -> None:
-    """Run the daily Kite index-price and AutoTrender derivatives snapshot at 15:30 IST."""
+    """Capture at 15:30 IST; catch up on startup and retry failures every five minutes."""
+    retry_seconds = 300
     while True:
         now = datetime.now(IST)
-        target = _next_run(now)
-        await asyncio.sleep(max(0.0, (target - now).total_seconds()))
+        target = datetime.combine(now.date(), SNAPSHOT_TIME, tzinfo=IST)
+        if now < target:
+            await asyncio.sleep((target - now).total_seconds())
+            now = datetime.now(IST)
+            target = datetime.combine(now.date(), SNAPSHOT_TIME, tzinfo=IST)
+            if now < target:
+                continue
         try:
+            # If startup is after the scheduled time, capture immediately rather
+            # than silently skipping the day. A failed attempt is retried below.
             result = await asyncio.to_thread(
                 persist_cache_snapshot,
-                captured_at=target,
+                captured_at=now,
                 auth=auth,
             )
             logger.info("Daily market snapshot result: %s", result)
+            if result.get("saved") or result.get("reason") == "already_saved_for_date":
+                next_target = _next_run(datetime.now(IST))
+                await asyncio.sleep(max(1.0, (next_target - datetime.now(IST)).total_seconds()))
+            else:
+                await asyncio.sleep(retry_seconds)
         except asyncio.CancelledError:
             raise
         except Exception:
-            logger.exception("Daily market snapshot failed")
+            logger.exception("Daily market snapshot failed; retrying in %s seconds", retry_seconds)
+            await asyncio.sleep(retry_seconds)
