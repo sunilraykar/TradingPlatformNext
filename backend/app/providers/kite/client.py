@@ -61,10 +61,11 @@ class KiteProvider:
     def quote(self, instrument_token: int) -> dict[str, Any]:
         return self.quotes([instrument_token]).get(str(instrument_token), {})
 
-    def quotes(self, instrument_tokens: list[int]) -> dict[str, Any]:
+    def quotes(self, instruments: list[str | int]) -> dict[str, Any]:
+        """Fetch quotes by Kite instrument token or EXCHANGE:TRADINGSYMBOL key."""
         if not self._client.access_token:
             raise KiteProviderError("Kite session is not configured")
-        keys = [str(token) for token in instrument_tokens]
+        keys = [str(instrument) for instrument in instruments]
         try:
             return self._client.quote(*keys)
         except Exception as exc:
