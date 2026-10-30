@@ -925,30 +925,27 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins }
         {DEFAULT_INDICES.filter((value, position, values) => values.indexOf(value) === position && !['MIDCPNIFTY', 'BANKEX'].includes(value)).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
       </div>
       <div className="interval-select">Refresh Interval: <strong>{mins} min</strong></div>
-      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
-    </section>
-    {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
-    <section className="panel historical-date-navigation" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(240px, 2fr) 1fr', alignItems: 'center', gap: '16px', width: '100%', boxSizing: 'border-box', minHeight: '92px', padding: '18px 24px', margin: '14px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-        <button type="button" className="button secondary" style={{ minWidth: '48px', minHeight: '44px', fontSize: '24px', lineHeight: 1 }} aria-label="Previous available date (older)" title="Previous available date (older)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) >= (result.snapshots || []).length - 1} onClick={() => {
+      <div className="historical-date-control" aria-label="Selected trading date navigation">
+        <button type="button" className="button secondary historical-date-arrow" aria-label="Previous available date (older)" title="Previous available date (older)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) >= (result.snapshots || []).length - 1} onClick={() => {
           const dates = result.snapshots || [];
           const index = dates.findIndex((item) => item.trading_date === selected?.trading_date);
           if (index >= 0 && dates[index + 1]) openSnapshot(dates[index + 1]);
         }}>‹</button>
-      </div>
-      <div className="historical-selected-date" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', minWidth: 0, gap: '8px' }}>
-        <span className="eyebrow">SELECTED TRADING DATE</span>
-        <strong style={{ fontSize: '20px', whiteSpace: 'nowrap' }}>{selected?.trading_date ? new Date(selected.trading_date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : loading ? 'Loading dates…' : 'No saved dates'}</strong>
-        {detailLoading && <span className="settings-intro">Loading records…</span>}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button type="button" className="button secondary" style={{ minWidth: '48px', minHeight: '44px', fontSize: '24px', lineHeight: 1 }} aria-label="Next available date (newer)" title="Next available date (newer)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) <= 0} onClick={() => {
+        <div className="historical-selected-date">
+          <span className="eyebrow">SELECTED TRADING DATE</span>
+          <strong>{selected?.trading_date ? new Date(selected.trading_date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : loading ? 'Loading dates…' : 'No saved dates'}</strong>
+          {detailLoading && <span className="settings-intro">Loading records…</span>}
+        </div>
+        <button type="button" className="button secondary historical-date-arrow" aria-label="Next available date (newer)" title="Next available date (newer)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) <= 0} onClick={() => {
           const dates = result.snapshots || [];
           const index = dates.findIndex((item) => item.trading_date === selected?.trading_date);
           if (index > 0 && dates[index - 1]) openSnapshot(dates[index - 1]);
         }}>›</button>
       </div>
+      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
     </section>
+    {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
+ion>
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="historical-records-content">
       <article className="panel price-vwap-panel historical-price-vwap-panel">
