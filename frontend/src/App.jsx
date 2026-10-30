@@ -1332,13 +1332,12 @@ export default function App() {
       </header>
 
       {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <><nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav><AutoTrenderHistoricalData /></> : <>
-      <nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
           {DEFAULT_INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
         </div>
         <div className="interval-select">Intraday window: <strong>{mins} min</strong></div>
-        <div className="control-note">Market data only · No order placement</div>
+        <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
       </section>
 
       {error && <div className="error-banner"><strong>Data request issue</strong><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
