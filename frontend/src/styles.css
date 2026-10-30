@@ -547,3 +547,11 @@
 @media(max-width:900px){.kite-account-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.kite-account-balance{grid-column:1/-1}}
 @media(max-width:620px){.kite-dashboard-content{padding:0 12px 14px}.kite-account-summary{grid-template-columns:1fr 1fr;gap:8px}.kite-account-balance{grid-column:1/-1}.kite-account-stat{padding:12px}.kite-account-stat strong{font-size:17px}.kite-dashboard-activity{flex-wrap:wrap}.kite-dashboard-activity>div{flex:1 1 130px;min-width:0}.kite-segment-grid{grid-template-columns:1fr}.kite-margin-columns{grid-template-columns:1fr}}
 
+/* Portfolio-level totals above the holdings filters and table. */
+.holdings-portfolio-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;padding:4px 0 16px;margin:0 0 14px;border-bottom:1px solid var(--line)}
+.holdings-summary-item{display:flex;flex-direction:column;gap:8px;min-width:0}
+.holdings-summary-item>span{color:var(--muted);font-size:12px;white-space:nowrap}
+.holdings-summary-item>strong{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font:600 clamp(15px,1.45vw,22px) 'DM Mono',monospace;white-space:nowrap}
+.holdings-summary-item>strong small{padding:5px 8px;border-radius:6px;background:rgba(56,217,169,.10);font:600 11px 'DM Mono',monospace}
+.holdings-summary-item>strong small.negative{background:rgba(248,113,113,.11)}
+@media(max-width:760px){.holdings-portfolio-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}.holdings-summary-item>strong{font-size:16px}}
