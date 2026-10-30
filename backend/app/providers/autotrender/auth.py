@@ -118,27 +118,66 @@ class AutoTrenderAuth:
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("Browser cleanup failed: %s", exc)
 
+    @staticmethod
+    def _response_rejects_session(response) -> bool:
+        """Identify explicit upstream authentication failures, including JSON errors."""
+        if response.status_code in (401, 403, 419, 440):
+            return True
+
+        content_type = response.headers.get("Content-Type", "").lower()
+        if "text/html" in content_type:
+            return True
+
+        # AutoTrender can return an application-level rejection in a successful
+        # HTTP response. Do not mistake that payload for an authenticated session.
+        try:
+            payload = response.json()
+        except (ValueError, TypeError):
+            payload = None
+        if isinstance(payload, dict):
+            message = " ".join(
+                str(payload.get(key, "")) for key in ("message", "detail", "error", "status")
+            ).lower()
+            rejection_terms = (
+                "session cookie", "invalid session", "session expired",
+                "unauthorized", "not authenticated", "authentication required",
+                "login required", "invalid token",
+            )
+            if any(term in message for term in rejection_terms):
+                return True
+
+        response_url = str(getattr(response, "url", "")).lower()
+        return "/login" in response_url
+
     def get(self, endpoint: str, **kwargs):
-        """Fetch an API endpoint, automatically logging in if the saved session is invalid."""
+        """Fetch an API endpoint, clearing rejected cookies and retrying login once."""
         url = endpoint if endpoint.startswith("http") else API_BASE_URL + endpoint
 
-        # Restore/validate the saved session first; if it is absent or expired,
-        # perform the same configured headless login used by the manual login action.
-        if not self.authenticated and not (self._restore_saved_cookie() and self._validate_session()):
-            logger.info("AutoTrender session unavailable; attempting automatic login")
-            self.login()
+        # Serialize authentication and requests. Concurrent API calls must not
+        # race to restore, delete, or replace the shared captured session cookie.
+        with self._lock:
+            if not self.authenticated:
+                restored = self._restore_saved_cookie()
+                if not restored or not self._validate_session():
+                    # A cookie that failed validation must never be left on disk.
+                    self.clear_saved_cookie()
+                    logger.info("AutoTrender session unavailable; attempting automatic login")
+                    self.login()
 
-        response = self.session.get(url, timeout=30, **kwargs)
-        content_type = response.headers.get("Content-Type", "").lower()
-        if response.status_code in (401, 403) or "text/html" in content_type:
-            # The session may have expired after the initial validation. Retry only
-            # once after re-authentication to avoid an infinite login/retry loop.
-            logger.warning("AutoTrender API rejected the session; attempting one re-login")
-            self.clear_saved_cookie()
-            self.login()
             response = self.session.get(url, timeout=30, **kwargs)
+            if self._response_rejects_session(response):
+                logger.warning("AutoTrender rejected the session; clearing cookie and logging in again")
+                self.clear_saved_cookie()
+                self.login()
+                response = self.session.get(url, timeout=30, **kwargs)
+                if self._response_rejects_session(response):
+                    self.clear_saved_cookie()
+                    raise RuntimeError(
+                        "AutoTrender rejected the new session after re-login. "
+                        "The captured session cookie was cleared; check AutoTrender credentials or account access."
+                    )
 
-        return response
+            return response
 
     def is_authenticated(self) -> bool:
         return bool(self.authenticated and self._validate_session())
@@ -155,10 +194,10 @@ class AutoTrenderAuth:
                 },
                 timeout=15,
             )
-            self.authenticated = (
-                response.ok
-                and "text/html" not in response.headers.get("Content-Type", "").lower()
-            )
+            self.authenticated = response.ok and not self._response_rejects_session(response)
+            if not self.authenticated and self._response_rejects_session(response):
+                logger.warning("AutoTrender rejected the saved session cookie; clearing it")
+                self.clear_saved_cookie()
         except requests.RequestException:
             self.authenticated = False
         return self.authenticated

@@ -331,3 +331,78 @@ def test_paper_market_close_uses_fresh_backend_quote_for_realized_pnl(monkeypatc
     assert "closed_quantity" not in closed
     assert "realized_pnl" not in closed
     assert persisted and persisted[-1][1] == "TRADE_UPDATED"
+
+
+
+def test_m_ttts_moves_stop_only_with_target_and_keeps_trail_counts_synchronized(monkeypatch):
+    updates = []
+    monkeypatch.setattr(
+        trade_terminal,
+        "update_trade",
+        lambda trade_id, values, event_type=None: updates.append(dict(values)),
+    )
+    trade = {
+        "trade_id": "m-ttts-sync",
+        "execution_mode": "PAPER",
+        "status": "OPEN",
+        "direction": "BUY",
+        "quantity": 1,
+        "open_quantity": 1,
+        "entry_price": 100.0,
+        "average_entry_price": 100.0,
+        "target": 110.0,
+        "stop_loss": None,
+        "favorable_price": 100.0,
+        "trailing_active": False,
+        "target_trail_count": 0,
+        "stop_loss_trail_count": 0,
+        "trailing_strategy": "M-TTTS",
+        "target_stop_loss_settings": {
+            "trailingDistance": 5,
+            "trailingDistanceType": "POINTS",
+            "trailingTarget": 10,
+            "trailingTargetType": "POINTS",
+        },
+    }
+
+    # First target is reached: target advances once and SL is established once.
+    trade["favorable_price"] = 110.0
+    trade["last_price"] = 110.0
+    trade_terminal._manage_paper_trade_risk(trade, 110.0, "2026-10-30T10:00:00")
+    first = updates[-1]
+    assert first["target"] == 120.0
+    assert first["stop_loss"] == 105.0
+    assert first["target_trail_count"] == 1
+    assert first["stop_loss_trail_count"] == 1
+
+    # Price improves but does not reach the next target: SL and both counters stay put.
+    trade.update({
+        "target": first["target"],
+        "stop_loss": first["stop_loss"],
+        "target_trail_count": first["target_trail_count"],
+        "stop_loss_trail_count": first["stop_loss_trail_count"],
+        "trailing_active": True,
+        "favorable_price": 110.0,
+    })
+    before = len(updates)
+    trade_terminal._manage_paper_trade_risk(trade, 115.0, "2026-10-30T10:01:00")
+    assert len(updates) == before + 1
+    assert "stop_loss" not in updates[-1]
+    assert "target_trail_count" not in updates[-1]
+    assert "stop_loss_trail_count" not in updates[-1]
+
+    # A quote gap crossing two target levels produces two paired trail events.
+    trade.update({
+        "target": 120.0,
+        "stop_loss": 105.0,
+        "target_trail_count": 1,
+        "stop_loss_trail_count": 1,
+        "trailing_active": True,
+        "favorable_price": 115.0,
+    })
+    trade_terminal._manage_paper_trade_risk(trade, 135.0, "2026-10-30T10:02:00")
+    last = updates[-1]
+    assert last["target"] == 140.0
+    assert last["stop_loss"] == 125.0
+    assert last["target_trail_count"] == 3
+    assert last["stop_loss_trail_count"] == 3

@@ -75,15 +75,6 @@ function displayValue(value) {
   return '—';
 }
 
-function extractTrend(payload) {
-  const candidates = [payload?.data?.trend, payload?.trend, payload?.data?.summary, payload?.data?.strength, payload?.data, payload?.summary, payload];
-  const source = candidates.find((item) => item && typeof item === 'object' && !Array.isArray(item) && (item.call !== undefined || item.put !== undefined || item.signal !== undefined || item.optionSignal !== undefined)) || {};
-  const call = numericValue(source.call ?? source.callStrength ?? source.call_strength ?? source.callPercentage ?? source.call_percentage);
-  const put = numericValue(source.put ?? source.putStrength ?? source.put_strength ?? source.putPercentage ?? source.put_percentage);
-  const signal = source.signal ?? source.optionSignal ?? source.option_signal ?? source.title;
-  return { call, put, signal };
-}
-
 function numericValue(value) {
   const scalar = scalarValue(value);
   if (scalar === null || scalar === '') return null;
@@ -119,24 +110,28 @@ function buildIntradayRows(rows, settings = {}) {
   return rows.map((row, index) => {
     const call = numericValue(row.call);
     const put = numericValue(row.put);
-    const total = call !== null && put !== null ? call + put : null;
-    const callStrength = total !== null && total > 0 ? (call / total) * 100 : null;
-    const putStrength = total !== null && total > 0 ? (put / total) * 100 : null;
-    // Positive difference means call strength is higher. Both directions use
-    // the absolute configured threshold; VWAP/Option signals distinguish direction.
+    // Call/Put inputs are strength magnitudes. Negative or missing values are
+    // invalid upstream data and must never be converted into percentages/signals.
+    const validStrength = call !== null && put !== null && call >= 0 && put >= 0 && call + put > 0;
+    const total = validStrength ? call + put : null;
+    const callStrength = total !== null ? (call / total) * 100 : null;
+    const putStrength = total !== null ? (put / total) * 100 : null;
+    // Positive difference means Call strength leads Put strength (bullish).
     const strengthDiff = callStrength !== null && putStrength !== null ? callStrength - putStrength : null;
     const price = numericValue(row.price ?? row.close ?? row.ltp);
     const vwap = numericValue(row.vWap ?? row.vwap);
-    const buffer = price !== null && vwap !== null && vwap !== 0 ? ((price - vwap) / vwap) * 100 : null;
+    const validPriceVwap = price !== null && vwap !== null && price > 0 && vwap > 0;
+    const buffer = validPriceVwap ? ((price - vwap) / price) * 100 : null;
     const optionSignal = signalValue(row.optionSignal);
     const vwapSignal = signalValue(row.vWapSignal ?? row.vwapSignal);
     const pcr = numericValue(row.pcr);
 
-    const strengthPass = strengthDiff !== null && Math.abs(strengthDiff) > strengthThreshold;
-    // The configured buffer is a maximum absolute Price-VWAP percentage gap.
-    const bufferPass = buffer !== null && Math.abs(buffer) <= bufferThreshold;
-    const bullish = strengthPass && bufferPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
-    const bearish = strengthPass && bufferPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
+    const strengthPass = validStrength && strengthDiff !== null && Math.abs(strengthDiff) > strengthThreshold;
+    // Fail closed unless both price and VWAP are valid; buffer is measured
+    // against Price, matching the backend evaluator.
+    const bufferPass = validPriceVwap && buffer !== null && Math.abs(buffer) <= bufferThreshold;
+    const bullish = strengthPass && strengthDiff > strengthThreshold && bufferPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
+    const bearish = strengthPass && strengthDiff < -strengthThreshold && bufferPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
     const enter = bullish ? 'BUY' : bearish ? 'SELL' : 'WAIT';
 
     return { key: recordTime(row) + '-' + index, time: recordTime(row), call, put, diff: numericValue(row.diff), pcr, price, vwap, vwapSignal, optionSignal, callStrength, putStrength, strengthDiff, buffer, enter };
@@ -806,7 +801,7 @@ function SettingsPanel() {
   </section>;
 }
 
-function AutoTrenderHistoricalData() {
+function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(0);
@@ -920,31 +915,31 @@ function AutoTrenderHistoricalData() {
 
   return <section className="historical-viewer">
 
-    <div className="index-switch historical-index-switch" aria-label="Select historical index">
-      {DEFAULT_INDICES.filter((value, position, values) => values.indexOf(value) === position && !['MIDCPNIFTY', 'BANKEX'].includes(value)).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
-    </div>
-    {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
-    <section className="panel historical-date-navigation" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(240px, 2fr) 1fr', alignItems: 'center', gap: '16px', width: '100%', boxSizing: 'border-box', minHeight: '92px', padding: '18px 24px', margin: '14px 0' }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
-        <button type="button" className="button secondary" style={{ minWidth: '48px', minHeight: '44px', fontSize: '24px', lineHeight: 1 }} aria-label="Previous available date (older)" title="Previous available date (older)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) >= (result.snapshots || []).length - 1} onClick={() => {
+    <section className="control-panel historical-control-panel">
+      <div className="index-switch historical-index-switch" aria-label="Select historical index">
+        {DEFAULT_INDICES.filter((value, position, values) => values.indexOf(value) === position && !['MIDCPNIFTY', 'BANKEX'].includes(value)).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
+      </div>
+
+      <div className="historical-date-control" aria-label="Selected trading date navigation">
+        <button type="button" className="button secondary historical-date-arrow" aria-label="Previous available date (older)" title="Previous available date (older)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) >= (result.snapshots || []).length - 1} onClick={() => {
           const dates = result.snapshots || [];
           const index = dates.findIndex((item) => item.trading_date === selected?.trading_date);
           if (index >= 0 && dates[index + 1]) openSnapshot(dates[index + 1]);
         }}>‹</button>
-      </div>
-      <div className="historical-selected-date" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', minWidth: 0, gap: '8px' }}>
-        <span className="eyebrow">SELECTED TRADING DATE</span>
-        <strong style={{ fontSize: '20px', whiteSpace: 'nowrap' }}>{selected?.trading_date ? new Date(selected.trading_date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : loading ? 'Loading dates…' : 'No saved dates'}</strong>
-        {detailLoading && <span className="settings-intro">Loading records…</span>}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button type="button" className="button secondary" style={{ minWidth: '48px', minHeight: '44px', fontSize: '24px', lineHeight: 1 }} aria-label="Next available date (newer)" title="Next available date (newer)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) <= 0} onClick={() => {
+        <div className="historical-selected-date">
+          <span className="eyebrow">SELECTED TRADING DATE</span>
+          <strong>{selected?.trading_date ? new Date(selected.trading_date + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }) : loading ? 'Loading dates…' : 'No saved dates'}</strong>
+          {detailLoading && <span className="settings-intro">Loading records…</span>}
+        </div>
+        <button type="button" className="button secondary historical-date-arrow" aria-label="Next available date (newer)" title="Next available date (newer)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) <= 0} onClick={() => {
           const dates = result.snapshots || [];
           const index = dates.findIndex((item) => item.trading_date === selected?.trading_date);
           if (index > 0 && dates[index - 1]) openSnapshot(dates[index - 1]);
         }}>›</button>
       </div>
+      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
     </section>
+    {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="historical-records-content">
       <article className="panel price-vwap-panel historical-price-vwap-panel">
@@ -1002,22 +997,21 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     close_price: row.close_price ?? row.closePrice ?? row.ohlc?.close ?? null,
     pnl: row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0,
     day_change: row.day_change ?? row.dayChange ?? null,
-    day_change_percentage: row.day_change_percentage ?? row.dayChangePercentage ?? null,
-    invested_amount: quantityOf(row) * averagePriceOf(row),
-    current_amount: quantityOf(row) * lastPriceOf(row),
-    open: row.open ?? row.ohlc?.open ?? null,
-    high: row.high ?? row.ohlc?.high ?? null,
-    low: row.low ?? row.ohlc?.low ?? null,
-    close: row.close ?? row.close_price ?? row.closePrice ?? row.ohlc?.close ?? null,
+    day_change_percentage: row.day_change_percentage ?? row.dayChangePercentage ?? row.day_change_percent ?? null,
+    invested_amount: Number(row.invested_amount ?? row.investedAmount ?? quantityOf(row) * averagePriceOf(row)),
+    current_amount: Number(row.current_amount ?? row.currentAmount ?? row.current_value ?? row.market_value ?? quantityOf(row) * lastPriceOf(row)),
+    net_change_percentage: (() => {
+      const invested = Number(row.invested_amount ?? row.investedAmount ?? quantityOf(row) * averagePriceOf(row));
+      const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
+      return invested ? (pnl / Math.abs(invested)) * 100 : 0;
+    })(),
   })) : rows;
-  // Holdings always use the same ordered columns. Do not derive their schema
-  // from the union of row keys: fields such as "book" on a stray/legacy row
-  // would otherwise shift values and make the table appear corrupted.
+  // Match Kite's holdings table: instrument, quantity, cost, LTP, invested,
+  // current value, P&L, net change and day change.
   const holdingsColumns = [
-    'tradingsymbol', 'exchange', 'price', 'quantity', 'average_price',
-    'last_price', 'close_price', 'pnl', 'day_change',
-    'day_change_percentage', 'open', 'high', 'low', 'close',
-    'invested_amount', 'current_amount',
+    'tradingsymbol', 'quantity', 'average_price', 'last_price',
+    'invested_amount', 'current_amount', 'pnl',
+    'net_change_percentage', 'day_change_percentage',
   ];
   const columns = columnsOverride
     ? columnsOverride.filter((key) => !hidden.has(normalizeColumn(key)))
@@ -1029,17 +1023,34 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     // AutoTrender may wrap values in objects such as { value, colorCode }.
     value = typeof value === 'object' ? scalarValue(value) : value;
     if (value === null || value === undefined || value === '') return '—';
-    const numericColumns = new Set(['call','put','diff','pcr','price','vwap','callstrength','putstrength','strengthdiff','vwappricebufferpct','buffer','day_change','day_change_percentage','last_price','close_price','average_price','invested_amount','current_amount','pnl','open','high','low','close']);
     const normalizedKey = normalizeColumn(key);
+    // Column keys are normalized to lowercase alphanumeric names above, so
+    // the formatter must use the same normalized names (no underscores).
+    const numericColumns = new Set([
+      'call', 'put', 'diff', 'pcr', 'price', 'vwap',
+      'callstrength', 'putstrength', 'strengthdiff', 'vwappricebufferpct', 'buffer',
+      'daychange', 'daychangepercentage', 'netchangepercentage',
+      'lastprice', 'closeprice', 'averageprice', 'investedamount', 'currentamount',
+      'pnl', 'open', 'high', 'low', 'close',
+    ]);
+    const percentageColumns = new Set([
+      'callstrength', 'putstrength', 'vwappricebufferpct', 'buffer',
+      'daychangepercentage', 'netchangepercentage',
+    ]);
+    if (normalizedKey === 'quantity') {
+      const parsed = numericValue(value);
+      return parsed === null ? '—' : parsed.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
     if (numericColumns.has(normalizedKey)) {
       const parsed = numericValue(value);
       if (parsed !== null) {
-        const digits = ['pcr','callstrength','putstrength','strengthdiff','vwappricebufferpct','buffer','day_change_percentage'].includes(normalizedKey) ? 2 : 2;
-        const formatted = parsed.toLocaleString('en-IN', { maximumFractionDigits: digits });
-        return ['callstrength','putstrength','vwappricebufferpct','buffer','day_change_percentage'].includes(normalizedKey) ? `${formatted}%` : formatted;
+        const formatted = parsed.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        return percentageColumns.has(normalizedKey) ? `${formatted}%` : formatted;
       }
     }
-    if (normalizedKey === 'day_change_percentage' && !String(value).endsWith('%')) return `${value}%`;
     return String(value);
   };
   const renderCell = (value, key) => {
@@ -1067,8 +1078,8 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
   }) : displayRows;
   const toggleSort = (key) => setSortConfig((current) => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }));
   const isSymbol = (key) => normalizeColumn(key) === 'tradingsymbol';
-  const heading = (key) => ({ time: 'Time', call: 'Call', put: 'Put', diff: 'Diff', pcr: 'PCR', price: 'Price', vwap: 'VWAP', vwapSignal: 'VWAP Signal', optionSignal: 'Option Signal', callStrength: 'Call Strength (%)', putStrength: 'Put Strength (%)', strengthDiff: 'Call-Put Strength Diff', vwapPriceBufferPct: 'VWAP-Price Buffer (%)', enter: 'Enter', tradingsymbol: 'Symbol', average_price: 'Average Price', last_price: 'Last Price', close_price: 'Close Price', pnl: 'PnL', day_change: 'Day Change', day_change_percentage: 'Day Change Percentage', invested_amount: 'Invested Amount', current_amount: 'Current Amount' })[key] || (isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' '));
-  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{renderCell(row[key], key)}</td>)}</tr>; })}</tbody></table></div>;
+  const heading = (key) => ({ time: 'Time', call: 'Call', put: 'Put', diff: 'Diff', pcr: 'PCR', price: 'Price', vwap: 'VWAP', vwapSignal: 'VWAP Signal', optionSignal: 'Option Signal', callStrength: 'Call Strength (%)', putStrength: 'Put Strength (%)', strengthDiff: 'Call-Put Strength Diff', vwapPriceBufferPct: 'VWAP-Price Buffer (%)', enter: 'Enter', tradingsymbol: 'Instrument', quantity: 'Qty.', average_price: 'Avg. cost', last_price: 'LTP', pnl: 'P&L', day_change_percentage: 'Day chg.', net_change_percentage: 'Net chg.', invested_amount: 'Invested', current_amount: 'Cur. val' })[key] || (isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' '));
+  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : holdingsMode && ['day_change','day_change_percentage','daychange','daychangepercentage','net_change_percentage'].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? 'cell-positive' : Number(row[key] ?? 0) < 0 ? 'cell-negative' : '') : ''}>{renderCell(row[key], key)}</td>)}</tr>; })}</tbody></table></div>;
 }
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
@@ -1079,6 +1090,8 @@ export default function App() {
   const [kiteError, setKiteError] = useState('');
   const [holdingsLetter, setHoldingsLetter] = useState('ALL');
   const [holdingsProfitFilter, setHoldingsProfitFilter] = useState('ALL');
+  const [holdingsSearch, setHoldingsSearch] = useState('');
+  const [holdingsSort, setHoldingsSort] = useState('SYMBOL');
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
   const refreshInFlight = useRef(false);
@@ -1185,16 +1198,38 @@ export default function App() {
         result = await api('/kite/option-chain?underlying=NIFTY&strike_count=10');
         const rows = (result.strikes || []).map((s) => ({ call_symbol: s.CE?.tradingsymbol, call_ltp: s.CE?.last_price, call_volume: s.CE?.volume, call_oi: s.CE?.oi, strike: s.strike, put_oi: s.PE?.oi, put_volume: s.PE?.volume, put_ltp: s.PE?.last_price, put_symbol: s.PE?.tradingsymbol }));
         setKiteData({ title: 'Option Chain', subtitle: (result.underlying || 'NIFTY') + ' · Expiry ' + (result.expiry || '—') + ' · Spot ' + number(result.spot_price), rows });
-      } else if (kiteTab === 'Orders') { result = await api('/kite/orders'); setKiteData({ title: 'Orders', subtitle: (result.orders || []).length + ' orders', rows: result.orders || [] });
-      } else if (kiteTab === 'Positions') { result = await api('/kite/positions'); setKiteData({ title: 'Positions', subtitle: 'Net and day positions', rows: [...(result.net || []).map((r) => ({ book: 'Net', ...r })), ...(result.day || []).map((r) => ({ book: 'Day', ...r }))] });
-      } else if (kiteTab === 'Holdings') { result = await api('/kite/holdings'); setKiteData({ title: 'Holdings', subtitle: (result.holdings || []).length + ' holdings', rows: result.holdings || [] });
-      } else if (kiteTab === 'Funds') { result = await api('/kite/funds'); const rows = Object.entries(result || {}).flatMap(([segment, vals]) => vals && typeof vals === 'object' ? Object.entries(vals).map(([metric, value]) => ({ segment, metric, value: typeof value === 'object' ? JSON.stringify(value) : value })) : [{ segment: 'Account', metric: segment, value: vals }]); setKiteData({ title: 'Funds & Margins', subtitle: 'Available balance and margin details', rows });
+      } else if (kiteTab === 'Orders') {
+        result = await api('/kite/orders');
+        setKiteData({ title: 'Orders', subtitle: (result.orders || []).length + ' orders', rows: result.orders || [] });
+      } else if (kiteTab === 'Positions') {
+        result = await api('/kite/positions');
+        setKiteData({ title: 'Positions', subtitle: 'Net and day positions', rows: [...(result.net || []).map((r) => ({ book: 'Net', ...r })), ...(result.day || []).map((r) => ({ book: 'Day', ...r }))] });
+      } else if (kiteTab === 'Holdings') {
+        result = await api('/kite/holdings');
+        setKiteData({ title: 'Holdings', subtitle: (result.holdings || []).length + ' holdings', rows: result.holdings || [] });
       } else {
-        const all = await Promise.all([api('/kite/orders'), api('/kite/positions'), api('/kite/holdings'), api('/kite/funds')]);
-        setKiteData({ title: 'Kite Dashboard', subtitle: 'Live account snapshot', rows: [{ metric: 'Orders today', value: (all[0].orders || []).length }, { metric: 'Net positions', value: (all[1].net || []).length }, { metric: 'Day positions', value: (all[1].day || []).length }, { metric: 'Holdings', value: (all[2].holdings || []).length }, ...Object.entries(all[3] || {}).flatMap(([segment, vals]) => vals && typeof vals === 'object' ? Object.entries(vals).map(([metric, value]) => ({ metric: segment + ' · ' + metric, value: typeof value === 'object' ? JSON.stringify(value) : value })) : [{ metric: segment, value: vals }])] });
+        const [orders, positions, holdings, funds] = await Promise.all([
+          api('/kite/orders'), api('/kite/positions'), api('/kite/holdings'), api('/kite/funds'),
+        ]);
+        setKiteData({
+          title: 'Kite Dashboard',
+          subtitle: 'Live account snapshot',
+          dashboard: {
+            ordersToday: (orders.orders || []).length,
+            netPositions: (positions.net || []).length,
+            dayPositions: (positions.day || []).length,
+            holdingsCount: (holdings.holdings || []).length,
+            funds: funds || {},
+          },
+          rows: [],
+        });
       }
-    } catch (e) { setKiteData(null); setKiteError(e.message || 'Unable to load Kite data. Check Kite login and backend.'); }
-    finally { setKiteLoading(false); }
+    } catch (e) {
+      setKiteData(null);
+      setKiteError(e.message || 'Unable to load Kite data. Check Kite login and backend.');
+    } finally {
+      setKiteLoading(false);
+    }
   }, [applicationTab, kiteTab]);
   useEffect(() => { loadKiteTab(); }, [loadKiteTab]);
 
@@ -1221,7 +1256,6 @@ export default function App() {
     }
   };
 
-  const trend = useMemo(() => extractTrend(oi), [oi]);
   const intradayRows = Array.isArray(intraday?.data) ? intraday.data : [];
   const calculatedRows = useMemo(() => buildIntradayRows(intradayRows, autotrendSettings), [intradayRows, autotrendSettings]);
   const calculatedRowsDescending = useMemo(() => [...calculatedRows].sort((a, b) => {
@@ -1283,6 +1317,15 @@ export default function App() {
   const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
   const kiteIndexRecord = kiteIndexQuotes?.data?.[index] || null;
   const liveIndexRecord = kiteIndexRecord || indexPriceRecord;
+  const rawDayChangePercent = liveIndexRecord?.day_change_percentage ?? liveIndexRecord?.change_percentage ?? liveIndexRecord?.changePercent ?? liveIndexRecord?.change_percent;
+  const dailyChangePercent = rawDayChangePercent === null || rawDayChangePercent === undefined || rawDayChangePercent === '' ? null : numericValue(rawDayChangePercent);
+  const dailyChangeAbsolute = (() => {
+    const explicit = liveIndexRecord?.day_change ?? liveIndexRecord?.change ?? liveIndexRecord?.net_change;
+    if (explicit !== null && explicit !== undefined && explicit !== '') return numericValue(explicit);
+    const last = numericValue(liveIndexRecord?.last_price ?? liveIndexRecord?.price ?? liveIndexRecord?.ltp);
+    const close = numericValue(liveIndexRecord?.close ?? liveIndexRecord?.close_price ?? liveIndexRecord?.ohlc?.close);
+    return last !== null && close !== null ? last - close : null;
+  })();
   const graph = oi?.data?.graph || {};
   const optionSeries = Array.isArray(graph.option) ? graph.option : [];
   const futureSeries = Array.isArray(graph.future) ? graph.future : [];
@@ -1306,14 +1349,13 @@ export default function App() {
         </div>
       </header>
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <><nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav><AutoTrenderHistoricalData /></> : <>
-      <nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} /> : <>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
           {DEFAULT_INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
         </div>
-        <div className="interval-select">Intraday window: <strong>{mins} min</strong></div>
-        <div className="control-note">Market data only · No order placement</div>
+        <div className="interval-select">Refresh Interval: <strong>{mins} min</strong></div>
+        <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
       </section>
 
       {error && <div className="error-banner"><strong>Data request issue</strong><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
@@ -1325,16 +1367,14 @@ export default function App() {
 
       <section className="metric-grid autotrender-summary-grid">
         <div className="metric autotrender-index-summary">
-          <span>INDEX</span>
-          <strong>{index}</strong>
           <div className="autotrender-latest-price">
-            <span>LATEST PRICE</span>
-            <strong>{number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)}</strong>
+            <div><span>LATEST PRICE</span><strong>{number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)}</strong></div>
+            <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}{dailyChangeAbsolute === null ? '' : ` (${dailyChangeAbsolute > 0 ? '+' : ''}${number(dailyChangeAbsolute)})`}</strong></div>
           </div>
         </div>
-        <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
-        <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
-        <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
+        <Metric label="CALL STRENGTH" value={calculatedRowsDescending[0]?.callStrength == null ? '—' : `${number(calculatedRowsDescending[0].callStrength)}%`} tone="positive" />
+        <Metric label="PUT STRENGTH" value={calculatedRowsDescending[0]?.putStrength == null ? '—' : `${number(calculatedRowsDescending[0].putStrength)}%`} tone="negative" />
+        <Metric label="OPTION SIGNAL" value={displayValue(calculatedRowsDescending[0]?.optionSignal)} />
       </section>
 
       <section className="selected-contract-panel panel" aria-live="polite">
@@ -1385,7 +1425,7 @@ export default function App() {
 
       <section className="content-grid">
         <article className="panel intraday-panel calculated-table-panel">
-          <div className="panel-header"><div><div className="eyebrow">INTRADAY SIGNALS</div><h2>Calculated intraday table</h2></div><div className="panel-actions"><span className="data-count">{calculatedRows.length} points</span><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div></div>
+          <div className="panel-header"><div><h2>Intraday Table</h2></div><div className="panel-actions"><span className="data-count">{calculatedRows.length} points</span><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div></div>
           <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>VWAP Signal</th><th>Option Signal</th><th>Enter</th>{showIntradayDetails && <><th>Call</th><th>Put</th></>}<th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th>{showIntradayDetails && <><th>Call Strength (%)</th><th>Put Strength (%)</th></>}<th>Call-Put Strength Diff</th><th>VWAP-Price Buffer (%)</th></tr></thead>
             <tbody>{calculatedRowsDescending.slice(0, 100).map((row) => <tr key={row.key} title={`Time: ${row.time || '—'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`}>
               <td>{row.time || '—'}</td><td><span className={'signal-tag ' + (row.vwapSignal === 'BUY' ? 'signal-buy' : row.vwapSignal === 'SELL' ? 'signal-sell' : '')}>{row.vwapSignal || '—'}</span></td><td><span className={'signal-tag ' + (row.optionSignal === 'BUY' ? 'signal-buy' : row.optionSignal === 'SELL' ? 'signal-sell' : '')}>{row.optionSignal || '—'}</span></td><td><span className={'signal-tag enter-tag ' + row.enter.toLowerCase()}>{row.enter}</span></td>{showIntradayDetails && <><td>{number(row.call)}</td><td>{number(row.put)}</td></>}<td>{number(row.diff)}</td><td>{number(row.pcr, 2)}</td><td>{number(row.price)}</td><td>{number(row.vwap)}</td>
@@ -1395,7 +1435,6 @@ export default function App() {
               </tr>)}
             {!calculatedRows.length && <tr><td colSpan={showIntradayDetails ? 14 : 10} className="empty-cell">{loading ? 'Loading market data…' : 'No intraday records returned.'}</td></tr>}</tbody>
           </table></div>
-          <div className="panel-footer">Calculated from the current API response and persisted to MySQL by index, trading date, interval, and time. Showing latest {Math.min(calculatedRows.length, 100)} records.</div>
         </article>
 
 
@@ -1407,29 +1446,118 @@ export default function App() {
       </footer>
       </>) : <>
                 <nav className="kite-tabs" aria-label="Kite sections">
-          {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings', 'Funds'].map((tab) =>
+          {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings'].map((tab) =>
             <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => setKiteTab(tab)}>{tab}</button>
           )}
         </nav>
-        <section className="kite-data-panel panel">
-          <div className="panel-header"><div><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></div><button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button></div>
-          {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and import the instrument master for Option Chain.</small></div>}
+        <section className={`kite-data-panel panel ${kiteTab === 'Dashboard' ? 'kite-dashboard-panel' : ''}`}>
+          <div className="panel-header">
+            <div><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || (kiteTab === 'Dashboard' ? 'Kite Dashboard' : kiteTab)}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || (kiteTab === 'Dashboard' ? 'Live account snapshot and margin overview' : 'Fetching data from Kite API…')}</div></div>
+            <button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button>
+          </div>
+          {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and backend connection.</small></div>}
+          {kiteTab === 'Dashboard' && kiteLoading && !kiteData && <div className="kite-data-empty">Loading account summary and margins…</div>}
+          {kiteTab === 'Dashboard' && kiteData?.dashboard && (() => {
+            const dashboard = kiteData.dashboard;
+            const segments = Object.entries(dashboard.funds || {});
+            const equity = dashboard.funds?.equity || {};
+            const equityAvailable = equity.available || {};
+            const availableBalance = equityAvailable.live_balance ?? equity.net ?? equityAvailable.opening_balance;
+            const money = (value) => {
+              const parsed = numericValue(value);
+              return parsed === null ? '—' : parsed.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+            const label = (key) => String(key).replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+            const detailRows = (value) => value && typeof value === 'object' ? Object.entries(value).filter(([, amount]) => amount !== null && amount !== undefined && typeof amount !== 'object') : [];
+            return <div className="kite-dashboard-content">
+              <div className="kite-account-summary">
+                <div className="kite-account-balance">
+                  <span>AVAILABLE BALANCE · EQUITY</span>
+                  <strong>{money(availableBalance)}</strong>
+                  <small>Live balance</small>
+                </div>
+                <div className="kite-account-stat"><span>NET EQUITY</span><strong>{money(equity.net)}</strong></div>
+                <div className="kite-account-stat"><span>ORDERS TODAY</span><strong>{dashboard.ordersToday}</strong></div>
+                <div className="kite-account-stat"><span>NET POSITIONS</span><strong>{dashboard.netPositions}</strong></div>
+              </div>
+              <div className="kite-dashboard-activity">
+                <div><span>DAY POSITIONS</span><strong>{dashboard.dayPositions}</strong></div>
+                <div><span>HOLDINGS</span><strong>{dashboard.holdingsCount}</strong></div>
+              </div>
+              <div className="kite-dashboard-section-heading"><div><h3>Segment margins</h3><p>Available and utilised funds by trading segment</p></div></div>
+              <div className="kite-segment-grid">
+                {segments.map(([segment, values]) => {
+                  const available = values?.available || {};
+                  const utilised = values?.utilised || {};
+                  const availableItems = detailRows(available);
+                  const utilisedItems = detailRows(utilised);
+                  return <article className="kite-segment-card" key={segment}>
+                    <div className="kite-segment-heading"><h3>{label(segment)}</h3><span className={values?.enabled ? 'kite-enabled' : 'kite-disabled'}>{values?.enabled ? 'Enabled' : 'Disabled'}</span></div>
+                    <div className="kite-segment-primary">
+                      <div><span>Net</span><strong>{money(values?.net)}</strong></div>
+                      <div><span>Available</span><strong>{money(available.live_balance ?? values?.net)}</strong></div>
+                    </div>
+                    <div className="kite-segment-secondary"><span>Utilised</span><strong>{money(utilised.debits ?? 0)}</strong></div>
+                    <details className="kite-margin-details">
+                      <summary>View margin breakdown</summary>
+                      <div className="kite-margin-columns">
+                        <div><h4>Available components</h4>{availableItems.length ? availableItems.map(([key, amount]) => <div className="kite-margin-row" key={key}><span>{label(key)}</span><strong>{money(amount)}</strong></div>) : <p className="kite-margin-empty">No available-margin components returned.</p>}</div>
+                        <div><h4>Utilised components</h4>{utilisedItems.length ? utilisedItems.map(([key, amount]) => <div className="kite-margin-row" key={key}><span>{label(key)}</span><strong>{money(amount)}</strong></div>) : <p className="kite-margin-empty">No utilised-margin components returned.</p>}</div>
+                      </div>
+                    </details>
+                  </article>;
+                })}
+                {!segments.length && <div className="kite-data-empty">No segment margin data returned.</div>}
+              </div>
+            </div>;
+          })()}
           {kiteTab === 'Holdings' && Array.isArray(kiteData?.rows) && kiteData.rows.length > 0 && (() => {
             const holdings = kiteData.rows;
-            const symbolOf = (row) => String(row.tradingsymbol || row.trading_symbol || row.symbol || '');
+            const quantityOf = (row) => Number(row.quantity ?? row.net_quantity ?? 0);
+            const averageOf = (row) => Number(row.average_price ?? row.averagePrice ?? row.average_buy_price ?? 0);
+            const ltpOf = (row) => Number(row.last_price ?? row.lastPrice ?? row.price ?? row.close_price ?? 0);
             const pnlOf = (row) => Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
+            const investment = holdings.reduce((sum, row) => sum + Math.abs(quantityOf(row)) * averageOf(row), 0);
+            const currentValue = holdings.reduce((sum, row) => sum + Math.abs(quantityOf(row)) * ltpOf(row), 0);
+            const totalPnl = holdings.reduce((sum, row) => sum + pnlOf(row), 0);
+            const dayPnl = holdings.reduce((sum, row) => {
+              const quantity = Math.abs(quantityOf(row));
+              const explicit = row.day_pnl ?? row.dayPnl ?? row.day_profit_and_loss ?? row.dayProfitAndLoss;
+              if (explicit !== null && explicit !== undefined && explicit !== '') return sum + Number(explicit || 0);
+              const dayChange = row.day_change ?? row.dayChange;
+              if (dayChange !== null && dayChange !== undefined && dayChange !== '') return sum + quantity * Number(dayChange || 0);
+              const close = row.close_price ?? row.closePrice ?? row.ohlc?.close;
+              return close !== null && close !== undefined && close !== '' ? sum + quantity * (ltpOf(row) - Number(close || 0)) : sum;
+            }, 0);
+            const dayBase = currentValue - dayPnl;
+            const formatMoney = (value) => Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const formatPercent = (value) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
+            const symbolOf = (row) => String(row.tradingsymbol || row.trading_symbol || row.symbol || '');
+            const dayPnlOf = (row) => {
+              const explicit = row.day_pnl ?? row.dayPnl ?? row.day_profit_and_loss ?? row.dayProfitAndLoss;
+              if (explicit !== null && explicit !== undefined && explicit !== '') return Number(explicit || 0);
+              const change = row.day_change ?? row.dayChange;
+              if (change !== null && change !== undefined && change !== '') return Math.abs(quantityOf(row)) * Number(change || 0);
+              const close = row.close_price ?? row.closePrice ?? row.ohlc?.close;
+              return close !== null && close !== undefined && close !== '' ? Math.abs(quantityOf(row)) * (ltpOf(row) - Number(close || 0)) : 0;
+            };
             const availableLetters = [...new Set(holdings.map((row) => symbolOf(row).trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
             const filtered = holdings.filter((row) => {
               const symbol = symbolOf(row).trim().toUpperCase();
               const pnl = pnlOf(row);
-              return (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
+              const matchesSearch = !holdingsSearch.trim() || symbol.includes(holdingsSearch.trim().toUpperCase());
+              return matchesSearch && (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
                 (holdingsProfitFilter === 'ALL' || (holdingsProfitFilter === 'PROFITABLE' && pnl > 0) || (holdingsProfitFilter === 'LOSS' && pnl < 0) || (holdingsProfitFilter === 'BREAKEVEN' && pnl === 0));
             });
-            const quantityOf = (row) => Number(row.quantity ?? row.net_quantity ?? 0);
-            const priceOf = (row) => Number(row.last_price ?? row.lastPrice ?? row.price ?? row.close_price ?? 0);
-            const averageOf = (row) => Number(row.average_price ?? row.averagePrice ?? 0);
-            const valueOf = (row) => Number(row.current_value ?? row.market_value ?? priceOf(row) * quantityOf(row));
-            const pnlPercentOf = (row) => { const cost = averageOf(row) * quantityOf(row); return cost ? pnlOf(row) / Math.abs(cost) * 100 : 0; };
+            const sortedHoldings = [...filtered].sort((left, right) => {
+              if (holdingsSort === 'PNL_DESC') return pnlOf(right) - pnlOf(left);
+              if (holdingsSort === 'PNL_ASC') return pnlOf(left) - pnlOf(right);
+              if (holdingsSort === 'INVESTED') return Math.abs(quantityOf(right)) * averageOf(right) - Math.abs(quantityOf(left)) * averageOf(left);
+              if (holdingsSort === 'DAY_LOSS') return dayPnlOf(left) - dayPnlOf(right);
+              return symbolOf(left).localeCompare(symbolOf(right));
+            });
+            const topFive = [...holdings].sort((left, right) => Math.abs(quantityOf(right)) * ltpOf(right) - Math.abs(quantityOf(left)) * ltpOf(left)).slice(0, 5);
+            const topFiveShare = currentValue ? topFive.reduce((sum, row) => sum + Math.abs(quantityOf(row)) * ltpOf(row), 0) / currentValue * 100 : 0;
             const counts = {
               ALL: holdings.length,
               PROFITABLE: holdings.filter((row) => pnlOf(row) > 0).length,
@@ -1437,19 +1565,38 @@ export default function App() {
               BREAKEVEN: holdings.filter((row) => pnlOf(row) === 0).length,
             };
             return <div className="holdings-filters">
+              <div className="holdings-portfolio-summary" aria-label="Holdings portfolio summary">
+                <div className="holdings-summary-item"><span>Total investment</span><strong>₹{formatMoney(investment)}</strong></div>
+                <div className="holdings-summary-item"><span>Current value</span><strong>₹{formatMoney(currentValue)}</strong></div>
+                <div className="holdings-summary-item"><span>Day's P&amp;L</span><strong className={dayPnl >= 0 ? 'positive' : 'negative'}>{dayPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(dayPnl))}<small className={dayPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(dayBase ? dayPnl / Math.abs(dayBase) * 100 : 0)}</small></strong></div>
+                <div className="holdings-summary-item"><span>Total P&amp;L</span><strong className={totalPnl >= 0 ? 'positive' : 'negative'}>{totalPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(totalPnl))}<small className={totalPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(investment ? totalPnl / investment * 100 : 0)}</small></strong></div>
+              </div>
               <div className="holdings-filter-heading"><strong>Filter portfolio by symbol</strong><span>{filtered.length} of {holdings.length} holdings</span></div>
+              <div className="holdings-tools">
+                <input type="search" value={holdingsSearch} onChange={(event) => setHoldingsSearch(event.target.value)} placeholder="Search instrument…" aria-label="Search holdings by instrument" />
+                <div className="holdings-sort-actions" aria-label="Sort holdings">
+                  {[['SYMBOL','Symbol'],['PNL_DESC','Highest P&amp;L'],['PNL_ASC','Lowest P&amp;L'],['INVESTED','Highest investment'],['DAY_LOSS','Largest day loss']].map(([key,label]) => <button type="button" key={key} className={holdingsSort === key ? 'active' : ''} onClick={() => setHoldingsSort(key)}>{label}</button>)}
+                </div>
+              </div>
               <div className="holdings-alphabet" aria-label="Filter portfolio holdings by first letter">
                 <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
                 {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
               </div>
-
               <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
-                {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,label]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{label}<span>{counts[key]}</span></button>)}
+                {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,labelText]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{labelText}<span>{counts[key]}</span></button>)}
               </div>
-              <KiteDataTable rows={filtered} holdingsMode hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
+              <details className="holdings-concentration">
+                <summary>Portfolio concentration · Top 5 holdings represent {topFiveShare.toFixed(1)}% of current value</summary>
+                <div className="holdings-concentration-list">{topFive.map((row) => {
+                  const value = Math.abs(quantityOf(row)) * ltpOf(row);
+                  const share = currentValue ? value / currentValue * 100 : 0;
+                  return <div className="holdings-concentration-row" key={symbolOf(row)}><span>{symbolOf(row)}</span><div><i style={{ width: `${share}%` }} /></div><strong>{share.toFixed(1)}%</strong></div>;
+                })}</div>
+              </details>
+              <KiteDataTable rows={sortedHoldings} holdingsMode hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
             </div>;
           })()}
-          {kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
+          {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
           {kiteTab === 'Holdings' && (!Array.isArray(kiteData?.rows) || kiteData.rows.length === 0) && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading holdings…</div> : <KiteDataTable rows={[]} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No holdings returned by Kite.'} />)}
           <div className="panel-footer">Read-only data view. No order placement or modification is performed by these tabs.</div>
         </section>
