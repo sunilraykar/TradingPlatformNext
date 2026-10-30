@@ -1090,6 +1090,8 @@ export default function App() {
   const [kiteError, setKiteError] = useState('');
   const [holdingsLetter, setHoldingsLetter] = useState('ALL');
   const [holdingsProfitFilter, setHoldingsProfitFilter] = useState('ALL');
+  const [holdingsSearch, setHoldingsSearch] = useState('');
+  const [holdingsSort, setHoldingsSort] = useState('SYMBOL');
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
   const refreshInFlight = useRef(false);
@@ -1531,13 +1533,31 @@ export default function App() {
             const formatMoney = (value) => Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const formatPercent = (value) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
             const symbolOf = (row) => String(row.tradingsymbol || row.trading_symbol || row.symbol || '');
+            const dayPnlOf = (row) => {
+              const explicit = row.day_pnl ?? row.dayPnl ?? row.day_profit_and_loss ?? row.dayProfitAndLoss;
+              if (explicit !== null && explicit !== undefined && explicit !== '') return Number(explicit || 0);
+              const change = row.day_change ?? row.dayChange;
+              if (change !== null && change !== undefined && change !== '') return Math.abs(quantityOf(row)) * Number(change || 0);
+              const close = row.close_price ?? row.closePrice ?? row.ohlc?.close;
+              return close !== null && close !== undefined && close !== '' ? Math.abs(quantityOf(row)) * (ltpOf(row) - Number(close || 0)) : 0;
+            };
             const availableLetters = [...new Set(holdings.map((row) => symbolOf(row).trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
             const filtered = holdings.filter((row) => {
               const symbol = symbolOf(row).trim().toUpperCase();
               const pnl = pnlOf(row);
-              return (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
+              const matchesSearch = !holdingsSearch.trim() || symbol.includes(holdingsSearch.trim().toUpperCase());
+              return matchesSearch && (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
                 (holdingsProfitFilter === 'ALL' || (holdingsProfitFilter === 'PROFITABLE' && pnl > 0) || (holdingsProfitFilter === 'LOSS' && pnl < 0) || (holdingsProfitFilter === 'BREAKEVEN' && pnl === 0));
             });
+            const sortedHoldings = [...filtered].sort((left, right) => {
+              if (holdingsSort === 'PNL_DESC') return pnlOf(right) - pnlOf(left);
+              if (holdingsSort === 'PNL_ASC') return pnlOf(left) - pnlOf(right);
+              if (holdingsSort === 'INVESTED') return Math.abs(quantityOf(right)) * averageOf(right) - Math.abs(quantityOf(left)) * averageOf(left);
+              if (holdingsSort === 'DAY_LOSS') return dayPnlOf(left) - dayPnlOf(right);
+              return symbolOf(left).localeCompare(symbolOf(right));
+            });
+            const topFive = [...holdings].sort((left, right) => Math.abs(quantityOf(right)) * ltpOf(right) - Math.abs(quantityOf(left)) * ltpOf(left)).slice(0, 5);
+            const topFiveShare = currentValue ? topFive.reduce((sum, row) => sum + Math.abs(quantityOf(row)) * ltpOf(row), 0) / currentValue * 100 : 0;
             const counts = {
               ALL: holdings.length,
               PROFITABLE: holdings.filter((row) => pnlOf(row) > 0).length,
@@ -1552,6 +1572,12 @@ export default function App() {
                 <div className="holdings-summary-item"><span>Total P&amp;L</span><strong className={totalPnl >= 0 ? 'positive' : 'negative'}>{totalPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(totalPnl))}<small className={totalPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(investment ? totalPnl / investment * 100 : 0)}</small></strong></div>
               </div>
               <div className="holdings-filter-heading"><strong>Filter portfolio by symbol</strong><span>{filtered.length} of {holdings.length} holdings</span></div>
+              <div className="holdings-tools">
+                <input type="search" value={holdingsSearch} onChange={(event) => setHoldingsSearch(event.target.value)} placeholder="Search instrument…" aria-label="Search holdings by instrument" />
+                <div className="holdings-sort-actions" aria-label="Sort holdings">
+                  {[['SYMBOL','Symbol'],['PNL_DESC','Highest P&amp;L'],['PNL_ASC','Lowest P&amp;L'],['INVESTED','Highest investment'],['DAY_LOSS','Largest day loss']].map(([key,label]) => <button type="button" key={key} className={holdingsSort === key ? 'active' : ''} onClick={() => setHoldingsSort(key)}>{label}</button>)}
+                </div>
+              </div>
               <div className="holdings-alphabet" aria-label="Filter portfolio holdings by first letter">
                 <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
                 {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
@@ -1559,7 +1585,15 @@ export default function App() {
               <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
                 {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,labelText]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{labelText}<span>{counts[key]}</span></button>)}
               </div>
-              <KiteDataTable rows={filtered} holdingsMode hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
+              <details className="holdings-concentration">
+                <summary>Portfolio concentration · Top 5 holdings represent {topFiveShare.toFixed(1)}% of current value</summary>
+                <div className="holdings-concentration-list">{topFive.map((row) => {
+                  const value = Math.abs(quantityOf(row)) * ltpOf(row);
+                  const share = currentValue ? value / currentValue * 100 : 0;
+                  return <div className="holdings-concentration-row" key={symbolOf(row)}><span>{symbolOf(row)}</span><div><i style={{ width: `${share}%` }} /></div><strong>{share.toFixed(1)}%</strong></div>;
+                })}</div>
+              </details>
+              <KiteDataTable rows={sortedHoldings} holdingsMode hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
             </div>;
           })()}
           {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
