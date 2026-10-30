@@ -132,7 +132,7 @@ class AutoTrenderAuth:
                 if not self._validate_session():
                     self.clear_saved_cookie()
                     raise RuntimeError(
-                        "AutoTrender rejected the captured session cookie. "
+                        "AutoTrender session validation failed using /api/market-summary. "
                         "Check backend logs for safe validation diagnostics."
                     )
                 return {"authenticated": True, "message": "AutoTrender login successful."}
@@ -217,9 +217,10 @@ class AutoTrenderAuth:
             return False
         try:
             response = self.session.get(
-                API_BASE_URL + "/api/index-price",
+                API_BASE_URL + "/api/market-summary",
                 headers={
                     "Accept": "application/json, text/plain, */*",
+                    "Origin": "https://theautotrender.com",
                     "Referer": "https://theautotrender.com/",
                 },
                 timeout=15,
