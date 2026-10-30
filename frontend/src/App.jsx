@@ -806,7 +806,7 @@ function SettingsPanel() {
   </section>;
 }
 
-function AutoTrenderHistoricalData() {
+function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(0);
@@ -920,9 +920,12 @@ function AutoTrenderHistoricalData() {
 
   return <section className="historical-viewer">
 
-    <div className="index-switch historical-index-switch" aria-label="Select historical index">
-      {DEFAULT_INDICES.filter((value, position, values) => values.indexOf(value) === position && !['MIDCPNIFTY', 'BANKEX'].includes(value)).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
-    </div>
+    <section className="control-panel historical-control-panel">
+      <div className="index-switch historical-index-switch" aria-label="Select historical index">
+        {DEFAULT_INDICES.filter((value, position, values) => values.indexOf(value) === position && !['MIDCPNIFTY', 'BANKEX'].includes(value)).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
+      </div>
+      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
+    </section>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
     <section className="panel historical-date-navigation" style={{ display: 'grid', gridTemplateColumns: '1fr minmax(240px, 2fr) 1fr', alignItems: 'center', gap: '16px', width: '100%', boxSizing: 'border-box', minHeight: '92px', padding: '18px 24px', margin: '14px 0' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
@@ -1331,7 +1334,7 @@ export default function App() {
         </div>
       </header>
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <><nav className="kite-tabs" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav><AutoTrenderHistoricalData /></> : <>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} /> : <>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
           {DEFAULT_INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
