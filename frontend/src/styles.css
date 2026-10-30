@@ -446,3 +446,14 @@
 @media (max-width: 760px) {
   .trade-details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+
+/* AutoTrender summary: use all four cards evenly and never clip quote values. */
+.autotrender-summary-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.autotrender-summary-grid>.autotrender-index-summary{grid-column:span 1}
+.autotrender-latest-price{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.autotrender-latest-price>div{min-width:0}
+.autotrender-latest-price span{white-space:normal}
+.autotrender-latest-price strong{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;word-break:normal;font-size:clamp(14px,1.25vw,19px);line-height:1.35}
+@media(max-width:1050px){.autotrender-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.autotrender-summary-grid{grid-template-columns:1fr}.autotrender-latest-price{grid-template-columns:repeat(2,minmax(0,1fr))}}
