@@ -1511,6 +1511,25 @@ export default function App() {
           })()}
           {kiteTab === 'Holdings' && Array.isArray(kiteData?.rows) && kiteData.rows.length > 0 && (() => {
             const holdings = kiteData.rows;
+            const quantityOf = (row) => Number(row.quantity ?? row.net_quantity ?? 0);
+            const averageOf = (row) => Number(row.average_price ?? row.averagePrice ?? row.average_buy_price ?? 0);
+            const ltpOf = (row) => Number(row.last_price ?? row.lastPrice ?? row.price ?? row.close_price ?? 0);
+            const pnlOf = (row) => Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
+            const investment = holdings.reduce((sum, row) => sum + Math.abs(quantityOf(row)) * averageOf(row), 0);
+            const currentValue = holdings.reduce((sum, row) => sum + Math.abs(quantityOf(row)) * ltpOf(row), 0);
+            const totalPnl = holdings.reduce((sum, row) => sum + pnlOf(row), 0);
+            const dayPnl = holdings.reduce((sum, row) => {
+              const quantity = Math.abs(quantityOf(row));
+              const explicit = row.day_pnl ?? row.dayPnl ?? row.day_profit_and_loss ?? row.dayProfitAndLoss;
+              if (explicit !== null && explicit !== undefined && explicit !== '') return sum + Number(explicit || 0);
+              const dayChange = row.day_change ?? row.dayChange;
+              if (dayChange !== null && dayChange !== undefined && dayChange !== '') return sum + quantity * Number(dayChange || 0);
+              const close = row.close_price ?? row.closePrice ?? row.ohlc?.close;
+              return close !== null && close !== undefined && close !== '' ? sum + quantity * (ltpOf(row) - Number(close || 0)) : sum;
+            }, 0);
+            const dayBase = currentValue - dayPnl;
+            const formatMoney = (value) => Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const formatPercent = (value) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
             const symbolOf = (row) => String(row.tradingsymbol || row.trading_symbol || row.symbol || '');
             const pnlOf = (row) => Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
             const availableLetters = [...new Set(holdings.map((row) => symbolOf(row).trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
@@ -1527,6 +1546,12 @@ export default function App() {
               BREAKEVEN: holdings.filter((row) => pnlOf(row) === 0).length,
             };
             return <div className="holdings-filters">
+              <div className="holdings-portfolio-summary" aria-label="Holdings portfolio summary">
+                <div className="holdings-summary-item"><span>Total investment</span><strong>₹{formatMoney(investment)}</strong></div>
+                <div className="holdings-summary-item"><span>Current value</span><strong>₹{formatMoney(currentValue)}</strong></div>
+                <div className="holdings-summary-item"><span>Day's P&amp;L</span><strong className={dayPnl >= 0 ? 'positive' : 'negative'}>{dayPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(dayPnl))}<small className={dayPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(dayBase ? dayPnl / Math.abs(dayBase) * 100 : 0)}</small></strong></div>
+                <div className="holdings-summary-item"><span>Total P&amp;L</span><strong className={totalPnl >= 0 ? 'positive' : 'negative'}>{totalPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(totalPnl))}<small className={totalPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(investment ? totalPnl / investment * 100 : 0)}</small></strong></div>
+              </div>
               <div className="holdings-filter-heading"><strong>Filter portfolio by symbol</strong><span>{filtered.length} of {holdings.length} holdings</span></div>
               <div className="holdings-alphabet" aria-label="Filter portfolio holdings by first letter">
                 <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
