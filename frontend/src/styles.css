@@ -482,3 +482,24 @@
   .historical-control-panel .historical-index-switch{width:100%}
   .historical-control-panel .autotrender-view-switch{margin-left:auto}
 }
+
+
+/* Historical date navigation shares the top control row; mode toggle stays at the far right. */
+.historical-control-panel{display:flex;align-items:center;gap:16px;flex-wrap:nowrap}
+.historical-date-control{display:flex;align-items:center;justify-content:center;gap:10px;flex:1 1 auto;min-width:260px;margin:0}
+.historical-date-control .historical-selected-date{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:3px;min-width:0}
+.historical-date-control .historical-selected-date .eyebrow{font-size:8px;white-space:nowrap}
+.historical-date-control .historical-selected-date strong{font-size:13px;line-height:1.25;white-space:nowrap}
+.historical-date-arrow{min-width:32px;min-height:32px;padding:4px 9px;font-size:19px;line-height:1}
+.historical-control-panel .autotrender-view-switch{margin-left:auto;flex:0 0 auto}
+@media(max-width:1050px){
+  .historical-control-panel{flex-wrap:wrap}
+  .historical-date-control{order:3;flex:1 1 100%}
+  .historical-control-panel .autotrender-view-switch{margin-left:auto}
+}
+@media(max-width:650px){
+  .historical-control-panel .historical-index-switch{width:100%}
+  .historical-date-control{order:3;min-width:0}
+  .historical-date-control .historical-selected-date strong{white-space:normal;font-size:12px}
+  .historical-control-panel .autotrender-view-switch{order:4;margin-left:auto}
+}
