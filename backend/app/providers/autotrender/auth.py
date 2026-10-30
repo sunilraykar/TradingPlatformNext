@@ -21,10 +21,9 @@ def _safe_response_excerpt(response, limit: int = 400) -> str:
     """Return a bounded response excerpt with common credential/token fields redacted."""
     import re
 
-    text = str(getattr(response, "text", "") or "").replace("\\n", " ").replace("\\r", " ")
-    pattern = r"(?i)(authcookie|cookie|token|password|authorization|access_token|refresh_token)(\\s*[:=]\\s*)[^\\s,;}]+"
-    return re.sub(pattern, r"\\1\\2[REDACTED]", text)[:limit]
-
+    text = str(getattr(response, "text", "") or "").replace("\n", " ").replace("\r", " ")
+    pattern = r"(?i)(authcookie|cookie|token|password|authorization|access_token|refresh_token)(\s*[:=]\s*)[^\s,;}]+"
+    return re.sub(pattern, r"\1\2[REDACTED]", text)[:limit]
 LOGIN_URL = "https://theautotrender.com/login"
 API_BASE_URL = "https://api.theautotrender.com:5959"
 SESSION_FILE = Path(__file__).resolve().parents[3] / "runtime" / "autotrender" / "session.json"
