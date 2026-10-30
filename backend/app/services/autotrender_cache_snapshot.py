@@ -1,4 +1,4 @@
-"""Persist the complete AutoTrender index-price cache to MySQL once per day at 15:30 IST."""
+"""Persist daily Kite index prices and AutoTrender derivatives data at 15:30 IST."""
 
 from __future__ import annotations
 
@@ -15,14 +15,31 @@ from sqlalchemy import text
 
 from app.db.session import get_engine
 from app.providers.autotrender.auth import AutoTrenderAuth
-from app.services.autotrender_cache import AutoTrenderCache
+from app.providers.kite.registry import get_kite_provider
 
 logger = logging.getLogger(__name__)
 IST = ZoneInfo("Asia/Kolkata")
 SNAPSHOT_TIME = time(15, 30)
 SNAPSHOT_TYPE = "AUTOTRENDER_CACHE"
 SNAPSHOT_KEY = "index-price"
-INDEX_CATEGORIES = {"NIFTY": "Nifty", "BANKNIFTY": "BankNifty", "FINNIFTY": "FinNifty", "MIDCPNIFTY": "MidcpNifty", "SENSEX": "Sensex", "BANKEX": "Bankex"}
+
+# Resolve these exact spot-index instruments from the daily Kite instrument master.
+INDEX_INSTRUMENTS = {
+    "NIFTY": ("NSE", "NIFTY 50", "nifty"),
+    "BANKNIFTY": ("NSE", "NIFTY BANK", "banknifty"),
+    "FINNIFTY": ("NSE", "NIFTY FIN SERVICE", "finnifty"),
+    "MIDCPNIFTY": ("NSE", "NIFTY MID SELECT", "midcpnifty"),
+    "SENSEX": ("BSE", "SENSEX", "sensex"),
+    "BANKEX": ("BSE", "BANKEX", "bankex"),
+}
+INDEX_CATEGORIES = {
+    "NIFTY": "Nifty",
+    "BANKNIFTY": "BankNifty",
+    "FINNIFTY": "FinNifty",
+    "MIDCPNIFTY": "MidcpNifty",
+    "SENSEX": "Sensex",
+    "BANKEX": "Bankex",
+}
 
 
 def _next_run(now: datetime) -> datetime:
@@ -34,26 +51,85 @@ def _next_run(now: datetime) -> datetime:
     return target
 
 
+def _fetch_kite_index_prices(engine: Any | None = None, kite_provider: Any | None = None) -> dict[str, Any]:
+    """Fetch all six underlying spot-index quotes directly from Kite REST API."""
+    db_engine = engine or get_engine()
+    provider = kite_provider or get_kite_provider()
+
+    resolved: dict[str, dict[str, Any]] = {}
+    with db_engine.connect() as connection:
+        for index, (exchange, symbol, _) in INDEX_INSTRUMENTS.items():
+            row = connection.execute(
+                text(
+                    "SELECT instrument_token, exchange, tradingsymbol "
+                    "FROM instruments WHERE source = 'KITE' AND is_active = TRUE "
+                    "AND exchange = :exchange AND tradingsymbol = :symbol "
+                    "ORDER BY instrument_version DESC LIMIT 1"
+                ),
+                {"exchange": exchange, "symbol": symbol},
+            ).mappings().first()
+            if row is None:
+                raise RuntimeError(
+                    f"Kite instrument master is missing {exchange}:{symbol}; "
+                    "refresh the Kite instrument master before snapshotting"
+                )
+            resolved[index] = {
+                "instrument_token": int(row["instrument_token"]),
+                "exchange": str(row["exchange"]),
+                "tradingsymbol": str(row["tradingsymbol"]),
+            }
+
+    # Kite's quote endpoint accepts exchange:tradingsymbol identifiers.
+    instruments = [
+        f"{item['exchange']}:{item['tradingsymbol']}"
+        for item in resolved.values()
+    ]
+    quotes = provider.quotes(instruments)
+    data: dict[str, Any] = {}
+    missing: list[str] = []
+    for index, (_, _, payload_key) in INDEX_INSTRUMENTS.items():
+        instrument = resolved[index]
+        quote_key = f"{instrument['exchange']}:{instrument['tradingsymbol']}"
+        quote = quotes.get(quote_key) if isinstance(quotes, dict) else None
+        if not isinstance(quote, dict) or quote.get("last_price") is None:
+            missing.append(quote_key)
+            continue
+        data[payload_key] = {
+            "price": quote["last_price"],
+            "ohlc": quote.get("ohlc"),
+            "instrument_token": instrument["instrument_token"],
+            "exchange": instrument["exchange"],
+            "tradingsymbol": instrument["tradingsymbol"],
+        }
+
+    if missing:
+        raise RuntimeError("Kite did not return quotes for: " + ", ".join(missing))
+    return {"title": "Index Price", "source": "KITE", "data": data}
+
+
 def persist_cache_snapshot(
-    cache: AutoTrenderCache,
     *,
     captured_at: datetime | None = None,
     engine: Any | None = None,
     auth: AutoTrenderAuth | None = None,
+    kite_provider: Any | None = None,
 ) -> dict[str, Any]:
-    """Store the entire upstream cache payload once per IST trading date.
+    """Store Kite spot-index prices and available AutoTrender derivatives datasets once per IST date.
 
-    The cache's presentation-only metadata is excluded; the complete AutoTrender
-    response payload itself is retained in market_snapshots.payload.
+    Index prices are sourced exclusively from Kite. AutoTrender remains the source
+    for its intraday option-strength and open-interest graph datasets.
     """
     captured = (captured_at or datetime.now(IST)).astimezone(IST)
-    payload = cache.get_index_price()
+    db_engine = engine or get_engine()
+
+    # Do not insert a partial index-price snapshot if Kite is unavailable.
+    index_price = _fetch_kite_index_prices(db_engine, kite_provider)
     upstream_payload: dict[str, Any] = {
-        "index_price": {key: value for key, value in payload.items() if key != "cache"},
+        "index_price": index_price,
         "indices": {},
         "capture_interval_minutes": 5,
     }
-    # Preserve the Live Data datasets for every supported index.
+
     if auth is not None:
         for index, category in INDEX_CATEGORIES.items():
             entry: dict[str, Any] = {}
@@ -69,10 +145,10 @@ def persist_cache_snapshot(
                 except (RuntimeError, TypeError, ValueError, requests.RequestException) as exc:
                     entry[dataset] = {"error": f"{type(exc).__name__}: {exc}"}
             upstream_payload["indices"][index] = entry
+
     serialized = json.dumps(upstream_payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     payload_hash = hashlib.sha256(serialized.encode("utf-8")).digest()
     trading_date: date = captured.date()
-    db_engine = engine or get_engine()
 
     with db_engine.begin() as connection:
         existing = connection.execute(
@@ -112,7 +188,7 @@ def persist_cache_snapshot(
         )
 
     logger.info(
-        "Persisted AutoTrender cache snapshot for %s (%s bytes)",
+        "Persisted Kite index-price snapshot for %s (%s bytes)",
         trading_date.isoformat(),
         len(serialized.encode("utf-8")),
     )
@@ -121,12 +197,13 @@ def persist_cache_snapshot(
         "trading_date": trading_date.isoformat(),
         "record_type": SNAPSHOT_TYPE,
         "snapshot_key": SNAPSHOT_KEY,
+        "index_price_source": "KITE",
         "payload_bytes": len(serialized.encode("utf-8")),
     }
 
 
-async def run_daily_snapshot_scheduler(cache: AutoTrenderCache, auth: AutoTrenderAuth | None = None) -> None:
-    """Run the AutoTrender cache snapshot every day at 15:30 Asia/Kolkata."""
+async def run_daily_snapshot_scheduler(auth: AutoTrenderAuth | None = None) -> None:
+    """Run the daily Kite index-price and AutoTrender derivatives snapshot at 15:30 IST."""
     while True:
         now = datetime.now(IST)
         target = _next_run(now)
@@ -134,12 +211,11 @@ async def run_daily_snapshot_scheduler(cache: AutoTrenderCache, auth: AutoTrende
         try:
             result = await asyncio.to_thread(
                 persist_cache_snapshot,
-                cache,
                 captured_at=target,
                 auth=auth,
             )
-            logger.info("AutoTrender daily cache snapshot result: %s", result)
+            logger.info("Daily market snapshot result: %s", result)
         except asyncio.CancelledError:
             raise
         except Exception:
-            logger.exception("AutoTrender daily cache snapshot failed")
+            logger.exception("Daily market snapshot failed")
