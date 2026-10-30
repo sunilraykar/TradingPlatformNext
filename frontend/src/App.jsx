@@ -924,7 +924,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins }
       <div className="index-switch historical-index-switch" aria-label="Select historical index">
         {DEFAULT_INDICES.filter((value, position, values) => values.indexOf(value) === position && !['MIDCPNIFTY', 'BANKEX'].includes(value)).map((item) => <button key={item} type="button" className={selectedIndex === item ? 'selected' : ''} onClick={() => setSelectedIndex(item)}>{item}</button>)}
       </div>
-      <div className="interval-select">Refresh Interval: <strong>{mins} min</strong></div>
+
       <div className="historical-date-control" aria-label="Selected trading date navigation">
         <button type="button" className="button secondary historical-date-arrow" aria-label="Previous available date (older)" title="Previous available date (older)" disabled={loading || !selected || (result.snapshots || []).findIndex((item) => item.trading_date === selected.trading_date) >= (result.snapshots || []).length - 1} onClick={() => {
           const dates = result.snapshots || [];
