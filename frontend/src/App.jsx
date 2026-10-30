@@ -1283,6 +1283,15 @@ export default function App() {
   const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
   const kiteIndexRecord = kiteIndexQuotes?.data?.[index] || null;
   const liveIndexRecord = kiteIndexRecord || indexPriceRecord;
+  const rawDayChangePercent = liveIndexRecord?.day_change_percentage ?? liveIndexRecord?.change_percentage ?? liveIndexRecord?.changePercent ?? liveIndexRecord?.change_percent;
+  const dailyChangePercent = rawDayChangePercent === null || rawDayChangePercent === undefined || rawDayChangePercent === '' ? null : numericValue(rawDayChangePercent);
+  const dailyChangeAbsolute = (() => {
+    const explicit = liveIndexRecord?.day_change ?? liveIndexRecord?.change ?? liveIndexRecord?.net_change;
+    if (explicit !== null && explicit !== undefined && explicit !== '') return numericValue(explicit);
+    const last = numericValue(liveIndexRecord?.last_price ?? liveIndexRecord?.price ?? liveIndexRecord?.ltp);
+    const close = numericValue(liveIndexRecord?.close ?? liveIndexRecord?.close_price ?? liveIndexRecord?.ohlc?.close);
+    return last !== null && close !== null ? last - close : null;
+  })();
   const graph = oi?.data?.graph || {};
   const optionSeries = Array.isArray(graph.option) ? graph.option : [];
   const futureSeries = Array.isArray(graph.future) ? graph.future : [];
@@ -1328,8 +1337,8 @@ export default function App() {
           <span>INDEX</span>
           <strong>{index}</strong>
           <div className="autotrender-latest-price">
-            <span>LATEST PRICE</span>
-            <strong>{number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)}</strong>
+            <div><span>LATEST PRICE</span><strong>{number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)}</strong></div>
+            <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}{dailyChangeAbsolute === null ? '' : ` (${dailyChangeAbsolute > 0 ? '+' : ''}${number(dailyChangeAbsolute)})`}</strong></div>
           </div>
         </div>
         <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
