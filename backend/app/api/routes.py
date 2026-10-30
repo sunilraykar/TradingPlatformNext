@@ -262,8 +262,8 @@ def market_data_status() -> dict:
 @router.get("/kite/market-data/autotrender-indices", tags=["kite"])
 def autotrender_index_quotes() -> dict:
     """Read latest AutoTrender index ticks from the Kite WebSocket quote cache."""
-    from sqlalchemy import text
     from app.db.session import get_engine
+    from sqlalchemy import text
 
     symbol_map = {
         ("NSE", "NIFTY 50"): "NIFTY",
