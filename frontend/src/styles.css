@@ -458,3 +458,12 @@
 @media(max-width:420px){.autotrender-latest-price>div{gap:6px}.autotrender-latest-price span{font-size:9px}.autotrender-latest-price strong{font-size:14px}}
 @media(max-width:1050px){.autotrender-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.autotrender-summary-grid{grid-template-columns:1fr}.autotrender-latest-price{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Keep the Live/Historical switch at the far right of AutoTrender index controls. */
+.autotrender-view-switch{margin:0 0 0 auto;flex:0 0 auto;flex-wrap:nowrap;width:auto;max-width:100%}
+.autotrender-view-switch button{flex:0 0 auto}
+@media(max-width:650px){
+  .autotrender-view-switch{margin-left:auto;width:auto;max-width:100%}
+  .autotrender-view-switch button{flex:0 0 auto}
+}
