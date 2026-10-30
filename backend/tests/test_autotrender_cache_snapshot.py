@@ -90,15 +90,17 @@ class FakeKiteProvider:
         }
 
 
-def test_fetch_kite_index_prices_requests_all_six_spot_indices() -> None:
+def test_fetch_kite_index_prices_requests_only_four_required_spot_indices() -> None:
     engine = FakeEngine()
     provider = FakeKiteProvider()
 
     result = _fetch_kite_index_prices(engine, provider)
 
-    assert len(provider.requested) == 6
+    assert len(provider.requested) == 4
     assert result["source"] == "KITE"
-    assert set(result["data"]) == {"nifty", "banknifty", "finnifty", "midcpnifty", "sensex", "bankex"}
+    assert set(result["data"]) == {"nifty", "banknifty", "finnifty", "sensex"}
+    assert "midcpnifty" not in result["data"]
+    assert "bankex" not in result["data"]
     assert result["data"]["nifty"]["price"] == 22000.0
 
 
@@ -117,7 +119,9 @@ def test_persist_cache_snapshot_saves_kite_prices_without_autotrend_index_price(
     assert "INSERT INTO market_snapshots" in insert_sql
     assert '"source":"KITE"' in params["payload"]
     assert '"nifty"' in params["payload"]
-    assert '"bankex"' in params["payload"]
+    assert '"sensex"' in params["payload"]
+    assert '"midcpnifty"' not in params["payload"]
+    assert '"bankex"' not in params["payload"]
     assert len(params["payload_hash"]) == 32
 
 
@@ -141,7 +145,7 @@ def test_persist_cache_snapshot_does_not_replace_complete_kite_snapshot() -> Non
     complete = {
         "index_price": {
             "source": "KITE",
-            "data": {key: {"price": 1} for key in ("nifty", "banknifty", "finnifty", "midcpnifty", "sensex", "bankex")},
+            "data": {key: {"price": 1} for key in ("nifty", "banknifty", "finnifty", "sensex")},
         }
     }
     engine = FakeEngine(already_saved=True, existing_payload=complete)
