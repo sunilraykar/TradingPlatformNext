@@ -64,6 +64,7 @@ def test_market_close_skips_stale_quote(monkeypatch):
     trade = _trade(last_market_data_at="2026-10-26T15:20:00+05:30")
     monkeypatch.setattr(worker, "_enabled", lambda: True)
     monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [trade])
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: trade)
     calls = []
     monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append(args))
 
