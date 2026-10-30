@@ -1028,8 +1028,20 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     // AutoTrender may wrap values in objects such as { value, colorCode }.
     value = typeof value === 'object' ? scalarValue(value) : value;
     if (value === null || value === undefined || value === '') return '—';
-    const numericColumns = new Set(['call','put','diff','pcr','price','vwap','callstrength','putstrength','strengthdiff','vwappricebufferpct','buffer','day_change','day_change_percentage','net_change_percentage','last_price','close_price','average_price','invested_amount','current_amount','pnl','open','high','low','close']);
     const normalizedKey = normalizeColumn(key);
+    // Column keys are normalized to lowercase alphanumeric names above, so
+    // the formatter must use the same normalized names (no underscores).
+    const numericColumns = new Set([
+      'call', 'put', 'diff', 'pcr', 'price', 'vwap',
+      'callstrength', 'putstrength', 'strengthdiff', 'vwappricebufferpct', 'buffer',
+      'daychange', 'daychangepercentage', 'netchangepercentage',
+      'lastprice', 'closeprice', 'averageprice', 'investedamount', 'currentamount',
+      'pnl', 'open', 'high', 'low', 'close',
+    ]);
+    const percentageColumns = new Set([
+      'callstrength', 'putstrength', 'vwappricebufferpct', 'buffer',
+      'daychangepercentage', 'netchangepercentage',
+    ]);
     if (normalizedKey === 'quantity') {
       const parsed = numericValue(value);
       return parsed === null ? '—' : parsed.toLocaleString('en-IN', { maximumFractionDigits: 0 });
@@ -1037,8 +1049,11 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     if (numericColumns.has(normalizedKey)) {
       const parsed = numericValue(value);
       if (parsed !== null) {
-        const formatted = parsed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        return ['callstrength','putstrength','vwappricebufferpct','buffer','day_change_percentage','net_change_percentage'].includes(normalizedKey) ? `${formatted}%` : formatted;
+        const formatted = parsed.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+        return percentageColumns.has(normalizedKey) ? `${formatted}%` : formatted;
       }
     }
     return String(value);
