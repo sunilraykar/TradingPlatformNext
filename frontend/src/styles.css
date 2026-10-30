@@ -467,3 +467,18 @@
   .autotrender-view-switch{margin-left:auto;width:auto;max-width:100%}
   .autotrender-view-switch button{flex:0 0 auto}
 }
+
+
+/* Compact, consistent AutoTrender control bar in both Live and Historical modes. */
+.control-panel{padding:10px 12px;gap:22px}
+.control-panel .index-switch{margin:0}
+.control-panel .index-switch button{padding:8px 13px}
+.control-panel .kite-tabs{padding:4px;margin:0}
+.control-panel .kite-tabs button{padding:8px 13px}
+.historical-index-switch{margin:0;flex-wrap:nowrap}
+.historical-control-panel{align-items:center;flex-wrap:nowrap}
+@media(max-width:650px){
+  .historical-control-panel{align-items:center;flex-wrap:wrap}
+  .historical-control-panel .historical-index-switch{width:100%}
+  .historical-control-panel .autotrender-view-switch{margin-left:auto}
+}
