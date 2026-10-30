@@ -103,10 +103,12 @@ def test_market_close_uses_latest_trade_snapshot_for_exit_and_pnl(monkeypatch):
 
 def test_market_close_skips_if_quote_changes_before_final_validation(monkeypatch):
     listed = _trade(last_price=90)
-    fresh = _trade(last_price=95, last_market_data_at="2026-10-26T15:27:00+05:30")
+    first_read = _trade(last_price=95, last_market_data_at="2026-10-26T15:27:00+05:30")
+    changed_read = _trade(last_price=96, last_market_data_at="2026-10-26T15:27:05+05:30")
+    reads = iter([first_read, changed_read])
     monkeypatch.setattr(worker, "_enabled", lambda: True)
     monkeypatch.setattr(worker.trade_terminal, "list_trades", lambda **kwargs: [listed])
-    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: fresh)
+    monkeypatch.setattr(worker.trade_terminal, "get_trade", lambda trade_id: next(reads))
     calls = []
     monkeypatch.setattr(worker.trade_terminal, "update_trade", lambda *args, **kwargs: calls.append(args))
 
@@ -139,3 +141,40 @@ def test_market_close_skips_weekends(monkeypatch):
 
     assert result["enabled"] is False
     assert result["reason"] == "outside_market_close_window"
+
+
+def test_trade_terminal_close_guard_is_atomic(monkeypatch):
+    from app.services import trade_terminal
+
+    trade_id = "market-close-guard"
+    monkeypatch.setitem(
+        trade_terminal._cache,
+        trade_id,
+        {
+            "trade_id": trade_id,
+            "execution_mode": "PAPER",
+            "status": "OPEN",
+            "last_price": 96,
+            "last_market_data_at": "2026-10-26T15:27:05+05:30",
+            "quantity": 50,
+            "open_quantity": 50,
+            "version": 1,
+        },
+    )
+    monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
+
+    import pytest
+    with pytest.raises(ValueError, match="changed before update"):
+        trade_terminal.update_trade(
+            trade_id,
+            {"status": "CLOSED", "open_quantity": 0},
+            event_type="PAPER_OPTION_MARKET_CLOSE",
+            expected_quote={
+                "status": "OPEN",
+                "execution_mode": "PAPER",
+                "last_price": 95,
+                "last_market_data_at": "2026-10-26T15:27:00+05:30",
+            },
+        )
+
+    assert trade_terminal.get_trade(trade_id)["status"] == "OPEN"

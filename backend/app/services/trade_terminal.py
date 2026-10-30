@@ -490,29 +490,35 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
                                 "exit_method": "TRAILING_STOP", "exit_reason": "Trailing stop breached", "auto_exit": True, "auto_exit_at": timestamp,
                                 "auto_exit_reason": "TRAILING_STOP_BREACHED"})
         elif strategy == "M-TTTS":
-            # Target-Triggered Trailing Stop: the first target activates trailing
-            # but does not close the trade. Thereafter, each reached target advances
-            # by the configured target step while the stop trails the best price.
+            # Synchronized Target-Triggered Trailing Stop:
+            # every target advancement produces exactly one corresponding SL trail.
+            # The first target activates trailing; it does not close the trade.
             if target_breached:
                 trailing_active = True
 
-            if trailing_active:
-                if target_step > 0 and target > 0:
-                    # Advance through each target level crossed by this quote. This
-                    # avoids losing target steps when quotes jump over a level.
-                    while (price >= target if is_buy else price <= target):
-                        target = target + target_step if is_buy else target - target_step
-                        updates["target"] = round(target, 4)
-                        updates["target_trail_count"] = int(updates.get("target_trail_count", trade.get("target_trail_count") or 0)) + 1
+            if trailing_active and target_step > 0 and target > 0:
+                target_advances = 0
+                # Process every target level crossed by this quote so price gaps do
+                # not lose milestones or desynchronize the two trail counters.
+                while (price >= target if is_buy else price <= target):
+                    target = target + target_step if is_buy else target - target_step
+                    target_advances += 1
 
-                if distance > 0:
-                    candidate = favorable - distance if is_buy else favorable + distance
-                    if stop <= 0 or (candidate > stop if is_buy else candidate < stop):
-                        rounded_stop = round(candidate, 4)
-                        if rounded_stop != round(stop, 4):
-                            updates["stop_loss_trail_count"] = int(trade.get("stop_loss_trail_count") or 0) + 1
+                if target_advances:
+                    updates["target"] = round(target, 4)
+                    updates["target_trail_count"] = int(trade.get("target_trail_count") or 0) + target_advances
+
+                    # Trail the stop to the level one configured distance behind the
+                    # last target milestone. SL only changes when Target advances.
+                    candidate = (target - target_step - distance) if is_buy else (target - target_step + distance)
+                    rounded_stop = round(candidate, 4)
+                    improves_stop = stop <= 0 or (rounded_stop > round(stop, 4) if is_buy else rounded_stop < round(stop, 4))
+                    if distance > 0 and improves_stop:
                         stop = candidate
                         updates["stop_loss"] = rounded_stop
+
+                    # In M-TTTS, the counters describe paired target/SL milestones.
+                    updates["stop_loss_trail_count"] = int(trade.get("stop_loss_trail_count") or 0) + target_advances
 
             updates["trailing_active"] = trailing_active
             stop_breached = trailing_active and bool(stop > 0 and (price <= stop if is_buy else price >= stop))
@@ -589,7 +595,13 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
 
 
 @_serialized_lifecycle
-def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "TRADE_UPDATED") -> dict[str, Any]:
+def update_trade(
+    trade_id: str,
+    changes: dict[str, Any],
+    *,
+    event_type: str = "TRADE_UPDATED",
+    expected_quote: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if not changes:
         raise ValueError("At least one trade field is required")
     if "trade_id" in changes or "created_at" in changes or "version" in changes:
@@ -600,6 +612,12 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
         current = _cache.get(trade_id)
         if not current:
             raise KeyError(trade_id)
+        if expected_quote is not None:
+            # Validate the quote and lifecycle state under the same lock used to
+            # apply the close, preventing a websocket update racing the final check.
+            for field, expected in expected_quote.items():
+                if current.get(field) != expected:
+                    raise ValueError("Trade quote or lifecycle state changed before update")
         if current.get("execution_mode") == "LIVE" and not event_type.startswith("BROKER_"):
             raise ValueError("Live trade lifecycle is controlled by broker reconciliation; manual updates are blocked.")
         updated = dict(current)

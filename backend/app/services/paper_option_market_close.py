@@ -155,6 +155,12 @@ def run_market_close_cycle(now: datetime | None = None) -> dict[str, Any]:
                     "auto_exit_charges": {key: float(value) for key, value in charges.items()},
                 },
                 event_type="PAPER_OPTION_MARKET_CLOSE",
+                expected_quote={
+                    "status": "OPEN",
+                    "execution_mode": "PAPER",
+                    "last_price": current.get("last_price"),
+                    "last_market_data_at": current.get("last_market_data_at"),
+                },
             )
             closed.append(trade_id)
         except (KeyError, RuntimeError, ValueError):
