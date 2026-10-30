@@ -475,6 +475,8 @@
 .control-panel .index-switch button{padding:8px 13px}
 .control-panel .kite-tabs{padding:4px;margin:0}
 .control-panel .kite-tabs button{padding:8px 13px}
+/* The mode switch must stay flush to the right in both Live and Historical control bars. */
+.control-panel > .autotrender-view-switch{margin-left:auto}
 .historical-index-switch{margin:0;flex-wrap:nowrap}
 .historical-control-panel{align-items:center;flex-wrap:nowrap}
 @media(max-width:650px){
