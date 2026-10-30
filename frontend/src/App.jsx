@@ -1334,8 +1334,6 @@ export default function App() {
 
       <section className="metric-grid autotrender-summary-grid">
         <div className="metric autotrender-index-summary">
-          <span>INDEX</span>
-          <strong>{index}</strong>
           <div className="autotrender-latest-price">
             <div><span>LATEST PRICE</span><strong>{number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)}</strong></div>
             <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}{dailyChangeAbsolute === null ? '' : ` (${dailyChangeAbsolute > 0 ? '+' : ''}${number(dailyChangeAbsolute)})`}</strong></div>
