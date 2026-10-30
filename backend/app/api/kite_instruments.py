@@ -1,14 +1,13 @@
 """Kite instrument-master refresh controls and diagnostics."""
 import json
 from datetime import datetime
-from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-
-from app.services.kite_instrument_master import instrument_master_status, refresh_instrument_master
-from app.db.session import get_engine
 from sqlalchemy import text
+
+from app.db.session import get_engine
+from app.services.kite_instrument_master import instrument_master_status, refresh_instrument_master
 from app.services.option_contract_selector import select_atm_contract
 
 router = APIRouter(prefix="/kite/instruments", tags=["Kite Instrument Master"])

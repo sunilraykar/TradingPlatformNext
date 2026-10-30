@@ -263,6 +263,7 @@ def market_data_status() -> dict:
 def autotrender_index_quotes() -> dict:
     """Read latest AutoTrender index ticks from the Kite WebSocket quote cache."""
     from sqlalchemy import text
+
     from app.db.session import get_engine
 
     symbol_map = {
