@@ -75,15 +75,6 @@ function displayValue(value) {
   return '—';
 }
 
-function extractTrend(payload) {
-  const candidates = [payload?.data?.trend, payload?.trend, payload?.data?.summary, payload?.data?.strength, payload?.data, payload?.summary, payload];
-  const source = candidates.find((item) => item && typeof item === 'object' && !Array.isArray(item) && (item.call !== undefined || item.put !== undefined || item.signal !== undefined || item.optionSignal !== undefined)) || {};
-  const call = numericValue(source.call ?? source.callStrength ?? source.call_strength ?? source.callPercentage ?? source.call_percentage);
-  const put = numericValue(source.put ?? source.putStrength ?? source.put_strength ?? source.putPercentage ?? source.put_percentage);
-  const signal = source.signal ?? source.optionSignal ?? source.option_signal ?? source.title;
-  return { call, put, signal };
-}
-
 function numericValue(value) {
   const scalar = scalarValue(value);
   if (scalar === null || scalar === '') return null;
@@ -1241,7 +1232,6 @@ export default function App() {
     }
   };
 
-  const trend = useMemo(() => extractTrend(oi), [oi]);
   const intradayRows = Array.isArray(intraday?.data) ? intraday.data : [];
   const calculatedRows = useMemo(() => buildIntradayRows(intradayRows, autotrendSettings), [intradayRows, autotrendSettings]);
   const calculatedRowsDescending = useMemo(() => [...calculatedRows].sort((a, b) => {
