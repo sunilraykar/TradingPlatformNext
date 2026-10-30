@@ -1093,7 +1093,6 @@ export default function App() {
   const refreshInFlight = useRef(false);
   const selectedIndexRef = useRef(index);
   selectedIndexRef.current = index;
-  const [indexPrices, setIndexPrices] = useState(null);
   const [kiteIndexQuotes, setKiteIndexQuotes] = useState(null);
   const [mins, setMins] = useState(3);
   const [intraday, setIntraday] = useState(null);
@@ -1126,7 +1125,6 @@ export default function App() {
       ] : []),
       api('/autotrender/auth/status'),
       api('/autotrender/cache/status'),
-      api('/autotrender/index-price'),
       // Reload saved thresholds on every market-data refresh so newly arrived
       // timestamp rows are evaluated against the latest Settings values.
       api('/settings'),
@@ -1146,13 +1144,8 @@ export default function App() {
     }
     if (results[resultOffset].status === 'fulfilled') setAuth(results[resultOffset].value);
     if (results[resultOffset + 1].status === 'fulfilled') setCache(results[resultOffset + 1].value);
+    if (results[resultOffset + 3].status === 'fulfilled') setKiteIndexQuotes(results[resultOffset + 3].value);
     if (results[resultOffset + 2].status === 'fulfilled') {
-      // Price data is independent from the selector: upstream may omit indices
-      // from this response, but all five requested indices must remain selectable.
-      setIndexPrices(results[resultOffset + 2].value);
-    }
-    if (results[resultOffset + 4].status === 'fulfilled') setKiteIndexQuotes(results[resultOffset + 4].value);
-    if (results[resultOffset + 3].status === 'fulfilled') {
       const saved = results[resultOffset + 3].value.settings || {};
       const configuredMinutes = Number(saved.autoTrenderIntradayMinutes ?? 3);
       setMins([1, 3, 5, 10, 15, 30, 60].includes(configuredMinutes) ? configuredMinutes : 3);
@@ -1309,10 +1302,8 @@ export default function App() {
       .finally(() => { if (active) setContractLoading(false); });
     return () => { active = false; };
   }, [index, contractSignal, lastUpdated]);
-  const indexPriceKey = Object.keys(indexPrices?.data || {}).find((key) => INDEX_LABELS[key.toLowerCase()] === index);
-  const indexPriceRecord = indexPriceKey ? indexPrices.data[indexPriceKey] : null;
   const kiteIndexRecord = kiteIndexQuotes?.data?.[index] || null;
-  const liveIndexRecord = kiteIndexRecord || indexPriceRecord;
+  const liveIndexRecord = kiteIndexRecord;
   const rawDayChangePercent = liveIndexRecord?.day_change_percentage ?? liveIndexRecord?.change_percentage ?? liveIndexRecord?.changePercent ?? liveIndexRecord?.change_percent;
   const dailyChangePercent = rawDayChangePercent === null || rawDayChangePercent === undefined || rawDayChangePercent === '' ? null : numericValue(rawDayChangePercent);
   const dailyChangeAbsolute = (() => {
@@ -1364,7 +1355,7 @@ export default function App() {
       <section className="metric-grid autotrender-summary-grid">
         <div className="metric autotrender-index-summary">
           <div className="autotrender-latest-price">
-            <div><span>LATEST PRICE</span><strong>{number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp ?? indexPriceRecord?.price ?? indexPriceRecord?.ltp ?? indexPriceRecord)}</strong></div>
+            <div><span>LATEST PRICE</span><strong>{number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp)}</strong></div>
             <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}{dailyChangeAbsolute === null ? '' : ` (${dailyChangeAbsolute > 0 ? '+' : ''}${number(dailyChangeAbsolute)})`}</strong></div>
           </div>
         </div>
