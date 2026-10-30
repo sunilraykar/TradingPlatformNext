@@ -1002,22 +1002,21 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     close_price: row.close_price ?? row.closePrice ?? row.ohlc?.close ?? null,
     pnl: row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0,
     day_change: row.day_change ?? row.dayChange ?? null,
-    day_change_percentage: row.day_change_percentage ?? row.dayChangePercentage ?? null,
-    invested_amount: quantityOf(row) * averagePriceOf(row),
-    current_amount: quantityOf(row) * lastPriceOf(row),
-    open: row.open ?? row.ohlc?.open ?? null,
-    high: row.high ?? row.ohlc?.high ?? null,
-    low: row.low ?? row.ohlc?.low ?? null,
-    close: row.close ?? row.close_price ?? row.closePrice ?? row.ohlc?.close ?? null,
+    day_change_percentage: row.day_change_percentage ?? row.dayChangePercentage ?? row.day_change_percent ?? null,
+    invested_amount: Number(row.invested_amount ?? row.investedAmount ?? quantityOf(row) * averagePriceOf(row)),
+    current_amount: Number(row.current_amount ?? row.currentAmount ?? row.current_value ?? row.market_value ?? quantityOf(row) * lastPriceOf(row)),
+    net_change_percentage: (() => {
+      const invested = Number(row.invested_amount ?? row.investedAmount ?? quantityOf(row) * averagePriceOf(row));
+      const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
+      return invested ? (pnl / Math.abs(invested)) * 100 : 0;
+    })(),
   })) : rows;
-  // Holdings always use the same ordered columns. Do not derive their schema
-  // from the union of row keys: fields such as "book" on a stray/legacy row
-  // would otherwise shift values and make the table appear corrupted.
+  // Match Kite's holdings table: instrument, quantity, cost, LTP, invested,
+  // current value, P&L, net change and day change.
   const holdingsColumns = [
-    'tradingsymbol', 'exchange', 'price', 'quantity', 'average_price',
-    'last_price', 'close_price', 'pnl', 'day_change',
-    'day_change_percentage', 'open', 'high', 'low', 'close',
-    'invested_amount', 'current_amount',
+    'tradingsymbol', 'quantity', 'average_price', 'last_price',
+    'invested_amount', 'current_amount', 'pnl',
+    'net_change_percentage', 'day_change_percentage',
   ];
   const columns = columnsOverride
     ? columnsOverride.filter((key) => !hidden.has(normalizeColumn(key)))
@@ -1029,17 +1028,19 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     // AutoTrender may wrap values in objects such as { value, colorCode }.
     value = typeof value === 'object' ? scalarValue(value) : value;
     if (value === null || value === undefined || value === '') return '—';
-    const numericColumns = new Set(['call','put','diff','pcr','price','vwap','callstrength','putstrength','strengthdiff','vwappricebufferpct','buffer','day_change','day_change_percentage','last_price','close_price','average_price','invested_amount','current_amount','pnl','open','high','low','close']);
+    const numericColumns = new Set(['call','put','diff','pcr','price','vwap','callstrength','putstrength','strengthdiff','vwappricebufferpct','buffer','day_change','day_change_percentage','net_change_percentage','last_price','close_price','average_price','invested_amount','current_amount','pnl','open','high','low','close']);
     const normalizedKey = normalizeColumn(key);
+    if (normalizedKey === 'quantity') {
+      const parsed = numericValue(value);
+      return parsed === null ? '—' : parsed.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
     if (numericColumns.has(normalizedKey)) {
       const parsed = numericValue(value);
       if (parsed !== null) {
-        const digits = ['pcr','callstrength','putstrength','strengthdiff','vwappricebufferpct','buffer','day_change_percentage'].includes(normalizedKey) ? 2 : 2;
-        const formatted = parsed.toLocaleString('en-IN', { maximumFractionDigits: digits });
-        return ['callstrength','putstrength','vwappricebufferpct','buffer','day_change_percentage'].includes(normalizedKey) ? `${formatted}%` : formatted;
+        const formatted = parsed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        return ['callstrength','putstrength','vwappricebufferpct','buffer','day_change_percentage','net_change_percentage'].includes(normalizedKey) ? `${formatted}%` : formatted;
       }
     }
-    if (normalizedKey === 'day_change_percentage' && !String(value).endsWith('%')) return `${value}%`;
     return String(value);
   };
   const renderCell = (value, key) => {
@@ -1067,7 +1068,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
   }) : displayRows;
   const toggleSort = (key) => setSortConfig((current) => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }));
   const isSymbol = (key) => normalizeColumn(key) === 'tradingsymbol';
-  const heading = (key) => ({ time: 'Time', call: 'Call', put: 'Put', diff: 'Diff', pcr: 'PCR', price: 'Price', vwap: 'VWAP', vwapSignal: 'VWAP Signal', optionSignal: 'Option Signal', callStrength: 'Call Strength (%)', putStrength: 'Put Strength (%)', strengthDiff: 'Call-Put Strength Diff', vwapPriceBufferPct: 'VWAP-Price Buffer (%)', enter: 'Enter', tradingsymbol: 'Symbol', average_price: 'Average Price', last_price: 'Last Price', close_price: 'Close Price', pnl: 'PnL', day_change: 'Day Change', day_change_percentage: 'Day Change Percentage', invested_amount: 'Invested Amount', current_amount: 'Current Amount' })[key] || (isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' '));
+  const heading = (key) => ({ time: 'Time', call: 'Call', put: 'Put', diff: 'Diff', pcr: 'PCR', price: 'Price', vwap: 'VWAP', vwapSignal: 'VWAP Signal', optionSignal: 'Option Signal', callStrength: 'Call Strength (%)', putStrength: 'Put Strength (%)', strengthDiff: 'Call-Put Strength Diff', vwapPriceBufferPct: 'VWAP-Price Buffer (%)', enter: 'Enter', tradingsymbol: 'Instrument', quantity: 'Qty.', average_price: 'Avg. cost', last_price: 'LTP', pnl: 'P&L', day_change_percentage: 'Day chg.', net_change_percentage: 'Net chg.', invested_amount: 'Invested', current_amount: 'Cur. val' })[key] || (isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' '));
   return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : ''}>{renderCell(row[key], key)}</td>)}</tr>; })}</tbody></table></div>;
 }
 export default function App() {
