@@ -73,9 +73,9 @@ def evaluate_signal(
     total = call + put
     call_pct = call / total * 100
     put_pct = put / total * 100
-    # Signed percentage difference: positive put-minus-call is bullish,
-    # negative is bearish. The configured threshold is applied to magnitude.
-    signed_strength_difference = put_pct - call_pct
+    # Positive Call-minus-Put difference is bullish; negative is bearish.
+    # This direction convention is shared with the frontend and test fixtures.
+    signed_strength_difference = call_pct - put_pct
     strength_difference = abs(signed_strength_difference)
     strength_threshold = abs(call_put_strength_diff)
     vwap_difference = abs((price - vwap) / price * 100)
@@ -94,6 +94,14 @@ def evaluate_signal(
         return Evaluation(False, None, "STRENGTH_DIFFERENCE_NOT_ABOVE_THRESHOLD", strength_difference, vwap_difference)
     if vwap_difference > abs(vwap_price_difference_buffer):
         return Evaluation(False, None, "VWAP_GAP_NOT_BELOW_THRESHOLD", strength_difference, vwap_difference)
+
+    pcr = _number(row.get("pcr", row.get("PCR")))
+    if pcr is None:
+        return Evaluation(False, None, "INVALID_OR_MISSING_PCR", strength_difference, vwap_difference)
+    if signed_strength_difference > 0 and pcr <= call_pcr:
+        return Evaluation(False, None, "PCR_DIRECTION_CONDITION_FAILED", strength_difference, vwap_difference)
+    if signed_strength_difference < 0 and pcr >= put_pcr:
+        return Evaluation(False, None, "PCR_DIRECTION_CONDITION_FAILED", strength_difference, vwap_difference)
 
     direction = "BUY" if signed_strength_difference > 0 else "SELL"
     return Evaluation(True, direction, "ELIGIBLE", strength_difference, vwap_difference)
