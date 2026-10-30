@@ -1336,7 +1336,7 @@ export default function App() {
         <div className="index-switch" aria-label="Select index">
           {DEFAULT_INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
         </div>
-        <div className="interval-select">Intraday window: <strong>{mins} min</strong></div>
+        <div className="interval-select">Refresh Interval: <strong>{mins} min</strong></div>
         <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
       </section>
 
@@ -1407,7 +1407,7 @@ export default function App() {
 
       <section className="content-grid">
         <article className="panel intraday-panel calculated-table-panel">
-          <div className="panel-header"><div><div className="eyebrow">INTRADAY SIGNALS</div><h2>Calculated intraday table</h2></div><div className="panel-actions"><span className="data-count">{calculatedRows.length} points</span><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div></div>
+          <div className="panel-header"><div><h2>Intraday Table</h2></div><div className="panel-actions"><span className="data-count">{calculatedRows.length} points</span><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div></div>
           <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>VWAP Signal</th><th>Option Signal</th><th>Enter</th>{showIntradayDetails && <><th>Call</th><th>Put</th></>}<th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th>{showIntradayDetails && <><th>Call Strength (%)</th><th>Put Strength (%)</th></>}<th>Call-Put Strength Diff</th><th>VWAP-Price Buffer (%)</th></tr></thead>
             <tbody>{calculatedRowsDescending.slice(0, 100).map((row) => <tr key={row.key} title={`Time: ${row.time || '—'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`}>
               <td>{row.time || '—'}</td><td><span className={'signal-tag ' + (row.vwapSignal === 'BUY' ? 'signal-buy' : row.vwapSignal === 'SELL' ? 'signal-sell' : '')}>{row.vwapSignal || '—'}</span></td><td><span className={'signal-tag ' + (row.optionSignal === 'BUY' ? 'signal-buy' : row.optionSignal === 'SELL' ? 'signal-sell' : '')}>{row.optionSignal || '—'}</span></td><td><span className={'signal-tag enter-tag ' + row.enter.toLowerCase()}>{row.enter}</span></td>{showIntradayDetails && <><td>{number(row.call)}</td><td>{number(row.put)}</td></>}<td>{number(row.diff)}</td><td>{number(row.pcr, 2)}</td><td>{number(row.price)}</td><td>{number(row.vwap)}</td>
