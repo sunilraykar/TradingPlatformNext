@@ -57,6 +57,7 @@ def test_pcr_threshold_is_strict():
 def test_missing_or_invalid_inputs_fail_closed():
     for overrides in (
         {"call": None},
+        {"call": -1},
         {"put": -1},
         {"call": 0, "put": 0},
         {"price": 0},
