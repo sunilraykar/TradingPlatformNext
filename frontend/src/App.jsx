@@ -1196,16 +1196,38 @@ export default function App() {
         result = await api('/kite/option-chain?underlying=NIFTY&strike_count=10');
         const rows = (result.strikes || []).map((s) => ({ call_symbol: s.CE?.tradingsymbol, call_ltp: s.CE?.last_price, call_volume: s.CE?.volume, call_oi: s.CE?.oi, strike: s.strike, put_oi: s.PE?.oi, put_volume: s.PE?.volume, put_ltp: s.PE?.last_price, put_symbol: s.PE?.tradingsymbol }));
         setKiteData({ title: 'Option Chain', subtitle: (result.underlying || 'NIFTY') + ' · Expiry ' + (result.expiry || '—') + ' · Spot ' + number(result.spot_price), rows });
-      } else if (kiteTab === 'Orders') { result = await api('/kite/orders'); setKiteData({ title: 'Orders', subtitle: (result.orders || []).length + ' orders', rows: result.orders || [] });
-      } else if (kiteTab === 'Positions') { result = await api('/kite/positions'); setKiteData({ title: 'Positions', subtitle: 'Net and day positions', rows: [...(result.net || []).map((r) => ({ book: 'Net', ...r })), ...(result.day || []).map((r) => ({ book: 'Day', ...r }))] });
-      } else if (kiteTab === 'Holdings') { result = await api('/kite/holdings'); setKiteData({ title: 'Holdings', subtitle: (result.holdings || []).length + ' holdings', rows: result.holdings || [] });
-      } else if (kiteTab === 'Funds') { result = await api('/kite/funds'); const rows = Object.entries(result || {}).flatMap(([segment, vals]) => vals && typeof vals === 'object' ? Object.entries(vals).map(([metric, value]) => ({ segment, metric, value: typeof value === 'object' ? JSON.stringify(value) : value })) : [{ segment: 'Account', metric: segment, value: vals }]); setKiteData({ title: 'Funds & Margins', subtitle: 'Available balance and margin details', rows });
+      } else if (kiteTab === 'Orders') {
+        result = await api('/kite/orders');
+        setKiteData({ title: 'Orders', subtitle: (result.orders || []).length + ' orders', rows: result.orders || [] });
+      } else if (kiteTab === 'Positions') {
+        result = await api('/kite/positions');
+        setKiteData({ title: 'Positions', subtitle: 'Net and day positions', rows: [...(result.net || []).map((r) => ({ book: 'Net', ...r })), ...(result.day || []).map((r) => ({ book: 'Day', ...r }))] });
+      } else if (kiteTab === 'Holdings') {
+        result = await api('/kite/holdings');
+        setKiteData({ title: 'Holdings', subtitle: (result.holdings || []).length + ' holdings', rows: result.holdings || [] });
       } else {
-        const all = await Promise.all([api('/kite/orders'), api('/kite/positions'), api('/kite/holdings'), api('/kite/funds')]);
-        setKiteData({ title: 'Kite Dashboard', subtitle: 'Live account snapshot', rows: [{ metric: 'Orders today', value: (all[0].orders || []).length }, { metric: 'Net positions', value: (all[1].net || []).length }, { metric: 'Day positions', value: (all[1].day || []).length }, { metric: 'Holdings', value: (all[2].holdings || []).length }, ...Object.entries(all[3] || {}).flatMap(([segment, vals]) => vals && typeof vals === 'object' ? Object.entries(vals).map(([metric, value]) => ({ metric: segment + ' · ' + metric, value: typeof value === 'object' ? JSON.stringify(value) : value })) : [{ metric: segment, value: vals }])] });
+        const [orders, positions, holdings, funds] = await Promise.all([
+          api('/kite/orders'), api('/kite/positions'), api('/kite/holdings'), api('/kite/funds'),
+        ]);
+        setKiteData({
+          title: 'Kite Dashboard',
+          subtitle: 'Live account snapshot',
+          dashboard: {
+            ordersToday: (orders.orders || []).length,
+            netPositions: (positions.net || []).length,
+            dayPositions: (positions.day || []).length,
+            holdingsCount: (holdings.holdings || []).length,
+            funds: funds || {},
+          },
+          rows: [],
+        });
       }
-    } catch (e) { setKiteData(null); setKiteError(e.message || 'Unable to load Kite data. Check Kite login and backend.'); }
-    finally { setKiteLoading(false); }
+    } catch (e) {
+      setKiteData(null);
+      setKiteError(e.message || 'Unable to load Kite data. Check Kite login and backend.');
+    } finally {
+      setKiteLoading(false);
+    }
   }, [applicationTab, kiteTab]);
   useEffect(() => { loadKiteTab(); }, [loadKiteTab]);
 
@@ -1422,13 +1444,71 @@ export default function App() {
       </footer>
       </>) : <>
                 <nav className="kite-tabs" aria-label="Kite sections">
-          {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings', 'Funds'].map((tab) =>
+          {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings'].map((tab) =>
             <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => setKiteTab(tab)}>{tab}</button>
           )}
         </nav>
-        <section className="kite-data-panel panel">
-          <div className="panel-header"><div><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></div><button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button></div>
-          {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and import the instrument master for Option Chain.</small></div>}
+        <section className={`kite-data-panel panel ${kiteTab === 'Dashboard' ? 'kite-dashboard-panel' : ''}`}>
+          <div className="panel-header">
+            <div><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || (kiteTab === 'Dashboard' ? 'Kite Dashboard' : kiteTab)}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || (kiteTab === 'Dashboard' ? 'Live account snapshot and margin overview' : 'Fetching data from Kite API…')}</div></div>
+            <button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button>
+          </div>
+          {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and backend connection.</small></div>}
+          {kiteTab === 'Dashboard' && kiteLoading && !kiteData && <div className="kite-data-empty">Loading account summary and margins…</div>}
+          {kiteTab === 'Dashboard' && kiteData?.dashboard && (() => {
+            const dashboard = kiteData.dashboard;
+            const segments = Object.entries(dashboard.funds || {});
+            const equity = dashboard.funds?.equity || {};
+            const equityAvailable = equity.available || {};
+            const availableBalance = equityAvailable.live_balance ?? equity.net ?? equityAvailable.opening_balance;
+            const money = (value) => {
+              const parsed = numericValue(value);
+              return parsed === null ? '—' : parsed.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+            const label = (key) => String(key).replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+            const detailRows = (value) => value && typeof value === 'object' ? Object.entries(value).filter(([, amount]) => amount !== null && amount !== undefined && typeof amount !== 'object') : [];
+            return <div className="kite-dashboard-content">
+              <div className="kite-account-summary">
+                <div className="kite-account-balance">
+                  <span>AVAILABLE BALANCE · EQUITY</span>
+                  <strong>{money(availableBalance)}</strong>
+                  <small>Live balance</small>
+                </div>
+                <div className="kite-account-stat"><span>NET EQUITY</span><strong>{money(equity.net)}</strong></div>
+                <div className="kite-account-stat"><span>ORDERS TODAY</span><strong>{dashboard.ordersToday}</strong></div>
+                <div className="kite-account-stat"><span>NET POSITIONS</span><strong>{dashboard.netPositions}</strong></div>
+              </div>
+              <div className="kite-dashboard-activity">
+                <div><span>DAY POSITIONS</span><strong>{dashboard.dayPositions}</strong></div>
+                <div><span>HOLDINGS</span><strong>{dashboard.holdingsCount}</strong></div>
+              </div>
+              <div className="kite-dashboard-section-heading"><div><h3>Segment margins</h3><p>Available and utilised funds by trading segment</p></div></div>
+              <div className="kite-segment-grid">
+                {segments.map(([segment, values]) => {
+                  const available = values?.available || {};
+                  const utilised = values?.utilised || {};
+                  const availableItems = detailRows(available);
+                  const utilisedItems = detailRows(utilised);
+                  return <article className="kite-segment-card" key={segment}>
+                    <div className="kite-segment-heading"><h3>{label(segment)}</h3><span className={values?.enabled ? 'kite-enabled' : 'kite-disabled'}>{values?.enabled ? 'Enabled' : 'Disabled'}</span></div>
+                    <div className="kite-segment-primary">
+                      <div><span>Net</span><strong>{money(values?.net)}</strong></div>
+                      <div><span>Available</span><strong>{money(available.live_balance ?? values?.net)}</strong></div>
+                    </div>
+                    <div className="kite-segment-secondary"><span>Utilised</span><strong>{money(utilised.debits ?? 0)}</strong></div>
+                    <details className="kite-margin-details">
+                      <summary>View margin breakdown</summary>
+                      <div className="kite-margin-columns">
+                        <div><h4>Available components</h4>{availableItems.length ? availableItems.map(([key, amount]) => <div className="kite-margin-row" key={key}><span>{label(key)}</span><strong>{money(amount)}</strong></div>) : <p className="kite-margin-empty">No available-margin components returned.</p>}</div>
+                        <div><h4>Utilised components</h4>{utilisedItems.length ? utilisedItems.map(([key, amount]) => <div className="kite-margin-row" key={key}><span>{label(key)}</span><strong>{money(amount)}</strong></div>) : <p className="kite-margin-empty">No utilised-margin components returned.</p>}</div>
+                      </div>
+                    </details>
+                  </article>;
+                })}
+                {!segments.length && <div className="kite-data-empty">No segment margin data returned.</div>}
+              </div>
+            </div>;
+          })()}
           {kiteTab === 'Holdings' && Array.isArray(kiteData?.rows) && kiteData.rows.length > 0 && (() => {
             const holdings = kiteData.rows;
             const symbolOf = (row) => String(row.tradingsymbol || row.trading_symbol || row.symbol || '');
@@ -1440,11 +1520,6 @@ export default function App() {
               return (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
                 (holdingsProfitFilter === 'ALL' || (holdingsProfitFilter === 'PROFITABLE' && pnl > 0) || (holdingsProfitFilter === 'LOSS' && pnl < 0) || (holdingsProfitFilter === 'BREAKEVEN' && pnl === 0));
             });
-            const quantityOf = (row) => Number(row.quantity ?? row.net_quantity ?? 0);
-            const priceOf = (row) => Number(row.last_price ?? row.lastPrice ?? row.price ?? row.close_price ?? 0);
-            const averageOf = (row) => Number(row.average_price ?? row.averagePrice ?? 0);
-            const valueOf = (row) => Number(row.current_value ?? row.market_value ?? priceOf(row) * quantityOf(row));
-            const pnlPercentOf = (row) => { const cost = averageOf(row) * quantityOf(row); return cost ? pnlOf(row) / Math.abs(cost) * 100 : 0; };
             const counts = {
               ALL: holdings.length,
               PROFITABLE: holdings.filter((row) => pnlOf(row) > 0).length,
@@ -1457,14 +1532,13 @@ export default function App() {
                 <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
                 {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
               </div>
-
               <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
-                {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,label]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{label}<span>{counts[key]}</span></button>)}
+                {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,labelText]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{labelText}<span>{counts[key]}</span></button>)}
               </div>
               <KiteDataTable rows={filtered} holdingsMode hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
             </div>;
           })()}
-          {kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
+          {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
           {kiteTab === 'Holdings' && (!Array.isArray(kiteData?.rows) || kiteData.rows.length === 0) && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading holdings…</div> : <KiteDataTable rows={[]} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No holdings returned by Kite.'} />)}
           <div className="panel-footer">Read-only data view. No order placement or modification is performed by these tabs.</div>
         </section>
