@@ -497,7 +497,6 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
                 trailing_active = True
 
             if trailing_active and target_step > 0 and target > 0:
-                old_target = target
                 target_advances = 0
                 # Process every target level crossed by this quote so price gaps do
                 # not lose milestones or desynchronize the two trail counters.
