@@ -292,6 +292,7 @@ const SETTINGS_FIELDS = {
   ],
   'active-trades': [
     ['autoExitProfitableTrades', 'Auto Exit Profitable Trades at Market Close', 'boolean', false, 'Enable AutoExitProfitableTradesWorker. When disabled, the worker must not auto-exit profitable trades.'],
+    ['autoClosePaperOptionsAtMarketClose', 'Auto-Close All PAPER Options at Market Close', 'boolean', false, 'Close all open PAPER option trades between 15:25 and 15:29:30 IST using a fresh market quote. LIVE trades are excluded.'],
     ['targetStopLossStrategy', 'Target & Stop Loss Strategy', 'select', 'M-TTTS', '', ['L-FT-FSL|Fixed Target + Fixed SL', 'M-FT-TSL|Fixed Target + Trailing SL', 'M-TTTS|Target-Triggered Trailing Stop', 'H-PT-TSL|Progressive Target + Trailing SL']],
     ['defaultTargetPercent', 'Default Target', 'number', '10', 'Default target for new manual option trades.', '0.01'],
     ['defaultTargetType', 'Default Target Unit', 'select', 'PERCENTAGE', '', ['POINTS|Points', 'PERCENTAGE|Percentage (%)']],

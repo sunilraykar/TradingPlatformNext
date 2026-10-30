@@ -595,7 +595,13 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
 
 
 @_serialized_lifecycle
-def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "TRADE_UPDATED") -> dict[str, Any]:
+def update_trade(
+    trade_id: str,
+    changes: dict[str, Any],
+    *,
+    event_type: str = "TRADE_UPDATED",
+    expected_quote: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     if not changes:
         raise ValueError("At least one trade field is required")
     if "trade_id" in changes or "created_at" in changes or "version" in changes:
@@ -606,6 +612,12 @@ def update_trade(trade_id: str, changes: dict[str, Any], *, event_type: str = "T
         current = _cache.get(trade_id)
         if not current:
             raise KeyError(trade_id)
+        if expected_quote is not None:
+            # Validate the quote and lifecycle state under the same lock used to
+            # apply the close, preventing a websocket update racing the final check.
+            for field, expected in expected_quote.items():
+                if current.get(field) != expected:
+                    raise ValueError("Trade quote or lifecycle state changed before update")
         if current.get("execution_mode") == "LIVE" and not event_type.startswith("BROKER_"):
             raise ValueError("Live trade lifecycle is controlled by broker reconciliation; manual updates are blocked.")
         updated = dict(current)
