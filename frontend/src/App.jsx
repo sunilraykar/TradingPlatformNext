@@ -119,24 +119,28 @@ function buildIntradayRows(rows, settings = {}) {
   return rows.map((row, index) => {
     const call = numericValue(row.call);
     const put = numericValue(row.put);
-    const total = call !== null && put !== null ? call + put : null;
-    const callStrength = total !== null && total > 0 ? (call / total) * 100 : null;
-    const putStrength = total !== null && total > 0 ? (put / total) * 100 : null;
-    // Positive difference means call strength is higher. Both directions use
-    // the absolute configured threshold; VWAP/Option signals distinguish direction.
+    // Call/Put inputs are strength magnitudes. Negative or missing values are
+    // invalid upstream data and must never be converted into percentages/signals.
+    const validStrength = call !== null && put !== null && call >= 0 && put >= 0 && call + put > 0;
+    const total = validStrength ? call + put : null;
+    const callStrength = total !== null ? (call / total) * 100 : null;
+    const putStrength = total !== null ? (put / total) * 100 : null;
+    // Positive difference means Call strength leads Put strength (bullish).
     const strengthDiff = callStrength !== null && putStrength !== null ? callStrength - putStrength : null;
     const price = numericValue(row.price ?? row.close ?? row.ltp);
     const vwap = numericValue(row.vWap ?? row.vwap);
-    const buffer = price !== null && vwap !== null && vwap !== 0 ? ((price - vwap) / vwap) * 100 : null;
+    const validPriceVwap = price !== null && vwap !== null && price > 0 && vwap > 0;
+    const buffer = validPriceVwap ? ((price - vwap) / price) * 100 : null;
     const optionSignal = signalValue(row.optionSignal);
     const vwapSignal = signalValue(row.vWapSignal ?? row.vwapSignal);
     const pcr = numericValue(row.pcr);
 
-    const strengthPass = strengthDiff !== null && Math.abs(strengthDiff) > strengthThreshold;
-    // The configured buffer is a maximum absolute Price-VWAP percentage gap.
-    const bufferPass = buffer !== null && Math.abs(buffer) <= bufferThreshold;
-    const bullish = strengthPass && bufferPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
-    const bearish = strengthPass && bufferPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
+    const strengthPass = validStrength && strengthDiff !== null && Math.abs(strengthDiff) > strengthThreshold;
+    // Fail closed unless both price and VWAP are valid; buffer is measured
+    // against Price, matching the backend evaluator.
+    const bufferPass = validPriceVwap && buffer !== null && Math.abs(buffer) <= bufferThreshold;
+    const bullish = strengthPass && strengthDiff > strengthThreshold && bufferPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
+    const bearish = strengthPass && strengthDiff < -strengthThreshold && bufferPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
     const enter = bullish ? 'BUY' : bearish ? 'SELL' : 'WAIT';
 
     return { key: recordTime(row) + '-' + index, time: recordTime(row), call, put, diff: numericValue(row.diff), pcr, price, vwap, vwapSignal, optionSignal, callStrength, putStrength, strengthDiff, buffer, enter };
@@ -1354,9 +1358,9 @@ export default function App() {
             <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}{dailyChangeAbsolute === null ? '' : ` (${dailyChangeAbsolute > 0 ? '+' : ''}${number(dailyChangeAbsolute)})`}</strong></div>
           </div>
         </div>
-        <Metric label="CALL STRENGTH" value={trend.call == null ? '—' : `${number(trend.call)}%`} tone="positive" />
-        <Metric label="PUT STRENGTH" value={trend.put == null ? '—' : `${number(trend.put)}%`} tone="negative" />
-        <Metric label="OPTION SIGNAL" value={displayValue(trend.signal ?? latest.optionSignal)} />
+        <Metric label="CALL STRENGTH" value={calculatedRowsDescending[0]?.callStrength == null ? '—' : `${number(calculatedRowsDescending[0].callStrength)}%`} tone="positive" />
+        <Metric label="PUT STRENGTH" value={calculatedRowsDescending[0]?.putStrength == null ? '—' : `${number(calculatedRowsDescending[0].putStrength)}%`} tone="negative" />
+        <Metric label="OPTION SIGNAL" value={displayValue(calculatedRowsDescending[0]?.optionSignal)} />
       </section>
 
       <section className="selected-contract-panel panel" aria-live="polite">
