@@ -945,7 +945,6 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins }
       <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
     </section>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
-ion>
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="historical-records-content">
       <article className="panel price-vwap-panel historical-price-vwap-panel">
