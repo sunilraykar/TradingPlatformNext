@@ -33,14 +33,19 @@ class FakeResult:
 
 
 class FakeConnection:
-    def __init__(self, already_saved: bool = False) -> None:
+    def __init__(self, already_saved: bool = False, existing_payload=None) -> None:
         self.already_saved = already_saved
+        self.existing_payload = existing_payload if existing_payload is not None else {
+            "index_price": {"source": "AUTOTRENDER", "data": {"nifty": {"price": "23000"}}}
+        }
         self.calls = []
 
     def execute(self, statement, params):
         self.calls.append((str(statement), params))
         if statement.text.startswith("SELECT snapshot_id"):
-            return FakeResult((1,) if self.already_saved else None)
+            return FakeResult(
+                {"snapshot_id": 1, "payload": self.existing_payload} if self.already_saved else None
+            )
         if "FROM instruments" in statement.text:
             exchange, symbol = params["exchange"], params["symbol"]
             index = next(key for key, value in INDEX_INSTRUMENTS.items() if value[:2] == (exchange, symbol))
@@ -116,7 +121,7 @@ def test_persist_cache_snapshot_saves_kite_prices_without_autotrend_index_price(
     assert len(params["payload_hash"]) == 32
 
 
-def test_persist_cache_snapshot_does_not_duplicate_same_date() -> None:
+def test_persist_cache_snapshot_repairs_legacy_snapshot_in_place() -> None:
     engine = FakeEngine(already_saved=True)
     result = persist_cache_snapshot(
         captured_at=datetime(2026, 10, 26, 15, 30, tzinfo=IST),
@@ -124,8 +129,28 @@ def test_persist_cache_snapshot_does_not_duplicate_same_date() -> None:
         kite_provider=FakeKiteProvider(),
     )
 
-    assert result == {
-        "saved": False,
-        "reason": "already_saved_for_date",
-        "trading_date": "2026-10-26",
+    assert result["saved"] is True
+    assert result["repaired"] is True
+    update_sql, params = engine.connection.calls[-1]
+    assert "UPDATE market_snapshots" in update_sql
+    assert params["snapshot_id"] == 1
+    assert '"source":"KITE"' in params["payload"]
+
+
+def test_persist_cache_snapshot_does_not_replace_complete_kite_snapshot() -> None:
+    complete = {
+        "index_price": {
+            "source": "KITE",
+            "data": {key: {"price": 1} for key in ("nifty", "banknifty", "finnifty", "midcpnifty", "sensex", "bankex")},
+        }
     }
+    engine = FakeEngine(already_saved=True, existing_payload=complete)
+    result = persist_cache_snapshot(
+        captured_at=datetime(2026, 10, 26, 15, 30, tzinfo=IST),
+        engine=engine,
+        kite_provider=FakeKiteProvider(),
+    )
+
+    assert result["saved"] is False
+    assert result["reason"] == "already_saved_for_date"
+    assert not any("UPDATE market_snapshots" in sql for sql, _ in engine.connection.calls)
