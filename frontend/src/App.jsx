@@ -1531,7 +1531,6 @@ export default function App() {
             const formatMoney = (value) => Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const formatPercent = (value) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
             const symbolOf = (row) => String(row.tradingsymbol || row.trading_symbol || row.symbol || '');
-            const pnlOf = (row) => Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
             const availableLetters = [...new Set(holdings.map((row) => symbolOf(row).trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
             const filtered = holdings.filter((row) => {
               const symbol = symbolOf(row).trim().toUpperCase();
