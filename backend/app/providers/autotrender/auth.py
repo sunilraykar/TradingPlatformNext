@@ -16,6 +16,15 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_response_excerpt(response, limit: int = 400) -> str:
+    """Return a bounded response excerpt with common credential/token fields redacted."""
+    import re
+
+    text = str(getattr(response, "text", "") or "").replace("\\n", " ").replace("\\r", " ")
+    pattern = r"(?i)(authcookie|cookie|token|password|authorization|access_token|refresh_token)(\\s*[:=]\\s*)[^\\s,;}]+"
+    return re.sub(pattern, r"\\1\\2[REDACTED]", text)[:limit]
+
 LOGIN_URL = "https://theautotrender.com/login"
 API_BASE_URL = "https://api.theautotrender.com:5959"
 SESSION_FILE = Path(__file__).resolve().parents[3] / "runtime" / "autotrender" / "session.json"
@@ -52,6 +61,7 @@ class AutoTrenderAuth:
             options.add_argument("--disable-dev-shm-usage")
             driver = None
             try:
+                logger.info("AutoTrender auth diagnostic: starting headless Chrome login")
                 driver = webdriver.Chrome(options=options)
                 driver.get(LOGIN_URL)
                 wait = WebDriverWait(driver, 30)
@@ -64,6 +74,11 @@ class AutoTrenderAuth:
                     return False
 
                 state = wait.until(page_ready)
+                logger.info(
+                    "AutoTrender auth diagnostic: login page ready; page_state=%s final_url=%s",
+                    state,
+                    driver.current_url,
+                )
                 if state == "login":
                     username_field = wait.until(
                         EC.presence_of_element_located((By.NAME, "username"))
@@ -85,6 +100,10 @@ class AutoTrenderAuth:
                         EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))
                     ).click()
                     wait.until(lambda browser: "/login" not in browser.current_url)
+                    logger.info(
+                        "AutoTrender auth diagnostic: submit completed; final_url=%s",
+                        driver.current_url,
+                    )
 
                 cookies = driver.execute_cdp_cmd("Network.getAllCookies", {}).get("cookies", [])
                 cookie = next((item for item in cookies if item.get("name") == "authcookie"), None)
@@ -93,6 +112,15 @@ class AutoTrenderAuth:
                         "AutoTrender login did not provide authcookie. Check account access or CAPTCHA."
                     )
 
+                logger.info(
+                    "AutoTrender auth diagnostic: authcookie captured; domain=%s path=%s "
+                    "secure=%s http_only=%s expiry_present=%s",
+                    cookie.get("domain"),
+                    cookie.get("path", "/"),
+                    cookie.get("secure"),
+                    cookie.get("httpOnly"),
+                    bool(cookie.get("expires")),
+                )
                 self.session.cookies.clear()
                 self.session.cookies.set(
                     "authcookie",
@@ -104,7 +132,10 @@ class AutoTrenderAuth:
                 self.authenticated = True
                 if not self._validate_session():
                     self.clear_saved_cookie()
-                    raise RuntimeError("AutoTrender rejected the captured session cookie.")
+                    raise RuntimeError(
+                        "AutoTrender rejected the captured session cookie. "
+                        "Check backend logs for safe validation diagnostics."
+                    )
                 return {"authenticated": True, "message": "AutoTrender login successful."}
             except Exception as exc:
                 self.authenticated = False
@@ -194,8 +225,18 @@ class AutoTrenderAuth:
                 },
                 timeout=15,
             )
-            self.authenticated = response.ok and not self._response_rejects_session(response)
-            if not self.authenticated and self._response_rejects_session(response):
+            rejected = self._response_rejects_session(response)
+            self.authenticated = response.ok and not rejected
+            logger.info(
+                "AutoTrender auth diagnostic: API validation status=%s content_type=%s "
+                "final_url=%s rejected=%s response_excerpt=%r",
+                response.status_code,
+                response.headers.get("Content-Type", ""),
+                getattr(response, "url", ""),
+                rejected,
+                _safe_response_excerpt(response),
+            )
+            if not self.authenticated and rejected:
                 logger.warning("AutoTrender rejected the saved session cookie; clearing it")
                 self.clear_saved_cookie()
         except requests.RequestException:
