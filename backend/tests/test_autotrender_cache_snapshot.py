@@ -59,8 +59,8 @@ class FakeConnection:
 
 
 class FakeEngine:
-    def __init__(self, already_saved: bool = False) -> None:
-        self.connection = FakeConnection(already_saved)
+    def __init__(self, already_saved: bool = False, existing_payload=None) -> None:
+        self.connection = FakeConnection(already_saved, existing_payload)
 
     def connect(self):
         return self
