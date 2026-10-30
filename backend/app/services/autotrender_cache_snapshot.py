@@ -28,17 +28,13 @@ INDEX_INSTRUMENTS = {
     "NIFTY": ("NSE", "NIFTY 50", "nifty"),
     "BANKNIFTY": ("NSE", "NIFTY BANK", "banknifty"),
     "FINNIFTY": ("NSE", "NIFTY FIN SERVICE", "finnifty"),
-    "MIDCPNIFTY": ("NSE", "NIFTY MID SELECT", "midcpnifty"),
     "SENSEX": ("BSE", "SENSEX", "sensex"),
-    "BANKEX": ("BSE", "BANKEX", "bankex"),
 }
 INDEX_CATEGORIES = {
     "NIFTY": "Nifty",
     "BANKNIFTY": "BankNifty",
     "FINNIFTY": "FinNifty",
-    "MIDCPNIFTY": "MidcpNifty",
     "SENSEX": "Sensex",
-    "BANKEX": "Bankex",
 }
 
 
@@ -52,7 +48,7 @@ def _next_run(now: datetime) -> datetime:
 
 
 def _fetch_kite_index_prices(engine: Any | None = None, kite_provider: Any | None = None) -> dict[str, Any]:
-    """Fetch all six underlying spot-index quotes directly from Kite REST API."""
+    """Fetch the four required underlying spot-index quotes directly from Kite REST API."""
     db_engine = engine or get_engine()
     provider = kite_provider or get_kite_provider()
 
@@ -185,8 +181,8 @@ def persist_cache_snapshot(
                     "trading_date": trading_date.isoformat(),
                 }
 
-            # Replace only an incomplete/legacy snapshot, and only after all six
-            # Kite quotes and the new payload have been fetched successfully.
+            # Replace only an incomplete/legacy snapshot, and only after all four
+            # required Kite quotes and the new payload have been fetched successfully.
             connection.execute(
                 text(
                     "UPDATE market_snapshots SET captured_at = :captured_at, "
