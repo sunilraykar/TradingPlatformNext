@@ -555,3 +555,20 @@
 .holdings-summary-item>strong small{padding:5px 8px;border-radius:6px;background:rgba(56,217,169,.10);font:600 11px 'DM Mono',monospace}
 .holdings-summary-item>strong small.negative{background:rgba(248,113,113,.11)}
 @media(max-width:760px){.holdings-portfolio-summary{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 12px}.holdings-summary-item>strong{font-size:16px}}
+
+/* Holdings search, sort shortcuts and portfolio concentration. */
+.holdings-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0}
+.holdings-tools input{width:min(280px,100%);min-width:180px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#0d1725;color:var(--text);font:inherit;font-size:12px;outline:none}
+.holdings-tools input:focus{border-color:var(--cyan)}
+.holdings-sort-actions{display:flex;flex-wrap:wrap;gap:6px}
+.holdings-sort-actions button{padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:#111c2b;color:var(--muted);font-size:10px;cursor:pointer}
+.holdings-sort-actions button.active{border-color:rgba(56,217,220,.4);background:rgba(56,217,220,.12);color:var(--cyan)}
+.holdings-concentration{margin:12px 0;border:1px solid var(--line);border-radius:8px;background:#0e1826}
+.holdings-concentration summary{padding:11px 13px;color:var(--text);font-size:11px;font-weight:600;cursor:pointer}
+.holdings-concentration-list{display:grid;gap:10px;padding:0 13px 13px}
+.holdings-concentration-row{display:grid;grid-template-columns:minmax(100px,160px) minmax(80px,1fr) 48px;align-items:center;gap:12px;font-size:10px}
+.holdings-concentration-row>span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.holdings-concentration-row>div{height:7px;border-radius:8px;background:#202c3d;overflow:hidden}
+.holdings-concentration-row>div i{display:block;height:100%;border-radius:8px;background:var(--cyan)}
+.holdings-concentration-row>strong{text-align:right;font:600 10px 'DM Mono',monospace}
+@media(max-width:760px){.holdings-tools{align-items:stretch;flex-direction:column}.holdings-tools input{width:100%;box-sizing:border-box}.holdings-sort-actions{overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px}.holdings-sort-actions button{white-space:nowrap}.holdings-concentration-row{grid-template-columns:90px minmax(60px,1fr) 42px}}
