@@ -21,7 +21,7 @@ def test_option_chain_rejects_invalid_expiry_before_database_access():
 
 
 def test_option_chain_uses_full_mode_for_open_interest(monkeypatch):
-    from datetime import date
+    from datetime import UTC, date, datetime
 
     from app.services import live_market_data, option_chain
     from app.services.live_quotes import live_quotes
@@ -90,7 +90,7 @@ def test_option_chain_uses_full_mode_for_open_interest(monkeypatch):
             "last_price": 125.5,
             "volume_traded": 1000,
             "oi": 25000,
-            "received_at": "2026-10-24T10:00:00+00:00",
+            "received_at": datetime.now(UTC).isoformat(),
         },
         2: {
             "last_price": 130.0,
