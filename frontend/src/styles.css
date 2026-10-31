@@ -767,3 +767,28 @@
   .trade-date-filter-panel .trade-filter-group{flex:1 1 auto}
   .trade-date-filter-panel .trade-terminal-count{margin-left:0}
 }
+
+
+/* Compact unified Trade Terminal date and filter bar. */
+.trade-date-filter-panel{
+  gap:14px;
+  padding:10px 12px;
+}
+.trade-date-filter-panel .trade-date-navigator{
+  gap:8px;
+  min-height:52px;
+  padding-right:12px;
+}
+.trade-date-filter-panel .trade-date-navigator-label{min-width:168px;gap:3px}
+.trade-date-filter-panel .trade-date-navigator-label>span{font-size:9px;letter-spacing:1px}
+.trade-date-filter-panel .trade-date-navigator-label>strong{font-size:12px}
+.trade-date-filter-panel .trade-date-nav-button{width:30px;height:32px;flex-basis:30px;font-size:21px}
+.trade-date-filter-panel .trade-terminal-filters{gap:8px}
+.trade-date-filter-panel .trade-filter-group{gap:5px}
+.trade-date-filter-panel .trade-filter-label{font-size:10px}
+.trade-date-filter-panel .trade-filter-buttons{gap:4px}
+.trade-date-filter-panel .trade-filter-button{padding:6px 8px;font-size:11px;min-height:34px}
+@media(min-width:1101px){
+  .trade-date-filter-panel{flex-wrap:nowrap}
+  .trade-date-filter-panel .trade-terminal-filters{flex-wrap:nowrap}
+}
