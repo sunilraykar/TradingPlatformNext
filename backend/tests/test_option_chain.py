@@ -96,7 +96,7 @@ def test_option_chain_uses_full_mode_for_open_interest(monkeypatch):
             "last_price": 130.0,
             "volume_traded": 1200,
             "oi": 30000,
-            "received_at": "2026-10-24T10:00:00+00:00",
+            "received_at": datetime.now(UTC).isoformat(),
         },
     }
     monkeypatch.setattr(live_quotes, "get", lambda token: quote_values.get(token))
