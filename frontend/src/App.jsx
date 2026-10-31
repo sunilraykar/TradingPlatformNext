@@ -806,6 +806,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
   const [selected, setSelected] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState('FINNIFTY');
   const [showIntradayDetails, setShowIntradayDetails] = useState(false);
+  const [enterFilter, setEnterFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
@@ -907,6 +908,27 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
     });
   }, [selected, selectedIndex, calculatedHistory.rows, autotrendSettings]);
 
+  const enterFilterValues = useMemo(() => {
+    const values = [...new Set(historicalIntradayRows
+      .map((row) => String(row.enter ?? '').trim().toUpperCase())
+      .filter(Boolean))];
+    const preferredOrder = ['BUY', 'SELL', 'WAIT'];
+    return values.sort((a, b) => {
+      const ai = preferredOrder.indexOf(a);
+      const bi = preferredOrder.indexOf(b);
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }, [historicalIntradayRows]);
+
+  const filteredHistoricalIntradayRows = useMemo(() => (
+    enterFilter === 'ALL'
+      ? historicalIntradayRows
+      : historicalIntradayRows.filter((row) => String(row.enter ?? '').trim().toUpperCase() === enterFilter)
+  ), [historicalIntradayRows, enterFilter]);
+
   const formatDateTime = (value) => value ? new Date(/[zZ]|[+-]\\d{2}:?\\d{2}$/.test(value) ? value : value + '+05:30').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
   const first = result.total ? page * pageSize + 1 : 0;
   const last = Math.min((page + 1) * pageSize, result.total || 0);
@@ -966,7 +988,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
           </div>
         </article>
       <section className="content-grid historical-dataset-grid">
-        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div><KiteDataTable columnsOverride={['time','vwapSignal','optionSignal','enter', ...(!showIntradayDetails ? [] : ['call','put']), 'diff','pcr','price','vwap', ...(!showIntradayDetails ? [] : ['callStrength','putStrength']), 'strengthDiff','vwapPriceBufferPct']} rows={historicalIntradayRows} /></article>
+        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div><div className="historical-enter-filters" role="group" aria-label="Filter intraday records by Enter signal"><button type="button" className={enterFilter === 'ALL' ? 'selected' : 'button secondary'} onClick={() => setEnterFilter('ALL')}>All ({historicalIntradayRows.length})</button>{enterFilterValues.map((value) => <button key={value} type="button" className={enterFilter === value ? 'selected' : 'button secondary'} onClick={() => setEnterFilter(value)}>{value} ({historicalIntradayRows.filter((row) => String(row.enter ?? '').trim().toUpperCase() === value).length})</button>)}</div><KiteDataTable columnsOverride={['time','vwapSignal','optionSignal','enter', ...(!showIntradayDetails ? [] : ['call','put']), 'diff','pcr','price','vwap', ...(!showIntradayDetails ? [] : ['callStrength','putStrength']), 'strengthDiff','vwapPriceBufferPct']} rows={filteredHistoricalIntradayRows} /></article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
       </section>
       <details className="historical-raw-payload"><summary>View complete saved JSON payload · SHA-256 {selected.payload_hash || '—'}</summary><pre>{JSON.stringify(selected.payload, null, 2)}</pre></details>
