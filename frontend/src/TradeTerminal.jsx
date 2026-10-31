@@ -384,13 +384,37 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
     } catch (e) { setError(e.message || 'Trade update failed.'); }
   };
 
+  const getTradeSortValue = (trade, key) => {
+    if (key === 'duration') {
+      const startRaw = trade.entry_time || trade.created_at;
+      const endRaw = isTerminalStatus(trade.status)
+        ? (trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at)
+        : durationNow;
+      const start = startRaw ? new Date(startRaw).getTime() : NaN;
+      const end = typeof endRaw === 'number' ? endRaw : new Date(endRaw).getTime();
+      return Number.isFinite(start) && Number.isFinite(end) ? Math.max(0, end - start) : null;
+    }
+    if (key === 'average_entry_price') return trade.average_entry_price ?? trade.entry_price;
+    if (key === 'average_exit_price') return trade.average_exit_price ?? trade.exit_price;
+    if (key === 'display_pnl') return calculateTradePnl(trade);
+    return trade[key];
+  };
+  const numericSortKeys = new Set([
+    'quantity', 'entry_price', 'average_entry_price', 'last_price', 'stop_loss',
+    'target', 'average_exit_price', 'exit_price', 'display_pnl', 'duration',
+    'created_at', 'updated_at',
+  ]);
   const displayedTrades = visibleTrades.map((trade) => ({ ...trade, display_pnl: calculateTradePnl(trade) })).sort((a, b) => {
-    const left = a[sortConfig.key];
-    const right = b[sortConfig.key];
+    const left = getTradeSortValue(a, sortConfig.key);
+    const right = getTradeSortValue(b, sortConfig.key);
     let comparison;
-    if (['quantity', 'entry_price', 'average_entry_price', 'last_price', 'stop_loss', 'target', 'average_exit_price', 'display_pnl'].includes(sortConfig.key)) {
-      const leftNumber = Number(left ?? 0);
-      const rightNumber = Number(right ?? 0);
+    if (numericSortKeys.has(sortConfig.key)) {
+      const leftNumber = left === null || left === undefined || left === '' ? Number.NEGATIVE_INFINITY : (
+        typeof left === 'number' ? left : new Date(left).getTime()
+      );
+      const rightNumber = right === null || right === undefined || right === '' ? Number.NEGATIVE_INFINITY : (
+        typeof right === 'number' ? right : new Date(right).getTime()
+      );
       comparison = leftNumber - rightNumber;
     } else {
       comparison = String(left ?? '').localeCompare(String(right ?? ''), undefined, { numeric: true, sensitivity: 'base' });
@@ -568,7 +592,6 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       <div className="trade-filter-group"><span className="trade-filter-label">Source</span><div className="trade-filter-buttons">{[['ALL','All'],...['AUTOTRENDER','MANUAL','KITE'].map(value => [value, value === 'AUTOTRENDER' ? 'AutoTrender' : value.charAt(0)+value.slice(1).toLowerCase()])].map(([value,label]) => <button key={value} type="button" className={sourceFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSourceFilter(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Underlying</span><div className="trade-filter-buttons">{[['ALL','All'],['INDICES','Indices'],...underlyings.filter(x => !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(x)).map(x => [x,x])].map(([value,label]) => <button key={value} type="button" className={underlyingFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setUnderlyingFilter(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group trade-symbol-letter-filter"><span className="trade-filter-label">Symbol</span><div className="trade-filter-buttons">{[['ALL','All'],...symbolLetters.map((letter) => [letter,letter])].map(([value,label]) => <button key={value} type="button" className={symbolLetter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSymbolLetter(value)}>{label}</button>)}</div></div>
-      <div className="trade-filter-group"><span className="trade-filter-label">Sort by</span><select className="trade-sort-select" value={`${sortConfig.key}:${sortConfig.direction}`} onChange={(event) => { const [key, direction] = event.target.value.split(':'); setSortConfig({ key, direction }); }}><option value="underlying:asc">Underlying A–Z</option><option value="updated_at:desc">Recently updated</option><option value="created_at:desc">Newest created</option><option value="created_at:asc">Oldest created</option><option value="last_price:desc">Last price ↓</option><option value="display_pnl:desc">P&amp;L ↓</option><option value="instrument_symbol:asc">Symbol A–Z</option><option value="instrument_symbol:desc">Symbol Z–A</option></select></div>
       <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · live updates</span>
     </div>
     </section>
