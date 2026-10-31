@@ -696,5 +696,5 @@
 .portfolio-choice.active.sell{border-color:#ef4444;background:#451d29;color:#fda4af;box-shadow:inset 0 0 0 1px #ef4444}
 
 /* GTT order-entry fields and three-way order-type selector. */
-.portfolio-choice-group{grid-template-columns:repeat(3,minmax(0,1fr))}
+.portfolio-order-type-choices{grid-template-columns:repeat(3,minmax(0,1fr))}
 .portfolio-order-help{grid-column:1/-1;padding:9px 11px;border:1px solid var(--line,#29354c);border-radius:6px;background:#101c2d;color:var(--muted,#9aabc4);font-size:11px;line-height:1.5}
