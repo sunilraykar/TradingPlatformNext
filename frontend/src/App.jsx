@@ -1398,22 +1398,20 @@ export default function App() {
         <Metric label="OPTION SIGNAL" value={displayValue(calculatedRowsDescending[0]?.optionSignal)} />
       </section>
 
-      <section className="selected-contract-panel panel" aria-live="polite">
+      {selectedContract?.status === 'SELECTED' && <section className="selected-contract-panel panel" aria-live="polite">
         <div className="selected-contract-heading">
           <div><div className="eyebrow">ATM CONTRACT SELECTION</div><h2>Selected option strike</h2></div>
         </div>
-        {selectedContract?.status === 'SELECTED' ? <>
-          <div className="selected-contract-main">
-            <div className="selected-contract-symbol"><strong>{selectedContract.tradingsymbol}</strong><span>{selectedContract.index} · {selectedContract.option_type} · {selectedContract.exchange}</span></div>
-            <div className="selected-contract-stat"><span>Spot</span><strong>{number(selectedContract.spot_price)}</strong></div>
-            <div className="selected-contract-stat"><span>ATM strike</span><strong>{number(selectedContract.strike, 0)}</strong></div>
-            <div className="selected-contract-stat"><span>Expiry</span><strong>{selectedContract.expiry}</strong></div>
-            <div className="selected-contract-stat"><span>Lot size</span><strong>{number(selectedContract.lot_size, 0)}</strong></div>
-          </div>
-          <div className="selected-contract-footnote">{selectedContract.expiry_rule}{selectedContract.used_next_expiry ? ' · Switched to next expiry' : ''} · Signal: {selectedContract.signal}. Paper-trade selection only; no order has been placed.</div>
-          {selectedContract.calendar_note && <div className="selected-contract-calendar-note">{selectedContract.calendar_note}</div>}
-        </> : <div className="selected-contract-empty">{contractLoading ? 'Checking Kite spot, listed strikes and expiry…' : contractError || 'Contract selection is unavailable.'}</div>}
-      </section>
+        <div className="selected-contract-main">
+          <div className="selected-contract-symbol"><strong>{selectedContract.tradingsymbol}</strong><span>{selectedContract.index} · {selectedContract.option_type} · {selectedContract.exchange}</span></div>
+          <div className="selected-contract-stat"><span>Spot</span><strong>{number(selectedContract.spot_price)}</strong></div>
+          <div className="selected-contract-stat"><span>ATM strike</span><strong>{number(selectedContract.strike, 0)}</strong></div>
+          <div className="selected-contract-stat"><span>Expiry</span><strong>{selectedContract.expiry}</strong></div>
+          <div className="selected-contract-stat"><span>Lot size</span><strong>{number(selectedContract.lot_size, 0)}</strong></div>
+        </div>
+        <div className="selected-contract-footnote">{selectedContract.expiry_rule}{selectedContract.used_next_expiry ? ' · Switched to next expiry' : ''} · Signal: {selectedContract.signal}. Paper-trade selection only; no order has been placed.</div>
+        {selectedContract.calendar_note && <div className="selected-contract-calendar-note">{selectedContract.calendar_note}</div>}
+      </section>}
 
       <section className="price-vwap-section">
         <article className="panel price-vwap-panel">
