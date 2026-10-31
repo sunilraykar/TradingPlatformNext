@@ -1108,7 +1108,7 @@ export default function App() {
   const [selectedContract, setSelectedContract] = useState(null);
   const [contractLoading, setContractLoading] = useState(false);
   const [contractError, setContractError] = useState('');
-  const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.3, autoTrenderEntryStartTime: '10:00', autoTrenderEntryEndTime: '15:25' });
+  const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.1, autoTrenderEntryStartTime: '10:00', autoTrenderEntryEndTime: '15:25' });
   const [showIntradayDetails, setShowIntradayDetails] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -1155,7 +1155,7 @@ export default function App() {
         callPutStrengthDiff: saved.callPutStrengthDiff ?? 10,
         callPcr: saved.callPcr ?? 1,
         putPcr: saved.putPcr ?? 1,
-        vwapPriceDifferenceBuffer: saved.vwapPriceDifferenceBuffer ?? 0.3,
+        vwapPriceDifferenceBuffer: saved.vwapPriceDifferenceBuffer ?? 0.1,
         autoTrenderEntryStartTime: saved.autoTrenderEntryStartTime ?? '10:00',
         autoTrenderEntryEndTime: saved.autoTrenderEntryEndTime ?? '15:25',
       });
