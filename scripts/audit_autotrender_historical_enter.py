@@ -1,16 +1,14 @@
-"""Read-only audit of every persisted AutoTrender historical UI Enter value.
+"""Read-only audit of persisted AutoTrender historical UI Enter values.
 
 Run from backend:
     python ..\\scripts\\audit_autotrender_historical_enter.py
 
-Optional thresholds:
-    python ..\\scripts\\audit_autotrender_historical_enter.py --vwap-buffer 0.10
-
-Creates CSV reports in backend/ and never modifies the database.
+Thresholds are loaded from the same ui.* records used by the application
+Settings. The script does not substitute its own threshold defaults and never
+modifies the database.
 """
 from __future__ import annotations
 
-import argparse
 import csv
 import json
 import math
@@ -19,6 +17,14 @@ from typing import Any
 
 from sqlalchemy import text
 from app.db.session import get_engine
+
+
+SETTING_KEYS = (
+    "callPutStrengthDiff",
+    "callPcr",
+    "putPcr",
+    "vwapPriceDifferenceBuffer",
+)
 
 
 def num(value: Any) -> float | None:
@@ -51,14 +57,46 @@ def raw_dict(value: Any) -> dict[str, Any]:
         return {}
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--strength-threshold", type=float, default=10.0)
-    parser.add_argument("--call-pcr", type=float, default=1.40)
-    parser.add_argument("--put-pcr", type=float, default=0.85)
-    parser.add_argument("--vwap-buffer", type=float, default=0.10)
-    args = parser.parse_args()
+def decode_setting(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+    try:
+        return json.loads(value)
+    except (TypeError, ValueError):
+        return value
 
+
+def read_thresholds(connection) -> dict[str, float]:
+    placeholders = ",".join(f":key{i}" for i in range(len(SETTING_KEYS)))
+    rows = connection.execute(
+        text(
+            "SELECT setting_key, setting_value FROM app_settings "
+            f"WHERE setting_key IN ({placeholders})"
+        ),
+        {f"key{i}": "ui." + key for i, key in enumerate(SETTING_KEYS)},
+    ).mappings().all()
+
+    saved = {str(row["setting_key"])[3:]: decode_setting(row["setting_value"]) for row in rows}
+    missing = [key for key in SETTING_KEYS if key not in saved]
+    if missing:
+        raise RuntimeError(
+            "Cannot run audit: these Settings values are missing from app_settings: "
+            + ", ".join(missing)
+            + ". Save them in the application Settings and rerun."
+        )
+
+    thresholds: dict[str, float] = {}
+    for key in SETTING_KEYS:
+        value = num(saved[key])
+        if value is None:
+            raise RuntimeError(
+                f"Cannot run audit: Settings value '{key}' is not a valid number: {saved[key]!r}"
+            )
+        thresholds[key] = abs(value) if key in {"callPutStrengthDiff", "vwapPriceDifferenceBuffer"} else value
+    return thresholds
+
+
+def main() -> None:
     sql = text("""
         SELECT row_id, trading_date, index_name, interval_minutes, row_time,
                call_value, put_value, pcr_value, price_value, vwap_value,
@@ -68,7 +106,13 @@ def main() -> None:
         ORDER BY trading_date, index_name, interval_minutes, row_time, row_id
     """)
     with get_engine().connect() as conn:
+        thresholds = read_thresholds(conn)
         records = conn.execute(sql).mappings().all()
+
+    strength_threshold = thresholds["callPutStrengthDiff"]
+    call_pcr_threshold = thresholds["callPcr"]
+    put_pcr_threshold = thresholds["putPcr"]
+    vwap_buffer_threshold = thresholds["vwapPriceDifferenceBuffer"]
 
     fields = [
         "row_id", "trading_date", "index", "interval_minutes", "time",
@@ -101,9 +145,9 @@ def main() -> None:
             reason = "INVALID_STRENGTH"
         elif price is None or vwap is None or price <= 0 or vwap <= 0:
             reason = "INVALID_PRICE_OR_VWAP"
-        elif strength <= args.strength_threshold:
+        elif strength <= strength_threshold:
             reason = "STRENGTH_DIFFERENCE_NOT_ABOVE_THRESHOLD"
-        elif buffer is None or buffer > args.vwap_buffer:
+        elif buffer is None or buffer > vwap_buffer_threshold:
             reason = "VWAP_GAP_ABOVE_THRESHOLD"
         elif vs not in {"BUY", "SELL"} or osig not in {"BUY", "SELL"}:
             reason = "INVALID_OR_MISSING_SIGNAL"
@@ -111,9 +155,9 @@ def main() -> None:
             reason = "SIGNALS_DISAGREE"
         elif pcr is None:
             reason = "INVALID_OR_MISSING_PCR"
-        elif vs == "BUY" and pcr <= args.call_pcr:
+        elif vs == "BUY" and pcr <= call_pcr_threshold:
             reason = "PCR_DIRECTION_CONDITION_FAILED"
-        elif vs == "SELL" and pcr >= args.put_pcr:
+        elif vs == "SELL" and pcr >= put_pcr_threshold:
             reason = "PCR_DIRECTION_CONDITION_FAILED"
         else:
             expected = vs
@@ -154,6 +198,11 @@ def main() -> None:
         "MATCH", "FALSE_WAIT", "FALSE_BUY_SELL", "FALSE_DIRECTION", "MISSING_HISTORICAL_ENTER"
     )}
     print("READ-ONLY AUTOTRENDER HISTORICAL ENTER AUDIT")
+    print("Thresholds loaded from saved application Settings:")
+    print(f"  Call-Put Strength Difference: {strength_threshold:g}")
+    print(f"  Call PCR: {call_pcr_threshold:g}")
+    print(f"  Put PCR: {put_pcr_threshold:g}")
+    print(f"  VWAP-Price Difference Buffer (%): {vwap_buffer_threshold:g}")
     print(f"Rows scanned: {len(audit)}")
     for key, value in counts.items():
         print(f"{key}: {value}")
