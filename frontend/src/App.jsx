@@ -1235,6 +1235,7 @@ export default function App() {
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const [index, setIndex] = useState('FINNIFTY');
   const refreshInFlight = useRef(false);
+  const kiteRefreshInFlight = useRef(false);
   const selectedIndexRef = useRef(index);
   selectedIndexRef.current = index;
   const [kiteIndexQuotes, setKiteIndexQuotes] = useState(null);
@@ -1333,14 +1334,18 @@ export default function App() {
   useEffect(() => { refreshWebsocketStatus(); const timer = window.setInterval(refreshWebsocketStatus, 3000); return () => window.clearInterval(timer); }, [refreshWebsocketStatus]);
 
   const loadKiteTab = useCallback(async () => {
-    if (applicationTab !== 'kite') return;
+    if (applicationTab !== 'kite' || kiteRefreshInFlight.current) return;
+    kiteRefreshInFlight.current = true;
     setKiteLoading(true); setKiteError('');
     try {
       let result;
       if (kiteTab === 'Option Chain') {
         result = await api('/kite/option-chain?underlying=NIFTY&strike_count=10');
         const rows = (result.strikes || []).map((s) => ({ call_symbol: s.CE?.tradingsymbol, call_ltp: s.CE?.last_price, call_volume: s.CE?.volume, call_oi: s.CE?.oi, strike: s.strike, put_oi: s.PE?.oi, put_volume: s.PE?.volume, put_ltp: s.PE?.last_price, put_symbol: s.PE?.tradingsymbol }));
-        setKiteData({ title: 'Option Chain', subtitle: (result.underlying || 'NIFTY') + ' · Expiry ' + (result.expiry || '—') + ' · Spot ' + number(result.spot_price), rows });
+        const feed = result.market_data || {};
+        const freshness = `${feed.fresh_quotes ?? 0}/${feed.total_quotes ?? rows.length} fresh · ${feed.stale_quotes ?? 0} stale · ${feed.missing_quotes ?? 0} missing`;
+        const connection = feed.websocket_connected ? 'WebSocket connected' : `WebSocket ${feed.websocket_state || 'unavailable'}`;
+        setKiteData({ title: 'Option Chain', subtitle: `${result.underlying || 'NIFTY'} · Expiry ${result.expiry || '—'} · Spot ${number(result.spot_price)} · ${connection} · ${freshness}`, rows });
       } else if (kiteTab === 'Orders') {
         result = await api('/kite/orders');
         setKiteData({ title: 'Orders', subtitle: (result.orders || []).length + ' orders', rows: result.orders || [] });
@@ -1372,9 +1377,15 @@ export default function App() {
       setKiteError(e.message || 'Unable to load Kite data. Check Kite login and backend.');
     } finally {
       setKiteLoading(false);
+      kiteRefreshInFlight.current = false;
     }
   }, [applicationTab, kiteTab]);
-  useEffect(() => { loadKiteTab(); }, [loadKiteTab]);
+  useEffect(() => {
+    loadKiteTab();
+    if (applicationTab !== 'kite' || kiteTab !== 'Option Chain') return undefined;
+    const timer = window.setInterval(() => loadKiteTab(), 3000);
+    return () => window.clearInterval(timer);
+  }, [loadKiteTab, applicationTab, kiteTab]);
 
   const openAutoTrenderUnderlying = (value) => {
     const normalized = String(value || '').trim().toUpperCase();
@@ -1713,7 +1724,7 @@ export default function App() {
           })()}
           {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
           {kiteTab === 'Holdings' && (!Array.isArray(kiteData?.rows) || kiteData.rows.length === 0) && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading holdings…</div> : <KiteDataTable rows={[]} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No holdings returned by Kite.'} />)}
-          <div className="panel-footer">{kiteTab === "Holdings" ? "Place BUY/SELL orders directly from your holdings." : "Read-only data view. No order placement or modification is performed by these tabs."}</div>
+          <div className="panel-footer">{kiteTab === 'Option Chain' ? 'Option-chain quotes refresh every 3 seconds. Quote freshness is based on the time the backend received the Kite tick; stale or missing values are identified in the panel subtitle.' : kiteTab === "Holdings" ? "Place BUY/SELL orders directly from your holdings." : "Read-only data view. No order placement or modification is performed by these tabs."}</div>
         </section>
       </>}
     </main>
