@@ -1489,8 +1489,8 @@ export default function App() {
         </nav>
         <section className={`kite-data-panel panel ${kiteTab === 'Dashboard' ? 'kite-dashboard-panel' : ''}`}>
           <div className="panel-header kite-panel-header">
-            <div>{kiteTab === 'Dashboard' ? <h2>Dashboard</h2> : <><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></>}</div>
-            {kiteTab !== 'Dashboard' && <button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button>}
+            <div>{kiteTab === 'Dashboard' ? <h2>Dashboard</h2> : kiteTab === 'Holdings' ? <div className="holdings-title-line"><h2>Holdings</h2><span>{(kiteData?.rows || []).length} holdings</span></div> : <><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></>}</div>
+            {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && <button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button>}
           </div>
           {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and backend connection.</small></div>}
           {kiteTab === 'Dashboard' && kiteLoading && !kiteData && <div className="kite-data-empty">Loading account summary and margins…</div>}
@@ -1602,19 +1602,20 @@ export default function App() {
                 <div className="holdings-summary-item"><span>Day's P&amp;L</span><strong className={dayPnl >= 0 ? 'positive' : 'negative'}>{dayPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(dayPnl))}<small className={dayPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(dayBase ? dayPnl / Math.abs(dayBase) * 100 : 0)}</small></strong></div>
                 <div className="holdings-summary-item"><span>Total P&amp;L</span><strong className={totalPnl >= 0 ? 'positive' : 'negative'}>{totalPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(totalPnl))}<small className={totalPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(investment ? totalPnl / investment * 100 : 0)}</small></strong></div>
               </div>
-              <div className="holdings-filter-heading"><strong>Filter portfolio by symbol</strong><span>{filtered.length} of {holdings.length} holdings</span></div>
               <div className="holdings-tools">
                 <input type="search" value={holdingsSearch} onChange={(event) => setHoldingsSearch(event.target.value)} placeholder="Search instrument…" aria-label="Search holdings by instrument" />
                 <div className="holdings-sort-actions" aria-label="Sort holdings">
                   {[['SYMBOL','Symbol'],['PNL_DESC','Highest P&amp;L'],['PNL_ASC','Lowest P&amp;L'],['INVESTED','Highest investment'],['DAY_LOSS','Largest day loss']].map(([key,label]) => <button type="button" key={key} className={holdingsSort === key ? 'active' : ''} onClick={() => setHoldingsSort(key)}>{label}</button>)}
                 </div>
               </div>
-              <div className="holdings-alphabet" aria-label="Filter portfolio holdings by first letter">
-                <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
-                {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
-              </div>
-              <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
-                {[['ALL','All holdings'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,labelText]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{labelText}<span>{counts[key]}</span></button>)}
+              <div className="holdings-filter-secondary-row">
+                <div className="holdings-alphabet" aria-label="Filter portfolio holdings by first letter">
+                  <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
+                  {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
+                </div>
+                <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
+                  {[['ALL','All'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,labelText]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{labelText}<span>{counts[key]}</span></button>)}
+                </div>
               </div>
               <details className="holdings-concentration">
                 <summary>Portfolio concentration · Top 5 holdings represent {topFiveShare.toFixed(1)}% of current value</summary>
