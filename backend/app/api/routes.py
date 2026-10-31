@@ -495,6 +495,89 @@ def kite_orders() -> dict:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
+class KitePortfolioOrderRequest(BaseModel):
+    symbol: str = Field(min_length=1, max_length=80)
+    exchange: str = Field(min_length=1, max_length=20)
+    transaction_type: str = Field(min_length=1, max_length=10)
+    product: str = Field(default="CNC", min_length=1, max_length=10)
+    quantity: int = Field(default=100, gt=0, le=1000000)
+    order_type: str = Field(default="LIMIT", min_length=1, max_length=10)
+    price: float | None = Field(default=None, gt=0)
+
+
+@router.post("/kite/portfolio/order", tags=["kite"])
+def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
+    """Place a manually confirmed holding order through the active Kite session."""
+    import json
+
+    symbol = payload.symbol.strip().upper()
+    exchange = payload.exchange.strip().upper()
+    transaction_type = payload.transaction_type.strip().upper()
+    product = payload.product.strip().upper()
+    order_type = payload.order_type.strip().upper()
+
+    if transaction_type not in {"BUY", "SELL"}:
+        raise HTTPException(status_code=400, detail="transaction_type must be BUY or SELL")
+    if product not in {"CNC", "MIS"}:
+        raise HTTPException(status_code=400, detail="product must be CNC or MIS")
+    if order_type not in {"LIMIT", "MARKET"}:
+        raise HTTPException(status_code=400, detail="order_type must be LIMIT or MARKET")
+    if order_type == "LIMIT" and payload.price is None:
+        raise HTTPException(status_code=400, detail="A limit price is required for LIMIT orders")
+
+    # Match the application's Trading Mode setting. Missing setting defaults safely to PAPER.
+    try:
+        with get_engine().connect() as connection:
+            row = connection.execute(
+                text("SELECT setting_value FROM app_settings WHERE setting_key = :key"),
+                {"key": "ui.executionMode"},
+            ).first()
+        mode_value = row[0] if row else "PAPER"
+        if isinstance(mode_value, str):
+            try:
+                mode_value = json.loads(mode_value)
+            except (TypeError, ValueError):
+                pass
+        mode = str(mode_value or "PAPER").strip().upper()
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="Unable to read Trading Mode; order was not submitted") from exc
+
+    if mode not in {"PAPER", "REAL"}:
+        raise HTTPException(status_code=503, detail="Trading Mode is invalid; order was not submitted")
+
+    if mode == "PAPER":
+        return {
+            "mode": "PAPER", "status": "PAPER", "order_id": None,
+            "symbol": symbol, "exchange": exchange, "transaction_type": transaction_type,
+            "quantity": payload.quantity, "product": product, "order_type": order_type,
+            "price": payload.price if order_type == "LIMIT" else None,
+            "message": "PAPER order accepted; no broker order was placed.",
+        }
+
+    order_params = {
+        "exchange": exchange,
+        "tradingsymbol": symbol,
+        "transaction_type": transaction_type,
+        "quantity": payload.quantity,
+        "product": product,
+        "order_type": order_type,
+        "validity": "DAY",
+    }
+    if order_type == "LIMIT":
+        order_params["price"] = payload.price
+
+    try:
+        order_id = get_kite_provider().place_order(**order_params)
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {
+        "mode": "REAL", "status": "SUBMITTED", "order_id": str(order_id),
+        "symbol": symbol, "exchange": exchange, "transaction_type": transaction_type,
+        "quantity": payload.quantity, "product": product, "order_type": order_type,
+        "price": payload.price if order_type == "LIMIT" else None,
+    }
+
+
 @router.get("/kite/positions", tags=["kite"])
 def kite_positions() -> dict:
     try:
