@@ -146,7 +146,7 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
-function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, showHeading = false }) {
+function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, showHeading = false, headingEyebrow = 'INTRADAY PRICE ACTION' }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
@@ -186,7 +186,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
     <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: 'none', borderRadius: '0', background: 'transparent' }} aria-label="Intraday price action and market summary">
-      {showHeading && <div style={{ flex: '0 0 220px', minWidth: '180px' }}><div className="eyebrow">INTRADAY PRICE ACTION</div><h2 style={{ margin: '5px 0 0', fontSize: '18px' }}>Future Price &amp; VWAP</h2></div>}
+      {showHeading && <div style={{ flex: '0 0 220px', minWidth: '180px' }}><div className="eyebrow">{headingEyebrow}</div><h2 style={{ margin: '5px 0 0', fontSize: '18px' }}>Future Price &amp; VWAP</h2></div>}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minWidth: 0 }}>
       <div style={{ minWidth: '150px', padding: '0 18px', textAlign: 'center' }}>
         <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>PRICE</div>
@@ -1009,8 +1009,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
       <article className="panel price-vwap-panel historical-price-vwap-panel">
           <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
             <div className="price-vwap-graph-column">
-              <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div></div>
-              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" selectedTime={selectedIntradayTime} />
+              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" selectedTime={selectedIntradayTime} enterValue={historicalIntradayRows.length ? historicalIntradayRows[historicalIntradayRows.length - 1]?.enter || '—' : '—'} showHeading headingEyebrow="HISTORICAL INTRADAY PRICE ACTION" />
             </div>
 
           </div>
