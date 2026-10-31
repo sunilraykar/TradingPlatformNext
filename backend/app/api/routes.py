@@ -503,6 +503,8 @@ class KitePortfolioOrderRequest(BaseModel):
     quantity: int = Field(default=100, gt=0, le=1000000)
     order_type: str = Field(default="LIMIT", min_length=1, max_length=10)
     price: float | None = Field(default=None, gt=0)
+    trigger_price: float | None = Field(default=None, gt=0)
+    last_price: float | None = Field(default=None, gt=0)
 
 
 @router.post("/kite/portfolio/order", tags=["kite"])
@@ -520,10 +522,17 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
         raise HTTPException(status_code=400, detail="transaction_type must be BUY or SELL")
     if product not in {"CNC", "MIS"}:
         raise HTTPException(status_code=400, detail="product must be CNC or MIS")
-    if order_type not in {"LIMIT", "MARKET"}:
-        raise HTTPException(status_code=400, detail="order_type must be LIMIT or MARKET")
+    if order_type not in {"LIMIT", "MARKET", "GTT"}:
+        raise HTTPException(status_code=400, detail="order_type must be LIMIT, MARKET or GTT")
     if order_type == "LIMIT" and payload.price is None:
         raise HTTPException(status_code=400, detail="A limit price is required for LIMIT orders")
+    if order_type == "GTT":
+        if payload.trigger_price is None:
+            raise HTTPException(status_code=400, detail="A GTT trigger price is required")
+        if payload.price is None:
+            raise HTTPException(status_code=400, detail="A GTT limit order price is required")
+        if payload.last_price is None:
+            raise HTTPException(status_code=400, detail="Current market price is required to create a GTT")
 
     # Match the application's Trading Mode setting. Missing setting defaults safely to PAPER.
     try:
@@ -550,8 +559,36 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
             "mode": "PAPER", "status": "PAPER", "order_id": None,
             "symbol": symbol, "exchange": exchange, "transaction_type": transaction_type,
             "quantity": payload.quantity, "product": product, "order_type": order_type,
-            "price": payload.price if order_type == "LIMIT" else None,
+            "price": payload.price if order_type in {"LIMIT", "GTT"} else None,
+            "trigger_price": payload.trigger_price if order_type == "GTT" else None,
             "message": "PAPER order accepted; no broker order was placed.",
+        }
+
+    if order_type == "GTT":
+        gtt_order = {
+            "transaction_type": transaction_type,
+            "quantity": payload.quantity,
+            "order_type": "LIMIT",
+            "product": product,
+            "price": payload.price,
+        }
+        try:
+            result = get_kite_provider().place_gtt(
+                trigger_type="single",
+                tradingsymbol=symbol,
+                exchange=exchange,
+                trigger_values=[payload.trigger_price],
+                last_price=payload.last_price,
+                orders=[gtt_order],
+            )
+        except KiteProviderError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        trigger_id = result.get("trigger_id") if isinstance(result, dict) else None
+        return {
+            "mode": "REAL", "status": "GTT_CREATED", "trigger_id": str(trigger_id) if trigger_id is not None else None,
+            "symbol": symbol, "exchange": exchange, "transaction_type": transaction_type,
+            "quantity": payload.quantity, "product": product, "order_type": "GTT",
+            "trigger_price": payload.trigger_price, "price": payload.price,
         }
 
     order_params = {
