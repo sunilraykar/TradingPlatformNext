@@ -909,18 +909,16 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
   }, [selected, selectedIndex, calculatedHistory.rows, autotrendSettings]);
 
   const enterFilterValues = useMemo(() => {
-    const values = [...new Set(historicalIntradayRows
+    const values = new Set(historicalIntradayRows
       .map((row) => String(row.enter ?? '').trim().toUpperCase())
-      .filter(Boolean))];
+      .filter(Boolean));
+    // Always show the three standard signal filters, even when a selected date
+    // has zero records for one of those signals.
     const preferredOrder = ['BUY', 'SELL', 'WAIT'];
-    return values.sort((a, b) => {
-      const ai = preferredOrder.indexOf(a);
-      const bi = preferredOrder.indexOf(b);
-      if (ai === -1 && bi === -1) return a.localeCompare(b);
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    });
+    return [
+      ...preferredOrder,
+      ...[...values].filter((value) => !preferredOrder.includes(value)).sort(),
+    ];
   }, [historicalIntradayRows]);
 
   const filteredHistoricalIntradayRows = useMemo(() => (
