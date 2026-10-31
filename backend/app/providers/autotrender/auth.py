@@ -146,10 +146,14 @@ class AutoTrenderAuth:
                 self._save_cookie(cookie["value"])
                 self.authenticated = True
                 if not self._validate_session():
-                    self.clear_saved_cookie()
+                    if self._last_validation_all_rejected:
+                        raise RuntimeError(
+                            "AutoTrender rejected the newly captured session on all configured "
+                            "validation endpoints. Check backend logs for diagnostics."
+                        )
                     raise RuntimeError(
-                        "AutoTrender session validation failed: all configured endpoints "
-                        "rejected the newly captured session. Check backend logs for diagnostics."
+                        "AutoTrender validation endpoints are unavailable. The newly captured "
+                        "session cookie was retained; retry validation later."
                     )
                 return {"authenticated": True, "message": "AutoTrender login successful."}
             except Exception as exc:
