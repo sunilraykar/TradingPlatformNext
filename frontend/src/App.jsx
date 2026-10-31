@@ -1398,7 +1398,6 @@ export default function App() {
       <section className="selected-contract-panel panel" aria-live="polite">
         <div className="selected-contract-heading">
           <div><div className="eyebrow">ATM CONTRACT SELECTION</div><h2>Selected option strike</h2></div>
-          <span className={'contract-status ' + (selectedContract?.status === 'SELECTED' ? 'ready' : 'waiting')}>{contractLoading ? 'Selecting…' : selectedContract?.status === 'SELECTED' ? 'Ready' : 'Waiting'}</span>
         </div>
         {selectedContract?.status === 'SELECTED' ? <>
           <div className="selected-contract-main">
