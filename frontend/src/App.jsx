@@ -173,8 +173,8 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const pathFor = (key) => usable.map((row) => row[key] === null ? null : `${x(row.minutes)},${y(row[key])}`).filter(Boolean).join(' ');
   const latest = usable[usable.length - 1];
   const displayed = (selectedTime && usable.find((row) => String(row.time).trim() === String(selectedTime).trim())) || latest;
-  const gap = displayed.price !== null && displayed.vwap !== null ? latest.price - latest.vwap : null;
-  const buffer = displayed.buffer ?? (latest.price !== null && latest.vwap !== null && latest.vwap !== 0 ? ((latest.price - latest.vwap) / latest.vwap) * 100 : null);
+  const gap = displayed.price !== null && displayed.vwap !== null ? displayed.price - displayed.vwap : null;
+  const buffer = displayed.buffer ?? (displayed.price !== null && displayed.vwap !== null && displayed.vwap !== 0 ? ((displayed.price - displayed.vwap) / displayed.vwap) * 100 : null);
   const ticks = Array.from({ length: 13 }, (_, i) => sessionStart + i * 30);
   const formatHoverNumber = (value, digits = 2) => value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: digits });
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
