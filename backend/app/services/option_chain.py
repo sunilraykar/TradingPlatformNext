@@ -2,8 +2,8 @@
 
 from datetime import UTC, date, datetime
 from time import monotonic
-from zoneinfo import ZoneInfo
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
 
