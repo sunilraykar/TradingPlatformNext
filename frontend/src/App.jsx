@@ -220,10 +220,10 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
     <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
       {[
-        ['Strength Diff', displayed.strengthDiff == null ? '—' : formatHoverNumber(latest.strengthDiff)],
-        ['Price', formatHoverNumber(latest.price)],
-        ['VWAP', formatHoverNumber(latest.vwap)],
-        ['Buffer', latest.buffer == null ? '—' : formatHoverNumber(latest.buffer, 3) + '%'],
+        ['Strength Diff', displayed.strengthDiff == null ? '—' : formatHoverNumber(displayed.strengthDiff)],
+        ['Price', formatHoverNumber(displayed.price)],
+        ['VWAP', formatHoverNumber(displayed.vwap)],
+        ['Buffer', displayed.buffer == null ? '—' : formatHoverNumber(displayed.buffer, 3) + '%'],
         ['VWAP Signal', displayed.vwapSignal || '—'],
         ['Option Signal', displayed.optionSignal || '—'],
         ['PCR', formatHoverNumber(displayed.pcr, 2)],
