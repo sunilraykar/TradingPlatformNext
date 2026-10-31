@@ -226,11 +226,12 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
         ['VWAP Signal', latest.vwapSignal || '—'],
         ['Option Signal', latest.optionSignal || '—'],
         ['PCR', formatHoverNumber(latest.pcr, 2)],
+        ['Enter', latest.enter || '—'],
       ].map(([label, value], index) => <React.Fragment key={label}>
         {index > 0 && <span aria-hidden="true" style={{ color: '#38bdf8', fontWeight: 700, fontSize: '18px' }}>→</span>}
         <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '72px' }}>
           <span style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>{label}</span>
-          <strong style={{ fontSize: '12px', color: label.includes('Signal') ? (value === 'BUY' ? '#22c55e' : value === 'SELL' ? '#f87171' : 'var(--text, #e5edf8)') : 'var(--text, #e5edf8)' }}>{value}</strong>
+          <strong style={{ fontSize: '12px', color: label.includes('Signal') || label === 'Enter' ? (value === 'BUY' ? '#22c55e' : value === 'SELL' ? '#f87171' : 'var(--text, #e5edf8)') : 'var(--text, #e5edf8)' }}>{value}</strong>
         </span>
       </React.Fragment>)}
     </div>
