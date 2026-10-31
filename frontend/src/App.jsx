@@ -218,7 +218,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
-    <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
+    <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
       {[
         ['Strength Diff', displayed.strengthDiff == null ? '—' : formatHoverNumber(displayed.strengthDiff)],
         ['Price', formatHoverNumber(displayed.price)],
@@ -230,7 +230,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
         ['Enter', displayed.enter || '—'],
       ].map(([label, value], index) => <React.Fragment key={label}>
         {index > 0 && <span aria-hidden="true" style={{ color: '#38bdf8', fontWeight: 700, fontSize: '18px' }}>→</span>}
-        <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '72px' }}>
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '3px', minWidth: '72px' }}>
           <span style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>{label}</span>
           <strong style={{ fontSize: '12px', color: label.includes('Signal') || label === 'Enter' ? (value === 'BUY' ? '#22c55e' : value === 'SELL' ? '#f87171' : 'var(--text, #e5edf8)') : 'var(--text, #e5edf8)' }}>{value}</strong>
         </span>
