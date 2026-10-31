@@ -41,11 +41,11 @@ def test_strength_threshold_is_strict():
     assert result.reason == "STRENGTH_DIFFERENCE_NOT_ABOVE_THRESHOLD"
 
 
-def test_vwap_buffer_is_strict():
+def test_vwap_buffer_includes_exact_boundary():
     # With price 1000, VWAP 997, the absolute gap is exactly 0.3%.
     result = evaluate_signal(row(price=1000, vwap=997))
-    assert not result.eligible
-    assert result.reason == "VWAP_GAP_NOT_BELOW_THRESHOLD"
+    assert result.eligible
+    assert result.direction == "BUY"
 
 
 def test_pcr_threshold_is_strict():
@@ -81,3 +81,32 @@ def test_nested_autotrend_values_and_formatted_numbers_are_supported():
     ))
     assert not result.eligible  # price/VWAP gap exceeds the 0.3% threshold
     assert result.reason == "VWAP_GAP_NOT_BELOW_THRESHOLD"
+
+
+
+def test_direction_comes_from_matching_signals_not_strength_sign():
+    # Put strength is larger, but matching BUY signals determine direction.
+    result = evaluate_signal(row(call=20, put=80, pcr=1.5))
+    assert result.eligible
+    assert result.direction == "BUY"
+
+
+def test_sell_direction_uses_put_pcr_threshold():
+    # Call strength is larger, but matching SELL signals determine direction.
+    result = evaluate_signal(row(
+        call=80,
+        put=20,
+        pcr=0.7,
+        vWapSignal="SELL",
+        optionSignal="SELL",
+    ))
+    assert result.eligible
+    assert result.direction == "SELL"
+
+
+def test_pcr_confirmation_follows_signal_direction():
+    # BUY signals require PCR strictly above Call PCR threshold,
+    # regardless of which strength percentage is larger.
+    result = evaluate_signal(row(call=20, put=80, pcr=1.0))
+    assert not result.eligible
+    assert result.reason == "PCR_DIRECTION_CONDITION_FAILED"
