@@ -42,8 +42,8 @@ def test_strength_threshold_is_strict():
 
 
 def test_vwap_buffer_includes_exact_boundary():
-    # With price 1000, VWAP 997, the absolute gap is exactly 0.3%.
-    result = evaluate_signal(row(price=1000, vwap=997))
+    # With price 1000, VWAP 999, the absolute gap is exactly 0.1%.
+    result = evaluate_signal(row(price=1000, vwap=999))
     assert result.eligible
     assert result.direction == "BUY"
 
@@ -79,7 +79,7 @@ def test_nested_autotrend_values_and_formatted_numbers_are_supported():
         vWapSignal={"type": "BUY"},
         optionSignal={"type": "BUY"},
     ))
-    assert not result.eligible  # price/VWAP gap exceeds the 0.3% threshold
+    assert not result.eligible  # price/VWAP gap exceeds the 0.1% threshold
     assert result.reason == "VWAP_GAP_ABOVE_THRESHOLD"
 
 
@@ -110,3 +110,15 @@ def test_pcr_confirmation_follows_signal_direction():
     result = evaluate_signal(row(call=20, put=80, pcr=1.0))
     assert not result.eligible
     assert result.reason == "PCR_DIRECTION_CONDITION_FAILED"
+
+
+def test_vwap_buffer_rejects_values_above_point_one_percent():
+    result = evaluate_signal(row(price=1000, vwap=998.99))
+    assert not result.eligible
+    assert result.reason == "VWAP_GAP_ABOVE_THRESHOLD"
+
+
+def test_vwap_buffer_uses_price_as_denominator():
+    result = evaluate_signal(row(price=1000, vwap=999))
+    assert result.eligible
+    assert result.direction == "BUY"
