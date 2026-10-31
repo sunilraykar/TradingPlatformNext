@@ -185,7 +185,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
-    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '10px', background: 'var(--panel-bg, #111b2b)' }} aria-label="Intraday price action and market summary">
+    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: 'none', borderRadius: '0', background: 'transparent' }} aria-label="Intraday price action and market summary">
       {showHeading && <div style={{ flex: '0 0 220px', minWidth: '180px' }}><div className="eyebrow">INTRADAY PRICE ACTION</div><h2 style={{ margin: '5px 0 0', fontSize: '18px' }}>Future Price &amp; VWAP</h2></div>}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minWidth: 0 }}>
       <div style={{ minWidth: '150px', padding: '0 18px', textAlign: 'center' }}>
