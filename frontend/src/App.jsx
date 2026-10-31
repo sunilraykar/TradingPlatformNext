@@ -1023,8 +1023,12 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
   </section>;
 }
 
-function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false, columnsOverride = null, onRowSelect = null }) {
+function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false, columnsOverride = null, onRowSelect = null, onActionComplete = null }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [portfolioOrder, setPortfolioOrder] = useState(null);
+  const [portfolioOrderLoading, setPortfolioOrderLoading] = useState(false);
+  const [portfolioOrderError, setPortfolioOrderError] = useState('');
+  const [portfolioOrderMessage, setPortfolioOrderMessage] = useState('');
   if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
   const normalizeColumn = (key) => String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().replace(/[^a-z0-9]/g, '');
   const hidden = new Set([...hiddenColumns, 'lastquantity', 'lastqty', 'lasquantity'].map(normalizeColumn));
@@ -1134,6 +1138,39 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     return sortConfig.direction === 'asc' ? result : -result;
   }) : displayRows;
   const toggleSort = (key) => setSortConfig((current) => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }));
+  const openPortfolioOrder = (row, side) => {
+    const symbol = String(row.tradingsymbol || row.trading_symbol || row.symbol || '').trim().toUpperCase();
+    const exchange = String(row.exchange || 'NSE').trim().toUpperCase();
+    const ltp = lastPriceOf(row);
+    if (!symbol || !exchange) { setPortfolioOrderError('Unable to place order: symbol or exchange is missing.'); return; }
+    setPortfolioOrderError('');
+    setPortfolioOrderMessage('');
+    setPortfolioOrder({ symbol, exchange, side, quantity: '100', product: 'CNC', orderType: 'LIMIT', price: ltp > 0 ? ltp.toFixed(2) : '' });
+  };
+  const submitPortfolioOrder = async () => {
+    if (!portfolioOrder || portfolioOrderLoading) return;
+    const quantity = Number(portfolioOrder.quantity);
+    const price = Number(portfolioOrder.price);
+    if (!Number.isInteger(quantity) || quantity <= 0) { setPortfolioOrderError('Quantity must be a positive whole number.'); return; }
+    if (!['BUY', 'SELL'].includes(portfolioOrder.side)) { setPortfolioOrderError('Transaction type must be BUY or SELL.'); return; }
+    if (!['CNC', 'MIS'].includes(portfolioOrder.product)) { setPortfolioOrderError('Product must be CNC or MIS.'); return; }
+    if (!['LIMIT', 'MARKET'].includes(portfolioOrder.orderType)) { setPortfolioOrderError('Order type must be LIMIT or MARKET.'); return; }
+    if (portfolioOrder.orderType === 'LIMIT' && (!Number.isFinite(price) || price <= 0)) { setPortfolioOrderError('Enter a valid limit price.'); return; }
+    try {
+      setPortfolioOrderLoading(true); setPortfolioOrderError('');
+      const result = await api('/kite/portfolio/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+        symbol: portfolioOrder.symbol, exchange: portfolioOrder.exchange, transaction_type: portfolioOrder.side,
+        quantity, product: portfolioOrder.product, order_type: portfolioOrder.orderType,
+        price: portfolioOrder.orderType === 'LIMIT' ? price : null,
+      }) });
+      setPortfolioOrder(null);
+      setPortfolioOrderMessage(result.mode === 'PAPER'
+        ? portfolioOrder.side + ' ' + quantity + ' ' + portfolioOrder.symbol + ': PAPER order accepted; no broker order was placed.'
+        : portfolioOrder.side + ' ' + quantity + ' ' + portfolioOrder.symbol + ': order submitted. Order ID: ' + (result.order_id || '—'));
+      if (onActionComplete) await onActionComplete();
+    } catch (error) { setPortfolioOrderError(error.message || 'Unable to place portfolio order.'); }
+    finally { setPortfolioOrderLoading(false); }
+  };
   const isSymbol = (key) => normalizeColumn(key) === 'tradingsymbol';
   const heading = (key) => ({ time: 'Time', call: 'Call', put: 'Put', diff: 'Diff', pcr: 'PCR', price: 'Price', vwap: 'VWAP', vwapSignal: 'VWAP Signal', optionSignal: 'Option Signal', callStrength: 'Call Strength (%)', putStrength: 'Put Strength (%)', strengthDiff: 'Call-Put Strength Diff', vwapPriceBufferPct: 'Price − VWAP / Buffer (%)', enter: 'Enter', tradingsymbol: 'Instrument', quantity: 'Qty.', average_price: 'Avg. cost', last_price: 'LTP', pnl: 'P&L', day_change_percentage: 'Day chg.', net_change_percentage: 'Net chg.', invested_amount: 'Invested', current_amount: 'Cur. val' })[key] || (isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' '));
   return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i} onClick={onRowSelect ? () => onRowSelect(row) : undefined} style={onRowSelect ? { cursor: 'pointer' } : undefined}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : holdingsMode && ['day_change','day_change_percentage','daychange','daychangepercentage','net_change_percentage'].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? 'cell-positive' : Number(row[key] ?? 0) < 0 ? 'cell-negative' : '') : ''}>{renderCell(row[key], key, row)}</td>)}</tr>; })}</tbody></table></div>;
