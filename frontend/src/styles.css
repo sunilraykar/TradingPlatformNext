@@ -723,3 +723,12 @@
   .trade-date-navigator-label>strong{font-size:13px}
   .trade-date-nav-button{width:36px;height:36px;flex-basis:36px}
 }
+
+
+/* Keep the selected date and all trade filters in one shared panel. */
+.trade-date-filter-panel{margin:0 0 18px;padding:14px 18px 12px}
+.trade-date-filter-panel .trade-date-navigator{
+  min-height:64px;margin:0 0 10px;padding:4px 10px;
+  border:0;border-radius:0;background:transparent;
+}
+.trade-date-filter-panel .trade-terminal-filters{margin:0;align-items:end}
