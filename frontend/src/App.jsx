@@ -967,14 +967,14 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
               <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" />
             </div>
             <aside className="latest-candle-card">
-              <div className="latest-record-grid">
-                <div><span>PCR</span><strong>{number(historicalIntradayRows[0]?.pcr, 2)}</strong></div>
+              <div className="latest-record-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <div><span>Strength Diff</span><strong>{historicalIntradayRows[0]?.strengthDiff == null ? '—' : number(historicalIntradayRows[0].strengthDiff)}</strong></div>
                 <div><span>Price</span><strong>{number(historicalIntradayRows[0]?.price)}</strong></div>
                 <div><span>VWAP</span><strong>{number(historicalIntradayRows[0]?.vwap)}</strong></div>
+                <div><span>Buffer (%)</span><strong>{historicalIntradayRows[0]?.buffer == null ? '—' : number(historicalIntradayRows[0].buffer, 3) + '%'}</strong></div>
                 <div><span>VWAP Signal</span><strong className="latest-signal">{historicalIntradayRows[0]?.vwapSignal || '—'}</strong></div>
                 <div><span>Option Signal</span><strong className="latest-signal">{historicalIntradayRows[0]?.optionSignal || '—'}</strong></div>
-                <div><span>Strength Diff</span><strong>{historicalIntradayRows[0]?.strengthDiff == null ? '—' : number(historicalIntradayRows[0].strengthDiff)}</strong></div>
-                <div><span>Buffer (%)</span><strong>{historicalIntradayRows[0]?.buffer == null ? '—' : number(historicalIntradayRows[0].buffer, 3) + '%'}</strong></div>
+                <div><span>PCR</span><strong>{number(historicalIntradayRows[0]?.pcr, 2)}</strong></div>
               </div>
               {!historicalIntradayRows.length && <div className="chart-empty">No historical intraday records returned for this date.</div>}
             </aside>
@@ -1415,14 +1415,14 @@ export default function App() {
               <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} />
             </div>
             <aside className="latest-candle-card">
-              <div className="latest-record-grid">
-                <div><span>PCR</span><strong>{number(calculatedRowsDescending[0]?.pcr, 2)}</strong></div>
+              <div className="latest-record-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <div><span>Strength Diff</span><strong className={calculatedRowsDescending[0]?.strengthDiff == null ? '' : calculatedRowsDescending[0].strengthDiff > 0 ? 'positive' : 'negative'}>{calculatedRowsDescending[0]?.strengthDiff == null ? '—' : number(calculatedRowsDescending[0].strengthDiff)}</strong></div>
                 <div><span>Price</span><strong>{number(calculatedRowsDescending[0]?.price)}</strong></div>
                 <div><span>VWAP</span><strong>{number(calculatedRowsDescending[0]?.vwap)}</strong></div>
+                <div><span>Buffer (%)</span><strong className={calculatedRowsDescending[0]?.buffer == null ? '' : calculatedRowsDescending[0].buffer > 0 ? 'positive' : 'negative'}>{calculatedRowsDescending[0]?.buffer == null ? '—' : number(calculatedRowsDescending[0].buffer, 3) + '%'}</strong></div>
                 <div><span>VWAP Signal</span><strong className="latest-signal">{calculatedRowsDescending[0]?.vwapSignal || '—'}</strong></div>
                 <div><span>Option Signal</span><strong className="latest-signal">{calculatedRowsDescending[0]?.optionSignal || '—'}</strong></div>
-                <div><span>Strength Diff</span><strong className={calculatedRowsDescending[0]?.strengthDiff == null ? '' : calculatedRowsDescending[0].strengthDiff > 0 ? 'positive' : 'negative'}>{calculatedRowsDescending[0]?.strengthDiff == null ? '—' : number(calculatedRowsDescending[0].strengthDiff)}</strong></div>
-                <div><span>Buffer (%)</span><strong className={calculatedRowsDescending[0]?.buffer == null ? '' : calculatedRowsDescending[0].buffer > 0 ? 'positive' : 'negative'}>{calculatedRowsDescending[0]?.buffer == null ? '—' : number(calculatedRowsDescending[0].buffer, 3) + '%'}</strong></div>
+                <div><span>PCR</span><strong>{number(calculatedRowsDescending[0]?.pcr, 2)}</strong></div>
               </div>
               {!calculatedRowsDescending.length && <div className="chart-empty">No intraday records returned.</div>}
             </aside>
