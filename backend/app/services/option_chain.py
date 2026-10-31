@@ -1,4 +1,4 @@
-""""Kite option-chain assembly with quote normalization and freshness metadata."""
+"""Kite option-chain assembly with quote normalization and freshness metadata."""
 
 from datetime import UTC, date, datetime
 from time import monotonic
@@ -76,7 +76,7 @@ def _get_rest_snapshots(instruments: dict[int, str]) -> dict[int, dict[str, Any]
             if normalized:
                 _rest_snapshots[token] = normalized
     _rest_snapshot_at = now
-    return {token: _rest_snapshots[token] for token in tokens if token in _rest_snapshots}
+    return {token: _rest_snapshots[token] for token in instruments if token in _rest_snapshots}
 
 
 def _get_quote(token: int, snapshots: dict[int, dict[str, Any]]) -> dict[str, Any] | None:
