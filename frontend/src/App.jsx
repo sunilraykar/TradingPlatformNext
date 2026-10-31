@@ -883,7 +883,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins }
       vwapSignal: row.vwapSignal ?? row.VwapSignal ?? row.vWapSignal ?? row.VWapSignal ?? null,
       optionSignal: row.optionSignal ?? row.OptionSignal ?? null,
     }));
-    const derivedByTime = new Map(buildIntradayRows(normalizedRows).map((row) => [String(row.time || '').trim(), row]));
+    const derivedByTime = new Map(buildIntradayRows(normalizedRows, autotrendSettings).map((row) => [String(row.time || '').trim(), row]));
     const calculatedByTime = new Map((calculatedHistory.rows || []).map((row) => [String(row.time || '').trim(), row]));
     return normalizedRows.map((row) => {
       const key = String(row.time || '').trim();
@@ -905,7 +905,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins }
         enter: derived.enter ?? null,
       };
     });
-  }, [selected, selectedIndex, calculatedHistory.rows]);
+  }, [selected, selectedIndex, calculatedHistory.rows, autotrendSettings]);
 
   const formatDateTime = (value) => value ? new Date(/[zZ]|[+-]\\d{2}:?\\d{2}$/.test(value) ? value : value + '+05:30').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
   const first = result.total ? page * pageSize + 1 : 0;
@@ -944,7 +944,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins }
           <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
               <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2><p className="settings-intro">Price, VWAP, signal markers, hover details, and entry-window markers for the selected saved date.</p></div><span className="data-count">{historicalIntradayRows.filter((row) => row.price != null || row.vwap != null).length} points</span></div>
-              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows)} entryStartTime="10:00" entryEndTime="15:30" />
+              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" />
             </div>
             <aside className="latest-candle-card">
               <div className="latest-record-grid">
@@ -1148,7 +1148,7 @@ export default function App() {
     if (results[resultOffset + 1].status === 'fulfilled') setCache(results[resultOffset + 1].value);
     if (results[resultOffset + 3].status === 'fulfilled') setKiteIndexQuotes(results[resultOffset + 3].value);
     if (results[resultOffset + 2].status === 'fulfilled') {
-      const saved = results[resultOffset + 3].value.settings || {};
+      const saved = results[resultOffset + 2].value.settings || {};
       const configuredMinutes = Number(saved.autoTrenderIntradayMinutes ?? 3);
       setMins([1, 3, 5, 10, 15, 30, 60].includes(configuredMinutes) ? configuredMinutes : 3);
       setAutotrendSettings({
