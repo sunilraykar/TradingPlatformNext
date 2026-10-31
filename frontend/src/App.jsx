@@ -103,7 +103,7 @@ function recordTime(row) {
 
 function buildIntradayRows(rows, settings = {}) {
   const strengthThreshold = Math.abs(numericValue(settings.callPutStrengthDiff) ?? 10);
-  const bufferThreshold = Math.abs(numericValue(settings.vwapPriceDifferenceBuffer) ?? 0.3);
+  const bufferThreshold = Math.abs(numericValue(settings.vwapPriceDifferenceBuffer) ?? 0.1);
   const callPcrThreshold = numericValue(settings.callPcr) ?? 1;
   const putPcrThreshold = numericValue(settings.putPcr) ?? 1;
 
@@ -118,7 +118,7 @@ function buildIntradayRows(rows, settings = {}) {
     const strengthDiff = callStrength !== null && putStrength !== null ? callStrength - putStrength : null;
     const price = numericValue(row.price ?? row.close ?? row.ltp);
     const vwap = numericValue(row.vWap ?? row.vwap);
-    const buffer = price !== null && vwap !== null && vwap !== 0 ? ((price - vwap) / vwap) * 100 : null;
+    const buffer = price !== null && vwap !== null && price > 0 && vwap > 0 ? (Math.abs((price - vwap) / price) * 100) : null;
     const optionSignal = signalValue(row.optionSignal);
     const vwapSignal = signalValue(row.vWapSignal ?? row.vwapSignal);
     const pcr = numericValue(row.pcr);
@@ -283,7 +283,7 @@ const SETTINGS_FIELDS = {
     ['autoTrenderIntradayMinutes', 'AutoTrender Intraday Data Window (minutes)', 'number', '3', 'Lookback window requested for AutoTrender intraday data and chart.', '1'],
     ['autoTrenderWorkerIntervalSeconds', 'AutoTrender Signal Evaluation Interval (seconds)', 'number', '5', 'How often the backend evaluates AutoTrender signals; separate from UI refresh.', '1'],
     ['autoTrenderMaxSignalAgeSeconds', 'AutoTrender Maximum Signal Age (seconds)', 'number', '300', 'Reject signals older than this age or without a valid source timestamp.', '1'],
-    ['vwapPriceDifferenceBuffer', 'VWAP-Price Difference Buffer (%)', 'number', '0.3', 'Maximum absolute VWAP/price buffer used by the entry filter.', '0'],
+    ['vwapPriceDifferenceBuffer', 'VWAP-Price Difference Buffer (%)', 'number', '0.1', 'Maximum absolute VWAP/price buffer used by the entry filter.', '0'],
     ['putPcr', 'Put PCR Threshold', 'number', '1', 'Put PCR threshold used by the signal filter.', '0'],
     ['callPcr', 'Call PCR Threshold', 'number', '1', 'Call PCR threshold used by the signal filter.', '0'],
     ['callPutStrengthDiff', 'Call-Put Strength Difference', 'number', '10', 'Minimum call/put strength difference for a signal.', '0'],
@@ -896,12 +896,13 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins }
         vwap: calculated.vwap ?? derived.vwap ?? row.vwap,
         vwapSignal: calculated.vwapSignal ?? derived.vwapSignal ?? row.vwapSignal,
         optionSignal: calculated.optionSignal ?? derived.optionSignal ?? row.optionSignal,
-        callStrength: calculated.callStrength ?? derived.callStrength ?? null,
-        putStrength: calculated.putStrength ?? derived.putStrength ?? null,
-        strengthDiff: calculated.strengthDiff ?? derived.strengthDiff ?? null,
-        buffer: calculated.buffer ?? derived.buffer ?? null,
-        vwapPriceBufferPct: calculated.buffer ?? derived.buffer ?? null,
-        enter: calculated.enter ?? derived.enter ?? null,
+        // Recalculate historical decisions from original source fields using current rules.
+        callStrength: derived.callStrength ?? null,
+        putStrength: derived.putStrength ?? null,
+        strengthDiff: derived.strengthDiff ?? null,
+        buffer: derived.buffer ?? null,
+        vwapPriceBufferPct: derived.buffer ?? null,
+        enter: derived.enter ?? null,
       };
     });
   }, [selected, selectedIndex, calculatedHistory.rows]);
