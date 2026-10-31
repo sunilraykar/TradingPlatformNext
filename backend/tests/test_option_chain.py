@@ -83,7 +83,8 @@ def test_option_chain_uses_full_mode_for_open_interest(monkeypatch):
             return Connection()
 
     monkeypatch.setattr(option_chain, "get_engine", lambda: Engine())
-    monkeypatch.setattr(option_chain, "_quote_price", lambda _token: 25100.0)
+    monkeypatch.setattr(option_chain, "_quote_price", lambda _token, _key: 25100.0)
+    monkeypatch.setattr(option_chain, "_get_rest_snapshots", lambda _instruments: {})
     quote_values = {
         1: {
             "last_price": 125.5,
@@ -112,3 +113,29 @@ def test_option_chain_uses_full_mode_for_open_interest(monkeypatch):
     assert calls == [([1, 2], "full")]
     assert result["strikes"][0]["CE"]["oi"] == 25000
     assert result["strikes"][0]["PE"]["oi"] == 30000
+    assert result["strikes"][0]["CE"]["volume"] == 1000
+    assert result["strikes"][0]["CE"]["quote_freshness"] == "FRESH"
+    assert result["market_data"]["fresh_quotes"] == 2
+
+
+def test_rest_quote_normalizes_volume_and_open_interest():
+    from app.services.option_chain import _normalize_quote
+
+    quote = _normalize_quote(
+        {"last_price": 12.5, "volume": 1234, "open_interest": 5678, "timestamp": "2026-10-31T10:00:00+05:30"},
+        "REST_SNAPSHOT",
+    )
+
+    assert quote["volume_traded"] == 1234
+    assert quote["oi"] == 5678
+    assert quote["exchange_timestamp"] == "2026-10-31T10:00:00+05:30"
+    assert quote["source"] == "REST_SNAPSHOT"
+
+
+def test_quote_age_marks_old_ticks_stale():
+    from datetime import UTC, datetime, timedelta
+
+    from app.services.option_chain import _quote_age_seconds
+
+    received = (datetime.now(UTC) - timedelta(seconds=30)).isoformat()
+    assert _quote_age_seconds({"received_at": received}) >= 29
