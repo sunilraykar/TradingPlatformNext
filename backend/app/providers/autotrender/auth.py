@@ -28,6 +28,15 @@ def _safe_response_excerpt(response, limit: int = 400) -> str:
 
 LOGIN_URL = "https://theautotrender.com/login"
 API_BASE_URL = "https://api.theautotrender.com:5959"
+SESSION_VALIDATION_ENDPOINTS = (
+    "/api/telegram",
+    "/api/market-summary",
+    "/api/index-price",
+    "/api/sectors",
+    "/api/announcement",
+    "/api/tickers",
+    "/api/menu",
+)
 SESSION_FILE = Path(__file__).resolve().parents[3] / "runtime" / "autotrender" / "session.json"
 
 
@@ -37,14 +46,19 @@ class AutoTrenderAuth:
     def __init__(self) -> None:
         self.session = requests.Session()
         self.authenticated = False
+        self._last_validation_all_rejected = False
         self._lock = RLock()
 
     def login(self) -> dict[str, object]:
         with self._lock:
-            if self._restore_saved_cookie() and self._validate_session():
-                return {"authenticated": True, "message": "Saved AutoTrender session restored."}
-
-            self.clear_saved_cookie()
+            if self._restore_saved_cookie():
+                if self._validate_session():
+                    return {"authenticated": True, "message": "Saved AutoTrender session restored."}
+                if self.session.cookies.get("authcookie"):
+                    raise RuntimeError(
+                        "Unable to verify the saved AutoTrender session because all validation "
+                        "endpoints are unavailable. The saved cookie was retained; retry later."
+                    )
             username = os.getenv("AUTOTRENDER_USERNAME", "").strip()
             password = os.getenv("AUTOTRENDER_PASSWORD", "")
             if not username or not password:
@@ -134,8 +148,8 @@ class AutoTrenderAuth:
                 if not self._validate_session():
                     self.clear_saved_cookie()
                     raise RuntimeError(
-                        "AutoTrender session validation failed using /api/market-summary. "
-                        "Check backend logs for safe validation diagnostics."
+                        "AutoTrender session validation failed: all configured endpoints "
+                        "rejected the newly captured session. Check backend logs for diagnostics."
                     )
                 return {"authenticated": True, "message": "AutoTrender login successful."}
             except Exception as exc:
@@ -190,10 +204,16 @@ class AutoTrenderAuth:
         with self._lock:
             if not self.authenticated:
                 restored = self._restore_saved_cookie()
-                if not restored or not self._validate_session():
-                    # A cookie that failed validation must never be left on disk.
-                    self.clear_saved_cookie()
+                if not restored:
                     logger.info("AutoTrender session unavailable; attempting automatic login")
+                    self.login()
+                elif not self._validate_session():
+                    if self.session.cookies.get("authcookie"):
+                        raise RuntimeError(
+                            "AutoTrender session could not be verified because its validation "
+                            "endpoints are unavailable. The saved cookie was retained; retry later."
+                        )
+                    logger.info("AutoTrender rejected the saved session; attempting automatic login")
                     self.login()
 
             response = self.session.get(url, timeout=30, **kwargs)
@@ -215,35 +235,71 @@ class AutoTrenderAuth:
         return bool(self.authenticated and self._validate_session())
 
     def _validate_session(self) -> bool:
+        """Validate the saved cookie against sequential AutoTrender API fallbacks."""
         if not self.authenticated and not self.session.cookies.get("authcookie"):
             return False
-        try:
-            response = self.session.get(
-                API_BASE_URL + "/api/market-summary",
-                headers={
-                    "Accept": "application/json, text/plain, */*",
-                    "Origin": "https://theautotrender.com",
-                    "Referer": "https://theautotrender.com/",
-                },
-                timeout=15,
+
+        self._last_validation_all_rejected = False
+        headers = {
+            "Accept": "*/*",
+            "Origin": "https://theautotrender.com",
+            "Referer": "https://theautotrender.com/",
+        }
+        explicit_rejections = 0
+
+        for endpoint in SESSION_VALIDATION_ENDPOINTS:
+            try:
+                response = self.session.get(
+                    API_BASE_URL + endpoint,
+                    headers=headers,
+                    timeout=15,
+                )
+                rejected = self._response_rejects_session(response)
+                valid = 200 <= response.status_code < 300 and not rejected
+                logger.info(
+                    "AutoTrender auth diagnostic: validation endpoint=%s status=%s "
+                    "content_type=%s final_url=%s rejected=%s response_excerpt=%r",
+                    endpoint,
+                    response.status_code,
+                    response.headers.get("Content-Type", ""),
+                    getattr(response, "url", ""),
+                    rejected,
+                    _safe_response_excerpt(response),
+                )
+
+                if valid:
+                    self.authenticated = True
+                    logger.info(
+                        "AutoTrender session validated successfully using %s",
+                        endpoint,
+                    )
+                    return True
+
+                if rejected:
+                    explicit_rejections += 1
+            except requests.RequestException as exc:
+                logger.warning(
+                    "AutoTrender auth diagnostic: validation endpoint=%s request_failed=%s",
+                    endpoint,
+                    type(exc).__name__,
+                )
+
+        self.authenticated = False
+        self._last_validation_all_rejected = (
+            explicit_rejections == len(SESSION_VALIDATION_ENDPOINTS)
+        )
+        if self._last_validation_all_rejected:
+            logger.warning(
+                "All AutoTrender validation endpoints explicitly rejected the saved session; clearing cookie"
             )
-            rejected = self._response_rejects_session(response)
-            self.authenticated = response.ok and not rejected
-            logger.info(
-                "AutoTrender auth diagnostic: API validation status=%s content_type=%s "
-                "final_url=%s rejected=%s response_excerpt=%r",
-                response.status_code,
-                response.headers.get("Content-Type", ""),
-                getattr(response, "url", ""),
-                rejected,
-                _safe_response_excerpt(response),
+            self.clear_saved_cookie()
+        else:
+            logger.warning(
+                "AutoTrender session validation unavailable: all %s endpoints failed; "
+                "saved cookie retained because authentication rejection was not confirmed",
+                len(SESSION_VALIDATION_ENDPOINTS),
             )
-            if not self.authenticated and rejected:
-                logger.warning("AutoTrender rejected the saved session cookie; clearing it")
-                self.clear_saved_cookie()
-        except requests.RequestException:
-            self.authenticated = False
-        return self.authenticated
+        return False
 
     def _restore_saved_cookie(self) -> bool:
         try:
