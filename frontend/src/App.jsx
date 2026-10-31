@@ -129,8 +129,18 @@ function buildIntradayRows(rows, settings = {}) {
     const bullish = strengthPass && bufferPass && vwapSignal === 'BUY' && optionSignal === 'BUY' && pcr !== null && pcr > callPcrThreshold;
     const bearish = strengthPass && bufferPass && vwapSignal === 'SELL' && optionSignal === 'SELL' && pcr !== null && pcr < putPcrThreshold;
     const enter = bullish ? 'BUY' : bearish ? 'SELL' : 'WAIT';
+    const failedConditions = [];
+    if (!strengthPass) failedConditions.push(strengthDiff === null ? 'Strength Diff unavailable' : 'Strength Diff below threshold');
+    if (!bufferPass) failedConditions.push(buffer === null ? 'Buffer unavailable' : 'Buffer above threshold');
+    if (vwapSignal !== 'BUY' && vwapSignal !== 'SELL') failedConditions.push('VWAP Signal unavailable');
+    else {
+      if (optionSignal !== vwapSignal) failedConditions.push('Option Signal does not confirm ' + vwapSignal);
+      if (pcr === null) failedConditions.push('PCR unavailable');
+      else if (vwapSignal === 'BUY' && pcr <= callPcrThreshold) failedConditions.push('PCR does not exceed bullish threshold');
+      else if (vwapSignal === 'SELL' && pcr >= putPcrThreshold) failedConditions.push('PCR does not fall below bearish threshold');
+    }
 
-    return { key: recordTime(row) + '-' + index, time: recordTime(row), call, put, diff: numericValue(row.diff), pcr, price, vwap, vwapSignal, optionSignal, callStrength, putStrength, strengthDiff, buffer, enter };
+    return { key: recordTime(row) + '-' + index, time: recordTime(row), call, put, diff: numericValue(row.diff), pcr, price, vwap, vwapSignal, optionSignal, callStrength, putStrength, strengthDiff, buffer, enter, failedConditions };
   });
 }
 function linePoints(series, width = 720, height = 220) {
