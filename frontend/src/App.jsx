@@ -963,21 +963,16 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
       <article className="panel price-vwap-panel historical-price-vwap-panel">
           <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
-              <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><span className="data-count">{historicalIntradayRows.filter((row) => row.price != null || row.vwap != null).length} points</span></div>
+              <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div></div>
               <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" />
             </div>
             <aside className="latest-candle-card">
               <div className="latest-record-grid">
-                <div><span>Call</span><strong>{number(historicalIntradayRows[0]?.call)}</strong></div>
-                <div><span>Put</span><strong>{number(historicalIntradayRows[0]?.put)}</strong></div>
-                <div><span>Diff</span><strong>{number(historicalIntradayRows[0]?.diff)}</strong></div>
                 <div><span>PCR</span><strong>{number(historicalIntradayRows[0]?.pcr, 2)}</strong></div>
                 <div><span>Price</span><strong>{number(historicalIntradayRows[0]?.price)}</strong></div>
                 <div><span>VWAP</span><strong>{number(historicalIntradayRows[0]?.vwap)}</strong></div>
                 <div><span>VWAP Signal</span><strong className="latest-signal">{historicalIntradayRows[0]?.vwapSignal || '—'}</strong></div>
                 <div><span>Option Signal</span><strong className="latest-signal">{historicalIntradayRows[0]?.optionSignal || '—'}</strong></div>
-                <div><span>Call Strength</span><strong>{historicalIntradayRows[0]?.callStrength == null ? '—' : number(historicalIntradayRows[0].callStrength) + '%'}</strong></div>
-                <div><span>Put Strength</span><strong>{historicalIntradayRows[0]?.putStrength == null ? '—' : number(historicalIntradayRows[0].putStrength) + '%'}</strong></div>
                 <div><span>Strength Diff</span><strong>{historicalIntradayRows[0]?.strengthDiff == null ? '—' : number(historicalIntradayRows[0].strengthDiff)}</strong></div>
                 <div><span>Buffer (%)</span><strong>{historicalIntradayRows[0]?.buffer == null ? '—' : number(historicalIntradayRows[0].buffer, 3) + '%'}</strong></div>
               </div>
