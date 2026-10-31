@@ -698,3 +698,28 @@
 /* GTT order-entry fields and three-way order-type selector. */
 .portfolio-order-type-choices{grid-template-columns:repeat(3,minmax(0,1fr))}
 .portfolio-order-help{grid-column:1/-1;padding:9px 11px;border:1px solid var(--line,#29354c);border-radius:6px;background:#101c2d;color:var(--muted,#9aabc4);font-size:11px;line-height:1.5}
+
+
+/* Trading Terminal — selected trading date navigator. */
+.trade-date-navigator{
+  display:flex;align-items:center;justify-content:center;gap:12px;
+  min-height:80px;margin:0 0 14px;padding:10px 14px;
+  border:1px solid var(--line,#29354c);border-radius:10px;
+  background:#101827;
+}
+.trade-date-navigator-label{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:210px}
+.trade-date-navigator-label>span{color:#22e6e2;font-size:10px;font-weight:800;letter-spacing:1.25px}
+.trade-date-navigator-label>strong{color:#edf3ff;font-size:16px;font-weight:750;text-align:center}
+.trade-date-nav-button{
+  display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;
+  border:1px solid #29364b;border-radius:11px;background:#172337;
+  color:#dbe6f6;font-size:25px;font-weight:700;line-height:1;cursor:pointer;
+}
+.trade-date-nav-button:hover:not(:disabled){border-color:#3b82a0;background:#1c2d43}
+.trade-date-nav-button:disabled{opacity:.38;cursor:not-allowed}
+@media(max-width:520px){
+  .trade-date-navigator{min-height:72px;gap:9px;padding:8px}
+  .trade-date-navigator-label{min-width:0;flex:1}
+  .trade-date-navigator-label>strong{font-size:13px}
+  .trade-date-nav-button{width:36px;height:36px;flex-basis:36px}
+}
