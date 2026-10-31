@@ -464,7 +464,6 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Net P&amp;L</span><strong style={{ fontSize: "1rem" }} className={pnlSummary.net >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{fmt(pnlSummary.net)}</strong></div>
     </div>
     </div>
-    </div>
     {error && <div className="error-banner"><strong>Trade terminal issue</strong><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
     {terminal.persistence_degraded && <div className="trade-persistence-warning">Database persistence is degraded. Do not assume cache-only changes are durable. {terminal.persistence_error || ''}</div>}
     {detailsTrade && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailsTrade(null); }}>
