@@ -146,7 +146,7 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
-function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25' }) {
+function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
@@ -172,8 +172,9 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const y = (value) => 202 - ((value - min) / span) * 168;
   const pathFor = (key) => usable.map((row) => row[key] === null ? null : `${x(row.minutes)},${y(row[key])}`).filter(Boolean).join(' ');
   const latest = usable[usable.length - 1];
-  const gap = latest.price !== null && latest.vwap !== null ? latest.price - latest.vwap : null;
-  const buffer = latest.buffer ?? (latest.price !== null && latest.vwap !== null && latest.vwap !== 0 ? ((latest.price - latest.vwap) / latest.vwap) * 100 : null);
+  const displayed = (selectedTime && usable.find((row) => String(row.time).trim() === String(selectedTime).trim())) || latest;
+  const gap = displayed.price !== null && displayed.vwap !== null ? latest.price - latest.vwap : null;
+  const buffer = displayed.buffer ?? (latest.price !== null && latest.vwap !== null && latest.vwap !== 0 ? ((latest.price - latest.vwap) / latest.vwap) * 100 : null);
   const ticks = Array.from({ length: 13 }, (_, i) => sessionStart + i * 30);
   const formatHoverNumber = (value, digits = 2) => value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: digits });
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
@@ -219,14 +220,14 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
     <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
       {[
-        ['Strength Diff', latest.strengthDiff == null ? '—' : formatHoverNumber(latest.strengthDiff)],
+        ['Strength Diff', displayed.strengthDiff == null ? '—' : formatHoverNumber(latest.strengthDiff)],
         ['Price', formatHoverNumber(latest.price)],
         ['VWAP', formatHoverNumber(latest.vwap)],
         ['Buffer', latest.buffer == null ? '—' : formatHoverNumber(latest.buffer, 3) + '%'],
-        ['VWAP Signal', latest.vwapSignal || '—'],
-        ['Option Signal', latest.optionSignal || '—'],
-        ['PCR', formatHoverNumber(latest.pcr, 2)],
-        ['Enter', latest.enter || '—'],
+        ['VWAP Signal', displayed.vwapSignal || '—'],
+        ['Option Signal', displayed.optionSignal || '—'],
+        ['PCR', formatHoverNumber(displayed.pcr, 2)],
+        ['Enter', displayed.enter || '—'],
       ].map(([label, value], index) => <React.Fragment key={label}>
         {index > 0 && <span aria-hidden="true" style={{ color: '#38bdf8', fontWeight: 700, fontSize: '18px' }}>→</span>}
         <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '72px' }}>
@@ -823,6 +824,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
   const [selectedIndex, setSelectedIndex] = useState('FINNIFTY');
   const [showIntradayDetails, setShowIntradayDetails] = useState(false);
   const [enterFilter, setEnterFilter] = useState('ALL');
+  const [selectedIntradayTime, setSelectedIntradayTime] = useState(null);
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
@@ -980,13 +982,13 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
           <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
               <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div></div>
-              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" />
+              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" selectedTime={selectedIntradayTime} />
             </div>
 
           </div>
         </article>
       <section className="content-grid historical-dataset-grid">
-        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div><div className="historical-enter-filters" role="group" aria-label="Filter intraday records by Enter signal"><button type="button" className={enterFilter === 'ALL' ? 'selected' : 'button secondary'} onClick={() => setEnterFilter('ALL')}>All ({historicalIntradayRows.length})</button>{enterFilterValues.map((value) => <button key={value} type="button" className={enterFilter === value ? 'selected' : 'button secondary'} onClick={() => setEnterFilter(value)}>{value} ({historicalIntradayRows.filter((row) => String(row.enter ?? '').trim().toUpperCase() === value).length})</button>)}</div><KiteDataTable columnsOverride={['time','vwapSignal','optionSignal','enter', ...(!showIntradayDetails ? [] : ['call','put']), 'diff','pcr','price','vwap', ...(!showIntradayDetails ? [] : ['callStrength','putStrength']), 'strengthDiff','vwapPriceBufferPct']} rows={filteredHistoricalIntradayRows} /></article>
+        <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div><div className="historical-enter-filters" role="group" aria-label="Filter intraday records by Enter signal"><button type="button" className={enterFilter === 'ALL' ? 'selected' : 'button secondary'} onClick={() => setEnterFilter('ALL')}>All ({historicalIntradayRows.length})</button>{enterFilterValues.map((value) => <button key={value} type="button" className={enterFilter === value ? 'selected' : 'button secondary'} onClick={() => setEnterFilter(value)}>{value} ({historicalIntradayRows.filter((row) => String(row.enter ?? '').trim().toUpperCase() === value).length})</button>)}</div><KiteDataTable columnsOverride={['time','vwapSignal','optionSignal','enter', ...(!showIntradayDetails ? [] : ['call','put']), 'diff','pcr','price','vwap', ...(!showIntradayDetails ? [] : ['callStrength','putStrength']), 'strengthDiff','vwapPriceBufferPct']} rows={filteredHistoricalIntradayRows} onRowSelect={(row) => setSelectedIntradayTime(row.time)} /></article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
       </section>
       <details className="historical-raw-payload"><summary>View complete saved JSON payload · SHA-256 {selected.payload_hash || '—'}</summary><pre>{JSON.stringify(selected.payload, null, 2)}</pre></details>
@@ -994,7 +996,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
   </section>;
 }
 
-function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false, columnsOverride = null }) {
+function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false, columnsOverride = null, onRowSelect = null }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   if (!Array.isArray(rows) || rows.length === 0) return <div className="kite-data-empty">{emptyText}</div>;
   const normalizeColumn = (key) => String(key).replace(/([a-z0-9])([A-Z])/g, '$1_$2').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1097,7 +1099,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
   const toggleSort = (key) => setSortConfig((current) => ({ key, direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc' }));
   const isSymbol = (key) => normalizeColumn(key) === 'tradingsymbol';
   const heading = (key) => ({ time: 'Time', call: 'Call', put: 'Put', diff: 'Diff', pcr: 'PCR', price: 'Price', vwap: 'VWAP', vwapSignal: 'VWAP Signal', optionSignal: 'Option Signal', callStrength: 'Call Strength (%)', putStrength: 'Put Strength (%)', strengthDiff: 'Call-Put Strength Diff', vwapPriceBufferPct: 'VWAP-Price Buffer (%)', enter: 'Enter', tradingsymbol: 'Instrument', quantity: 'Qty.', average_price: 'Avg. cost', last_price: 'LTP', pnl: 'P&L', day_change_percentage: 'Day chg.', net_change_percentage: 'Net chg.', invested_amount: 'Invested', current_amount: 'Cur. val' })[key] || (isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' '));
-  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : holdingsMode && ['day_change','day_change_percentage','daychange','daychangepercentage','net_change_percentage'].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? 'cell-positive' : Number(row[key] ?? 0) < 0 ? 'cell-negative' : '') : ''}>{renderCell(row[key], key)}</td>)}</tr>; })}</tbody></table></div>;
+  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i} onClick={onRowSelect ? () => onRowSelect(row) : undefined} style={onRowSelect ? { cursor: 'pointer' } : undefined}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : holdingsMode && ['day_change','day_change_percentage','daychange','daychangepercentage','net_change_percentage'].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? 'cell-positive' : Number(row[key] ?? 0) < 0 ? 'cell-negative' : '') : ''}>{renderCell(row[key], key)}</td>)}</tr>; })}</tbody></table></div>;
 }
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
@@ -1131,6 +1133,7 @@ export default function App() {
   const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.1, autoTrenderEntryStartTime: '10:00', autoTrenderEntryEndTime: '15:25' });
   const [showIntradayDetails, setShowIntradayDetails] = useState(false);
   const [liveEnterFilter, setLiveEnterFilter] = useState('ALL');
+  const [selectedLiveIntradayTime, setSelectedLiveIntradayTime] = useState(null);
 
   const refresh = useCallback(async () => {
     // Prevent overlapping 1-second polls from returning out of order and
@@ -1417,7 +1420,7 @@ export default function App() {
           <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
               <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><div className="chart-header-right"><div className="chart-enter-card"><span>Enter</span><strong className={'latest-enter ' + (calculatedRowsDescending[0]?.enter || 'wait').toLowerCase()}>{calculatedRowsDescending[0]?.enter || '—'}</strong></div></div></div>
-              <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} />
+              <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} />
             </div>
 
           </div>
@@ -1429,7 +1432,7 @@ export default function App() {
           <div className="panel-header"><div><h2>Intraday Table</h2></div><div className="panel-actions"><span className="data-count">{filteredLiveIntradayRows.length} / {calculatedRows.length} points</span><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div></div>
           <div className="historical-enter-filters" role="group" aria-label="Filter live intraday records by Enter signal">{['ALL', 'BUY', 'SELL', 'WAIT'].map((signal) => <button key={signal} type="button" className={liveEnterFilter === signal ? 'selected' : 'button secondary'} onClick={() => setLiveEnterFilter(signal)}>{signal === 'ALL' ? 'All' : signal} ({liveEnterFilterCount(signal)})</button>)}</div>
           <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>VWAP Signal</th><th>Option Signal</th><th>Enter</th>{showIntradayDetails && <><th>Call</th><th>Put</th></>}<th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th>{showIntradayDetails && <><th>Call Strength (%)</th><th>Put Strength (%)</th></>}<th>Call-Put Strength Diff</th><th>VWAP-Price Buffer (%)</th></tr></thead>
-            <tbody>{filteredLiveIntradayRows.slice(0, 100).map((row) => <tr key={row.key} title={`Time: ${row.time || '—'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`}>
+            <tbody>{filteredLiveIntradayRows.slice(0, 100).map((row) => <tr key={row.key} onClick={() => setSelectedLiveIntradayTime(row.time)} style={{ cursor: 'pointer', background: selectedLiveIntradayTime === row.time ? 'rgba(56,189,248,0.10)' : undefined }} title={`Time: ${row.time || '—'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`}>
               <td>{row.time || '—'}</td><td><span className={'signal-tag ' + (row.vwapSignal === 'BUY' ? 'signal-buy' : row.vwapSignal === 'SELL' ? 'signal-sell' : '')}>{row.vwapSignal || '—'}</span></td><td><span className={'signal-tag ' + (row.optionSignal === 'BUY' ? 'signal-buy' : row.optionSignal === 'SELL' ? 'signal-sell' : '')}>{row.optionSignal || '—'}</span></td><td><span className={'signal-tag enter-tag ' + row.enter.toLowerCase()}>{row.enter}</span></td>{showIntradayDetails && <><td>{number(row.call)}</td><td>{number(row.put)}</td></>}<td>{number(row.diff)}</td><td>{number(row.pcr, 2)}</td><td>{number(row.price)}</td><td>{number(row.vwap)}</td>
               {showIntradayDetails && <><td>{row.callStrength === null ? '—' : number(row.callStrength) + '%'}</td><td>{row.putStrength === null ? '—' : number(row.putStrength) + '%'}</td></>}
               <td className={row.strengthDiff === null ? '' : row.strengthDiff > 0 ? 'cell-positive' : row.strengthDiff < 0 ? 'cell-negative' : ''}>{row.strengthDiff === null ? '—' : number(row.strengthDiff)}</td>
