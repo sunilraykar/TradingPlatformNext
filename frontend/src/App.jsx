@@ -146,7 +146,7 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
-function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null }) {
+function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
@@ -158,7 +158,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const sessionEnd = 15 * 60 + 30;
   // Plot chronologically from 09:30 to 15:30 regardless of API response order.
   const usable = rows
-    .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer, strengthDiff: row.strengthDiff, enter: row.enter, optionSignal: row.optionSignal, vwapSignal: row.vwapSignal }))
+    .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer, strengthDiff: row.strengthDiff, callStrength: row.callStrength, putStrength: row.putStrength, enter: row.enter, optionSignal: row.optionSignal, vwapSignal: row.vwapSignal }))
     .filter((row) => row.minutes !== null && row.minutes >= sessionStart && row.minutes <= sessionEnd && (row.price !== null || row.vwap !== null))
     .sort((a, b) => a.minutes - b.minutes);
   const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
@@ -173,6 +173,11 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const pathFor = (key) => usable.map((row) => row[key] === null ? null : `${x(row.minutes)},${y(row[key])}`).filter(Boolean).join(' ');
   const latest = usable[usable.length - 1];
   const displayed = (selectedTime && usable.find((row) => String(row.time).trim() === String(selectedTime).trim())) || latest;
+  const callStrength = displayed.callStrength;
+  const putStrength = displayed.putStrength;
+  const side = callStrength == null || putStrength == null ? '—' : callStrength < putStrength ? 'BULLISH' : callStrength > putStrength ? 'BEARISH' : 'NEUTRAL';
+  const sideColor = side === 'BULLISH' ? '#22c55e' : side === 'BEARISH' ? '#f87171' : 'var(--text, #e5edf8)';
+  const summaryPrice = summary?.price ?? displayed.price;
   const gap = displayed.price !== null && displayed.vwap !== null ? displayed.price - displayed.vwap : null;
   const buffer = displayed.buffer ?? (displayed.price !== null && displayed.vwap !== null && displayed.vwap !== 0 ? ((displayed.price - displayed.vwap) / displayed.vwap) * 100 : null);
   const ticks = Array.from({ length: 13 }, (_, i) => sessionStart + i * 30);
@@ -180,6 +185,25 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
+    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: '0', margin: '8px auto 14px', padding: '10px 14px', maxWidth: '760px', border: '1px solid var(--border-color, #263449)', borderRadius: '10px', background: 'var(--panel-bg, #111b2b)' }} aria-label="Price and strength summary">
+      <div style={{ minWidth: '150px', padding: '0 18px', textAlign: 'center' }}>
+        <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>PRICE</div>
+        <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px' }}>{formatHoverNumber(summaryPrice, 2)}</strong>
+        {summary?.dayChangePercent != null && <strong className={summary.dayChangePercent >= 0 ? 'positive' : 'negative'} style={{ display: 'block', marginTop: '2px', fontSize: '12px' }}>{number(summary.dayChangePercent)}%{summary.dayChangeAbsolute == null ? '' : ` (${summary.dayChangeAbsolute > 0 ? '+' : ''}${number(summary.dayChangeAbsolute)})`}</strong>}
+      </div>
+      <div style={{ minWidth: '130px', padding: '0 18px', textAlign: 'center', borderLeft: '1px solid var(--border-color, #263449)' }}>
+        <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>CALL STRENGTH</div>
+        <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px', color: '#34d399' }}>{callStrength == null ? '—' : `${number(callStrength)}%`}</strong>
+      </div>
+      <div style={{ minWidth: '130px', padding: '0 18px', textAlign: 'center', borderLeft: '1px solid var(--border-color, #263449)' }}>
+        <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>PUT STRENGTH</div>
+        <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px', color: '#f87171' }}>{putStrength == null ? '—' : `${number(putStrength)}%`}</strong>
+      </div>
+      <div style={{ minWidth: '130px', padding: '0 18px', textAlign: 'center', borderLeft: '1px solid var(--border-color, #263449)' }}>
+        <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>SIDE</div>
+        <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px', color: sideColor }}>{side}</strong>
+      </div>
+    </div>
     <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
       <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart from 09:30 to 15:30" preserveAspectRatio="none">
@@ -1386,17 +1410,7 @@ export default function App() {
         <button className="button primary" onClick={login} disabled={loggingIn}>{loggingIn ? 'Connecting…' : 'Connect AutoTrender'}</button>
       </section>}
 
-      <section className="metric-grid autotrender-summary-grid">
-        <div className="metric autotrender-index-summary">
-          <div className="autotrender-latest-price">
-            <div><span>LATEST PRICE</span><strong>{number(kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp)}</strong></div>
-            <div><span>DAY'S CHANGE %</span><strong className={dailyChangePercent !== null && dailyChangePercent >= 0 ? 'positive' : dailyChangePercent !== null ? 'negative' : ''}>{dailyChangePercent === null ? '—' : `${number(dailyChangePercent)}%`}{dailyChangeAbsolute === null ? '' : ` (${dailyChangeAbsolute > 0 ? '+' : ''}${number(dailyChangeAbsolute)})`}</strong></div>
-          </div>
-        </div>
-        <Metric label="CALL STRENGTH" value={calculatedRowsDescending[0]?.callStrength == null ? '—' : `${number(calculatedRowsDescending[0].callStrength)}%`} tone="positive" />
-        <Metric label="PUT STRENGTH" value={calculatedRowsDescending[0]?.putStrength == null ? '—' : `${number(calculatedRowsDescending[0].putStrength)}%`} tone="negative" />
-        <Metric label="OPTION SIGNAL" value={displayValue(calculatedRowsDescending[0]?.optionSignal)} />
-      </section>
+
 
       {selectedContract?.status === 'SELECTED' && <section className="selected-contract-panel panel" aria-live="polite">
         <div className="selected-contract-heading">
@@ -1418,7 +1432,7 @@ export default function App() {
           <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
             <div className="price-vwap-graph-column">
               <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><div className="chart-header-right"><div className="chart-enter-card"><span>Enter</span><strong className={'latest-enter ' + (calculatedRowsDescending[0]?.enter || 'wait').toLowerCase()}>{calculatedRowsDescending[0]?.enter || '—'}</strong></div></div></div>
-              <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} />
+              <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} />
             </div>
 
           </div>
