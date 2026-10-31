@@ -1,4 +1,5 @@
 import json
+import math
 from datetime import date, datetime, time
 from typing import Annotated
 from zoneinfo import ZoneInfo
@@ -192,7 +193,7 @@ def _read_enter_thresholds() -> dict[str, float]:
             number = float(value)
         except (TypeError, ValueError, OverflowError):
             number = float("nan")
-        if not __import__("math").isfinite(number):
+        if not math.isfinite(number):
             raise HTTPException(
                 status_code=503,
                 detail=f"AutoTrender Enter setting '{key}' is not a valid number",
@@ -310,6 +311,7 @@ def historical_intraday_rows(
     if normalized_index not in _INDEX_CATEGORIES:
         raise HTTPException(status_code=404, detail="Unsupported AutoTrender index")
     _ensure_intraday_table()
+    thresholds = _read_enter_thresholds()
     with get_engine().connect() as connection:
         rows = connection.execute(text("""
             SELECT row_time AS time, call_value AS `call`, put_value AS `put`,
@@ -330,9 +332,29 @@ def historical_intraday_rows(
         raw = item.pop("rawRow", None)
         if isinstance(raw, str):
             try:
-                item["rawRow"] = json.loads(raw)
+                raw = json.loads(raw)
             except ValueError:
-                item["rawRow"] = raw
+                raw = {}
+        source_row = dict(raw) if isinstance(raw, dict) else {}
+        # Use the original row payload where available, with persisted columns
+        # filling any fields absent from older payloads.
+        for key in (
+            "call", "put", "pcr", "price", "vwap", "vwapSignal",
+            "optionSignal", "callStrength", "putStrength",
+        ):
+            if source_row.get(key) in (None, "") and item.get(key) is not None:
+                source_row[key] = item[key]
+        evaluation = evaluate_signal(
+            source_row,
+            call_put_strength_diff=thresholds["callPutStrengthDiff"],
+            call_pcr=thresholds["callPcr"],
+            put_pcr=thresholds["putPcr"],
+            vwap_price_difference_buffer=thresholds["vwapPriceDifferenceBuffer"],
+        )
+        calculated_enter = evaluation.direction if evaluation.eligible else "WAIT"
+        item["enter"] = calculated_enter
+        source_row["enter"] = calculated_enter
+        item["rawRow"] = source_row
         result.append({key: (value.isoformat() if hasattr(value, "isoformat") else value) for key, value in item.items()})
     return {"index": normalized_index, "trading_date": trading_date.isoformat(), "interval_minutes": mins, "total": len(result), "rows": result}
 
