@@ -1704,7 +1704,7 @@ export default function App() {
           })()}
           {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
           {kiteTab === 'Holdings' && (!Array.isArray(kiteData?.rows) || kiteData.rows.length === 0) && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading holdings…</div> : <KiteDataTable rows={[]} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No holdings returned by Kite.'} />)}
-          <div className="panel-footer">Read-only data view. No order placement or modification is performed by these tabs.</div>
+          <div className="panel-footer">{kiteTab === "Holdings" ? "Place BUY/SELL orders directly from your holdings." : "Read-only data view. No order placement or modification is performed by these tabs."}</div>
         </section>
       </>}
     </main>
