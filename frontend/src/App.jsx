@@ -979,7 +979,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="historical-records-content">
       <article className="panel price-vwap-panel historical-price-vwap-panel">
-          <div className="price-vwap-layout">
+          <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
             <div className="price-vwap-graph-column">
               <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div></div>
               <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" selectedTime={selectedIntradayTime} />
