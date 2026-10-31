@@ -55,7 +55,7 @@ def evaluate_signal(
     call_put_strength_diff: float = 10.0,
     call_pcr: float = 1.0,
     put_pcr: float = 1.0,
-    vwap_price_difference_buffer: float = 0.3,
+    vwap_price_difference_buffer: float = 0.1,
 ) -> Evaluation:
     """Evaluate absolute strength qualification and directional confirmation filters."""
     call = _number(row.get("call", row.get("callStrength", row.get("call_strength"))))
