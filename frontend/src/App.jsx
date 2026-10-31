@@ -146,7 +146,7 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
-function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null }) {
+function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, showHeading = false }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
@@ -185,7 +185,9 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
-    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', gap: '0', margin: '8px auto 14px', padding: '10px 14px', maxWidth: '760px', border: '1px solid var(--border-color, #263449)', borderRadius: '10px', background: 'var(--panel-bg, #111b2b)' }} aria-label="Price and strength summary">
+    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '10px', background: 'var(--panel-bg, #111b2b)' }} aria-label="Intraday price action and market summary">
+      {showHeading && <div style={{ flex: '0 0 220px', minWidth: '180px' }}><div className="eyebrow">INTRADAY PRICE ACTION</div><h2 style={{ margin: '5px 0 0', fontSize: '18px' }}>Future Price &amp; VWAP</h2></div>}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minWidth: 0 }}>
       <div style={{ minWidth: '150px', padding: '0 18px', textAlign: 'center' }}>
         <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>PRICE</div>
         <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px' }}>{formatHoverNumber(summaryPrice, 2)}</strong>
@@ -203,6 +205,8 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
         <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>SIDE</div>
         <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px', color: sideColor }}>{side}</strong>
       </div>
+      </div>
+      {enterValue !== null && <div className="chart-enter-card" style={{ flex: '0 0 150px', marginLeft: 'auto' }}><span>Enter</span><strong className={'latest-enter ' + String(enterValue || 'wait').toLowerCase()}>{enterValue || '—'}</strong></div>}
     </div>
     <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
@@ -1431,8 +1435,7 @@ export default function App() {
         <article className="panel price-vwap-panel">
           <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
             <div className="price-vwap-graph-column">
-              <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><div className="chart-header-right"><div className="chart-enter-card"><span>Enter</span><strong className={'latest-enter ' + (calculatedRowsDescending[0]?.enter || 'wait').toLowerCase()}>{calculatedRowsDescending[0]?.enter || '—'}</strong></div></div></div>
-              <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} />
+              <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} showHeading />
             </div>
 
           </div>
