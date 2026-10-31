@@ -57,7 +57,7 @@ def evaluate_signal(
     put_pcr: float = 1.0,
     vwap_price_difference_buffer: float = 0.3,
 ) -> Evaluation:
-    """Evaluate the signed put-minus-call strength rule and confirmation filters."""
+    """Evaluate absolute strength qualification and directional confirmation filters."""
     call = _number(row.get("call", row.get("callStrength", row.get("call_strength"))))
     put = _number(row.get("put", row.get("putStrength", row.get("put_strength"))))
     price = _number(row.get("price", row.get("close", row.get("ltp"))))
@@ -84,11 +84,8 @@ def evaluate_signal(
     if vwap_signal != option_signal:
         return Evaluation(False, None, "SIGNALS_DISAGREE", strength_difference, vwap_difference)
 
-    # Keep the configured rule strictly greater than the threshold.
-    at_strength_threshold = math.isclose(
-        strength_difference, strength_threshold, rel_tol=0.0, abs_tol=1e-9
-    )
-    if strength_difference < strength_threshold or at_strength_threshold:
+    # The configured strength rule is strictly greater than the threshold.
+    if strength_difference <= strength_threshold:
         return Evaluation(False, None, "STRENGTH_DIFFERENCE_NOT_ABOVE_THRESHOLD", strength_difference, vwap_difference)
     if vwap_difference > abs(vwap_price_difference_buffer):
         return Evaluation(False, None, "VWAP_GAP_ABOVE_THRESHOLD", strength_difference, vwap_difference)
