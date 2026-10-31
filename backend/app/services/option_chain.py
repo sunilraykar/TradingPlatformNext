@@ -1,6 +1,7 @@
-"""Live option-chain assembly from the imported Kite instrument master."""
+""""Kite option-chain assembly with quote normalization and freshness metadata."""
 
-from datetime import date
+from datetime import UTC, date, datetime
+from time import monotonic
 from typing import Any
 
 from sqlalchemy import text
@@ -15,6 +16,73 @@ UNDERLYINGS = {
     "NIFTY": {"index_symbol": "NIFTY 50", "option_prefix": "NIFTY"},
     "BANKNIFTY": {"index_symbol": "NIFTY BANK", "option_prefix": "BANKNIFTY"},
 }
+REST_SNAPSHOT_TTL_SECONDS = 5.0
+QUOTE_STALE_AFTER_SECONDS = 15.0
+_rest_snapshots: dict[int, dict[str, Any]] = {}
+_rest_snapshot_at = 0.0
+
+
+def _as_iso(value: Any) -> str | None:
+    if value is None:
+        return None
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def _normalize_quote(quote: dict[str, Any] | None, source: str) -> dict[str, Any] | None:
+    if not quote:
+        return None
+    # Kite REST quote and WebSocket tick use different volume field names.
+    normalized = dict(quote)
+    normalized["volume_traded"] = quote.get("volume_traded", quote.get("volume"))
+    normalized["oi"] = quote.get("oi", quote.get("open_interest"))
+    normalized["exchange_timestamp"] = quote.get("exchange_timestamp", quote.get("timestamp"))
+    normalized["last_trade_time"] = quote.get("last_trade_time", quote.get("last_trade_time"))
+    normalized["source"] = quote.get("source", source)
+    normalized["received_at"] = quote.get("received_at") or datetime.now(UTC).isoformat()
+    return normalized
+
+
+def _quote_age_seconds(quote: dict[str, Any] | None, now: datetime | None = None) -> float | None:
+    if not quote or not quote.get("received_at"):
+        return None
+    try:
+        received = datetime.fromisoformat(str(quote["received_at"]).replace("Z", "+00:00"))
+        if received.tzinfo is None:
+            received = received.replace(tzinfo=UTC)
+        return max(0.0, ((now or datetime.now(UTC)) - received.astimezone(UTC)).total_seconds())
+    except (TypeError, ValueError):
+        return None
+
+
+def _get_rest_snapshots(tokens: list[int]) -> dict[int, dict[str, Any]]:
+    """Seed instruments that have not emitted a WebSocket tick yet, in one quote call."""
+    global _rest_snapshot_at, _rest_snapshots
+    now = monotonic()
+    missing = [token for token in tokens if token not in _rest_snapshots]
+    if not missing or now - _rest_snapshot_at < REST_SNAPSHOT_TTL_SECONDS:
+        return {token: _rest_snapshots[token] for token in tokens if token in _rest_snapshots}
+    try:
+        response = get_kite_provider().quotes(missing)
+    except KiteProviderError:
+        return {token: _rest_snapshots[token] for token in tokens if token in _rest_snapshots}
+    received_at = datetime.now(UTC).isoformat()
+    for token in missing:
+        quote = response.get(str(token)) or response.get(token)
+        if quote:
+            normalized = _normalize_quote({**quote, "received_at": received_at}, "REST_SNAPSHOT")
+            if normalized:
+                _rest_snapshots[token] = normalized
+    _rest_snapshot_at = now
+    return {token: _rest_snapshots[token] for token in tokens if token in _rest_snapshots}
+
+
+def _get_quote(token: int, snapshots: dict[int, dict[str, Any]]) -> dict[str, Any] | None:
+    cached = _normalize_quote(live_quotes.get(token), "WEBSOCKET")
+    if cached:
+        return cached
+    return snapshots.get(token)
 
 
 def _quote_price(token: int) -> float | None:
@@ -32,7 +100,7 @@ def _quote_price(token: int) -> float | None:
 def get_option_chain(
     underlying: str, expiry: str | None = None, strike_count: int = 10
 ) -> dict[str, Any]:
-    """Return a strike-centered chain and subscribe its tokens for live updates."""
+    """Return a strike-centered chain, seeding missing quotes and reporting tick age."""
     key = underlying.upper()
     if key not in UNDERLYINGS:
         raise ValueError("underlying must be NIFTY or BANKNIFTY")
@@ -62,10 +130,10 @@ def get_option_chain(
             text(
                 "SELECT DISTINCT expiry FROM instruments WHERE is_active = TRUE "
                 "AND exchange = 'NFO' AND instrument_type IN ('CE', 'PE') "
-                "AND tradingsymbol LIKE :prefix AND expiry >= CURRENT_DATE "
+                "AND tradingsymbol LIKE :prefix AND expiry >= :today "
                 "ORDER BY expiry"
             ),
-            {"prefix": f"{spec['option_prefix']}%"},
+            {"prefix": f"{spec['option_prefix']}%", "today": date.today()},
         ).scalars().all()
         if not expiries:
             raise RuntimeError(
@@ -90,24 +158,36 @@ def get_option_chain(
     strikes = sorted({float(row["strike"]) for row in options if row["strike"] is not None})
     if not strikes:
         raise RuntimeError(f"No strikes found for {key} expiry {chosen_expiry.isoformat()}")
-    if spot is None:
-        center_index = len(strikes) // 2
-    else:
-        center_index = min(range(len(strikes)), key=lambda i: abs(strikes[i] - spot))
+    center_index = len(strikes) // 2 if spot is None else min(
+        range(len(strikes)), key=lambda i: abs(strikes[i] - spot)
+    )
     start = max(0, center_index - strike_count)
     end = min(len(strikes), center_index + strike_count + 1)
     selected_strikes = strikes[start:end]
     selected_rows = [row for row in options if float(row["strike"]) in selected_strikes]
     tokens = [int(row["instrument_token"]) for row in selected_rows]
     subscription = live_market_data.subscribe(tokens, mode="full")
+    snapshots = _get_rest_snapshots(tokens)
 
+    now = datetime.now(UTC)
     by_strike: dict[float, dict[str, Any]] = {
         strike: {"strike": strike, "CE": None, "PE": None} for strike in selected_strikes
     }
+    fresh_count = stale_count = missing_count = 0
     for row in selected_rows:
         token = int(row["instrument_token"])
-        quote = live_quotes.get(token)
+        quote = _get_quote(token, snapshots)
         side = str(row["instrument_type"])
+        age = _quote_age_seconds(quote, now)
+        freshness = "MISSING" if quote is None else (
+            "FRESH" if age is not None and age <= QUOTE_STALE_AFTER_SECONDS else "STALE"
+        )
+        if freshness == "FRESH":
+            fresh_count += 1
+        elif freshness == "STALE":
+            stale_count += 1
+        else:
+            missing_count += 1
         by_strike[float(row["strike"])][side] = {
             "instrument_token": token,
             "tradingsymbol": row["tradingsymbol"],
@@ -115,9 +195,15 @@ def get_option_chain(
             "last_price": quote.get("last_price") if quote else None,
             "volume": quote.get("volume_traded") if quote else None,
             "oi": quote.get("oi") if quote else None,
+            "exchange_timestamp": _as_iso(quote.get("exchange_timestamp")) if quote else None,
+            "last_trade_time": _as_iso(quote.get("last_trade_time")) if quote else None,
             "received_at": quote.get("received_at") if quote else None,
+            "quote_age_seconds": round(age, 2) if age is not None else None,
+            "quote_freshness": freshness,
+            "quote_source": quote.get("source") if quote else None,
         }
 
+    feed = live_market_data.status()
     return {
         "underlying": key,
         "index_symbol": spec["index_symbol"],
@@ -127,5 +213,15 @@ def get_option_chain(
         "available_expiries": [item.isoformat() for item in expiries],
         "strike_count_each_side": strike_count,
         "live_subscription": subscription,
+        "market_data": {
+            "websocket_connected": feed.get("connected", False),
+            "websocket_state": feed.get("state", "unknown"),
+            "fresh_quotes": fresh_count,
+            "stale_quotes": stale_count,
+            "missing_quotes": missing_count,
+            "total_quotes": len(selected_rows),
+            "quote_stale_after_seconds": QUOTE_STALE_AFTER_SECONDS,
+            "checked_at": now.isoformat(),
+        },
         "strikes": list(by_strike.values()),
     }
