@@ -615,3 +615,41 @@
   .kite-segment-values .kite-margin-details{grid-column:1/-1;padding:6px 0 0 6px}
   .kite-segment-values .kite-margin-columns{position:static;min-width:0;grid-column:1/-1}
 }
+
+
+/* Holdings page — compact Option 2 layout. */
+.holdings-title-line{display:flex;align-items:baseline;gap:12px}
+.holdings-title-line h2{margin:0;font-size:19px}
+.holdings-title-line>span{color:var(--muted);font-size:11px}
+.kite-data-panel:has(.holdings-filters)>.panel-header{padding:16px 19px 10px}
+.holdings-portfolio-summary{gap:10px;padding:0 0 12px;margin:0 0 10px;border:0}
+.holdings-summary-item{min-height:66px;justify-content:center;gap:6px;padding:10px 13px;border:1px solid var(--line);border-radius:9px;background:linear-gradient(145deg,#131f30,#101a29)}
+.holdings-summary-item>span{font-size:10px;letter-spacing:.2px}
+.holdings-summary-item>strong{font-size:clamp(14px,1.25vw,19px)}
+.holdings-summary-item>strong small{padding:3px 6px;font-size:10px}
+.holdings-tools{gap:9px;margin:0 0 9px}
+.holdings-tools input{width:min(32%,340px);min-width:190px;padding:8px 11px}
+.holdings-sort-actions{justify-content:flex-end;gap:6px}
+.holdings-sort-actions button{padding:7px 9px;font-size:10px;white-space:nowrap}
+.holdings-filter-secondary-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 9px}
+.holdings-alphabet{flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;gap:3px;padding:4px 5px;border:0;background:transparent}
+.holdings-alphabet button{flex:0 0 auto;min-width:27px;padding:6px 7px;font-size:10px}
+.holdings-profit-filters{flex:0 0 auto;flex-wrap:nowrap;gap:5px}
+.holdings-profit-filters button{padding:6px 8px;font-size:10px;white-space:nowrap}
+.holdings-profit-filters button span{padding:2px 5px}
+.holdings-concentration{margin:0 0 9px;border-radius:7px}
+.holdings-concentration summary{padding:8px 11px;font-size:10px}
+.holdings-concentration-list{gap:7px;padding:0 11px 10px}
+.holdings-filters{gap:0}
+@media(max-width:1050px){
+  .holdings-tools{align-items:stretch;flex-direction:column}
+  .holdings-tools input{width:100%;min-width:0}
+  .holdings-sort-actions{justify-content:flex-start}
+  .holdings-filter-secondary-row{align-items:flex-start;flex-direction:column}
+  .holdings-alphabet{width:100%;box-sizing:border-box}
+  .holdings-profit-filters{flex-wrap:wrap}
+}
+@media(max-width:760px){
+  .holdings-portfolio-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .holdings-summary-item{min-height:60px}
+}
