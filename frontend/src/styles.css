@@ -792,3 +792,56 @@
   .trade-date-filter-panel{flex-wrap:nowrap}
   .trade-date-filter-panel .trade-terminal-filters{flex-wrap:nowrap}
 }
+
+
+/* Final override: the filters must not render as a second nested card. */
+.trade-date-filter-panel .trade-terminal-filters{
+  display:flex!important;
+  flex:1 1 auto!important;
+  align-items:center!important;
+  flex-wrap:nowrap!important;
+  gap:7px!important;
+  min-width:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.trade-date-filter-panel .trade-filter-group{
+  display:flex!important;
+  flex:0 1 auto!important;
+  flex-direction:column!important;
+  gap:4px!important;
+  min-width:0!important;
+}
+.trade-date-filter-panel .trade-filter-buttons{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  gap:3px!important;
+}
+.trade-date-filter-panel .trade-filter-button{
+  padding:5px 7px!important;
+  min-height:30px!important;
+  font-size:10px!important;
+}
+.trade-date-filter-panel .trade-date-navigator{
+  flex:0 0 auto!important;
+  gap:6px!important;
+  padding-right:10px!important;
+  margin:0!important;
+}
+.trade-date-filter-panel .trade-date-navigator-label{min-width:155px!important}
+.trade-date-filter-panel .trade-date-navigator-label>strong{font-size:11px!important}
+.trade-date-filter-panel .trade-date-nav-button{
+  width:28px!important;height:30px!important;flex-basis:28px!important;
+}
+@media(min-width:1101px){
+  .trade-date-filter-panel{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;gap:10px!important}
+  .trade-date-filter-panel .trade-terminal-filters{flex-wrap:nowrap!important}
+}
+@media(max-width:1100px){
+  .trade-date-filter-panel{display:flex!important;flex-wrap:wrap!important}
+  .trade-date-filter-panel .trade-terminal-filters{flex-wrap:wrap!important}
+}
