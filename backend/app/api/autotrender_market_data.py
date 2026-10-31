@@ -10,6 +10,7 @@ from sqlalchemy import text
 from app.db.session import get_engine
 from app.providers.autotrender.auth import AutoTrenderAuth
 from app.services.autotrender_cache import AutoTrenderCache
+from app.services.autotrender_signal_evaluator import evaluate_signal
 
 router = APIRouter(prefix="/autotrender", tags=["AutoTrender Market Data"])
 
@@ -147,6 +148,61 @@ def _number_or_none(value):
         return None
 
 
+def _read_enter_thresholds() -> dict[str, float]:
+    """Load the four AutoTrender Enter thresholds from the saved UI settings."""
+    keys = (
+        "callPutStrengthDiff",
+        "callPcr",
+        "putPcr",
+        "vwapPriceDifferenceBuffer",
+    )
+    placeholders = ",".join(f":key{i}" for i in range(len(keys)))
+    with get_engine().connect() as connection:
+        rows = connection.execute(
+            text(
+                "SELECT setting_key, setting_value FROM app_settings "
+                f"WHERE setting_key IN ({placeholders})"
+            ),
+            {f"key{i}": "ui." + key for i, key in enumerate(keys)},
+        ).mappings().all()
+
+    saved = {}
+    for row in rows:
+        value = row["setting_value"]
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except (TypeError, ValueError):
+                pass
+        saved[str(row["setting_key"])[3:]] = value
+
+    missing = [key for key in keys if key not in saved]
+    if missing:
+        raise HTTPException(
+            status_code=503,
+            detail="AutoTrender Enter settings are missing: " + ", ".join(missing),
+        )
+
+    thresholds = {}
+    for key in keys:
+        value = saved[key]
+        if isinstance(value, dict):
+            value = value.get("value")
+        try:
+            number = float(value)
+        except (TypeError, ValueError, OverflowError):
+            number = float("nan")
+        if not __import__("math").isfinite(number):
+            raise HTTPException(
+                status_code=503,
+                detail=f"AutoTrender Enter setting '{key}' is not a valid number",
+            )
+        thresholds[key] = abs(number) if key in {
+            "callPutStrengthDiff", "vwapPriceDifferenceBuffer"
+        } else number
+    return thresholds
+
+
 @router.post("/indices/{index}/intraday/persist")
 async def persist_index_intraday(index: str, request: Request) -> dict:
     """Persist every calculated intraday row for the selected index and interval."""
@@ -169,6 +225,7 @@ async def persist_index_intraday(index: str, request: Request) -> dict:
     if not rows:
         return {"index": normalized_index, "trading_date": trading_date.isoformat(), "saved": 0}
     _ensure_intraday_table()
+    thresholds = _read_enter_thresholds()
     records = []
     for row in rows:
         if not isinstance(row, dict):
@@ -176,6 +233,17 @@ async def persist_index_intraday(index: str, request: Request) -> dict:
         row_time = str(row.get("time") or "").strip()
         if not row_time:
             continue
+        evaluation = evaluate_signal(
+            row,
+            call_put_strength_diff=thresholds["callPutStrengthDiff"],
+            call_pcr=thresholds["callPcr"],
+            put_pcr=thresholds["putPcr"],
+            vwap_price_difference_buffer=thresholds["vwapPriceDifferenceBuffer"],
+        )
+        calculated_enter = evaluation.direction if evaluation.eligible else "WAIT"
+        persisted_row = dict(row)
+        persisted_row["enter"] = calculated_enter
+
         records.append({
             "trading_date": trading_date,
             "index_name": normalized_index,
@@ -193,8 +261,8 @@ async def persist_index_intraday(index: str, request: Request) -> dict:
             "put_strength": _number_or_none(row.get("putStrength")),
             "strength_diff": _number_or_none(row.get("strengthDiff")),
             "vwap_price_buffer_pct": _number_or_none(row.get("buffer")),
-            "enter_signal": str(row.get("enter") or "")[:16] or None,
-            "raw_row": json.dumps(row, ensure_ascii=False, default=str),
+            "enter_signal": calculated_enter,
+            "raw_row": json.dumps(persisted_row, ensure_ascii=False, default=str),
         })
     if not records:
         return {"index": normalized_index, "trading_date": trading_date.isoformat(), "saved": 0}
