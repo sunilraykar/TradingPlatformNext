@@ -107,6 +107,9 @@ class KiteProvider:
     def place_order(self, **params) -> str:
         return self._account_call("place_order", variety="regular", **params)
 
+    def place_gtt(self, **params) -> dict[str, Any]:
+        return self._account_call("place_gtt", **params)
+
     def modify_order(self, order_id: str, variety: str = "regular", **params) -> str:
         return self._account_call("modify_order", variety=variety, order_id=order_id, **params)
 
