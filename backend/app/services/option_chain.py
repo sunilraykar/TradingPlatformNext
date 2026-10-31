@@ -49,9 +49,11 @@ def _quote_age_seconds(quote: dict[str, Any] | None, now: datetime | None = None
     if not quote or not quote.get("received_at"):
         return None
     try:
-        received = datetime.fromisoformat(str(quote["received_at"]).replace("Z", "+00:00"))
+        timestamp = quote.get("exchange_timestamp") or quote.get("received_at")
+        received = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
         if received.tzinfo is None:
-            received = received.replace(tzinfo=UTC)
+            # Kite's Python client commonly returns exchange timestamps as naive IST datetimes.
+            received = received.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
         return max(0.0, ((now or datetime.now(UTC)) - received.astimezone(UTC)).total_seconds())
     except (TypeError, ValueError):
         return None
