@@ -50,7 +50,10 @@ def _quote_age_seconds(quote: dict[str, Any] | None, now: datetime | None = None
         return None
     try:
         timestamp = quote.get("exchange_timestamp") or quote.get("received_at")
-        received = datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+        timestamp_text = str(timestamp)
+        if timestamp_text.endswith("Z"):
+            timestamp_text = timestamp_text[:-1] + "+00:00"
+        received = datetime.fromisoformat(timestamp_text)
         if received.tzinfo is None:
             # Kite's Python client commonly returns exchange timestamps as naive IST datetimes.
             received = received.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
@@ -61,7 +64,7 @@ def _quote_age_seconds(quote: dict[str, Any] | None, now: datetime | None = None
 
 def _get_rest_snapshots(instruments: dict[int, str]) -> dict[int, dict[str, Any]]:
     """Seed instruments that have not emitted a WebSocket tick yet, in one quote call."""
-    global _rest_snapshot_at, _rest_snapshots
+    global _rest_snapshot_at
     now = monotonic()
     missing = {token: key for token, key in instruments.items() if token not in _rest_snapshots}
     if not missing or now - _rest_snapshot_at < REST_SNAPSHOT_TTL_SECONDS:
