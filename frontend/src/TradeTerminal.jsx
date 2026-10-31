@@ -79,8 +79,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   const [sourceFilter, setSourceFilter] = useState('ALL');
   const [underlyingFilter, setUnderlyingFilter] = useState('INDICES');
   const [symbolLetter, setSymbolLetter] = useState('ALL');
-  const [tradeDate, setTradeDate] = useState('');
-  const [dateFilter, setDateFilter] = useState('TODAY');
+  const [selectedTradingDate, setSelectedTradingDate] = useState(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -226,11 +225,16 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
     }).format(date);
   };
   const todayKey = indiaDateKey(new Date());
-  const todayUtc = new Date(`${todayKey}T00:00:00Z`);
-  const mondayUtc = new Date(todayUtc);
-  mondayUtc.setUTCDate(todayUtc.getUTCDate() - ((todayUtc.getUTCDay() + 6) % 7));
-  const weekStartKey = mondayUtc.toISOString().slice(0, 10);
-  const monthStartKey = `${todayKey.slice(0, 7)}-01`;
+  const selectedDateObject = new Date(`${selectedTradingDate}T00:00:00Z`);
+  const selectedTradingDateLabel = Number.isFinite(selectedDateObject.getTime())
+    ? new Intl.DateTimeFormat('en-IN', { timeZone: 'UTC', weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(selectedDateObject)
+    : selectedTradingDate;
+  const shiftTradingDate = (days) => {
+    const next = new Date(`${selectedTradingDate}T00:00:00Z`);
+    next.setUTCDate(next.getUTCDate() + days);
+    const nextKey = next.toISOString().slice(0, 10);
+    if (nextKey <= todayKey) setSelectedTradingDate(nextKey);
+  };
   const tradesMatchingBaseFilters = trades.filter((trade) => {
     const createdKey = indiaDateKey(trade.created_at || trade.updated_at);
     const normalizedSource = String(trade.source || '').toUpperCase();
@@ -238,12 +242,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       (sourceFilter === 'AUTOTRENDER' && normalizedSource.includes('AUTO'));
     const statusValue = String(trade.status || '').toUpperCase();
     const statusMatches = status === 'ALL' || (status === 'OPEN' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(statusValue)) || statusValue === status;
-    const dateMatches = dateFilter === 'ALL' ||
-      (dateFilter === 'TODAY' && createdKey === todayKey) ||
-      (dateFilter === 'WEEK' && createdKey >= weekStartKey && createdKey <= todayKey) ||
-      (dateFilter === 'MONTH' && createdKey >= monthStartKey && createdKey <= todayKey) ||
-      (dateFilter === 'CUSTOM' && !!tradeDate && createdKey === tradeDate);
-    return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches && dateMatches;
+    return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches && createdKey === selectedTradingDate;
   });
   const underlyings = [...new Set(tradesMatchingBaseFilters.map((trade) => String(trade.underlying || '').trim()).filter(Boolean))].sort();
   const tradesMatchingOtherFilters = tradesMatchingBaseFilters.filter((trade) => {
@@ -554,6 +553,14 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
         <button type="button" className={columnPreset === 'Detailed' ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setColumnPreset('Detailed')}>Detailed</button>
       </div>
     </div>
+    <div className="trade-date-navigator" aria-label="Select trading date">
+      <button type="button" className="trade-date-nav-button" aria-label="Previous trading date" onClick={() => shiftTradingDate(-1)}>‹</button>
+      <div className="trade-date-navigator-label">
+        <span>SELECTED TRADING DATE</span>
+        <strong>{selectedTradingDateLabel}</strong>
+      </div>
+      <button type="button" className="trade-date-nav-button" aria-label="Next trading date" onClick={() => shiftTradingDate(1)} disabled={selectedTradingDate >= todayKey}>›</button>
+    </div>
     <div className="trade-terminal-filters">
       <div className="trade-filter-group"><span className="trade-filter-label">Mode</span><div className="trade-filter-buttons">{[['ALL','All'],['PAPER','Paper'],['LIVE','Live']].map(([value,label]) => <button key={value} type="button" className={mode === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setMode(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
@@ -561,7 +568,6 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       <div className="trade-filter-group"><span className="trade-filter-label">Underlying</span><div className="trade-filter-buttons">{[['ALL','All'],['INDICES','Indices'],...underlyings.filter(x => !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(x)).map(x => [x,x])].map(([value,label]) => <button key={value} type="button" className={underlyingFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setUnderlyingFilter(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group trade-symbol-letter-filter"><span className="trade-filter-label">Symbol</span><div className="trade-filter-buttons">{[['ALL','All'],...symbolLetters.map((letter) => [letter,letter])].map(([value,label]) => <button key={value} type="button" className={symbolLetter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSymbolLetter(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Sort by</span><select className="trade-sort-select" value={`${sortConfig.key}:${sortConfig.direction}`} onChange={(event) => { const [key, direction] = event.target.value.split(':'); setSortConfig({ key, direction }); }}><option value="underlying:asc">Underlying A–Z</option><option value="updated_at:desc">Recently updated</option><option value="created_at:desc">Newest created</option><option value="created_at:asc">Oldest created</option><option value="last_price:desc">Last price ↓</option><option value="display_pnl:desc">P&amp;L ↓</option><option value="instrument_symbol:asc">Symbol A–Z</option><option value="instrument_symbol:desc">Symbol Z–A</option></select></div>
-      <div className="trade-filter-group"><span className="trade-filter-label">Trade date</span><div className="trade-filter-buttons">{[['ALL','All'],['TODAY','Today'],['WEEK','This Week'],['MONTH','This Month'],['CUSTOM','Custom']].map(([value,label]) => <button key={value} type="button" className={(dateFilter === value ? 'trade-filter-button active' : 'trade-filter-button')} onClick={() => setDateFilter(value)}>{label}</button>)}</div>{dateFilter === 'CUSTOM' && <input className="trade-date-custom" type="date" value={tradeDate} onChange={(e) => setTradeDate(e.target.value)} />}</div>
       <span className="trade-terminal-count">{visibleTrades.length} of {trades.length} trades · live updates</span>
     </div>
     <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr>{([... [['execution_mode','Mode'],['underlying','Underlying'],['instrument_symbol','Instrument'],['direction','Side'],['quantity','Qty'],['average_entry_price','Entry'],...(columnPreset === 'Detailed' ? [['duration','Duration']] : []),['last_price','Last price'],['stop_loss','SL'],['target','Target'],['display_pnl','P&L'],['average_exit_price','Exit price'],['status','Status']], ...(columnPreset === 'Basic' ? [['trailing_strategy','Trailing Strategy']] : columnPreset === 'AutoTrender' ? [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy']] : [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy'],['updated_at','Updated']])]).map(([key,label]) => <th key={key}><button type="button" className="trade-sort-header" onClick={() => toggleSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button></th>)}<th>Action</th></tr></thead><tbody>
