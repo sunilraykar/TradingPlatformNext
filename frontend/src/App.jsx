@@ -1145,7 +1145,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     if (!symbol || !exchange) { setPortfolioOrderError('Unable to place order: symbol or exchange is missing.'); return; }
     setPortfolioOrderError('');
     setPortfolioOrderMessage('');
-    setPortfolioOrder({ symbol, exchange, side, quantity: '100', product: 'CNC', orderType: 'LIMIT', price: ltp > 0 ? ltp.toFixed(2) : '' });
+    setPortfolioOrder({ symbol, exchange, side, quantity: '100', product: 'CNC', orderType: 'LIMIT', price: ltp > 0 ? ltp.toFixed(2) : '', triggerPrice: ltp > 0 ? ltp.toFixed(2) : '', lastPrice: ltp > 0 ? ltp.toFixed(2) : '' });
   };
   const submitPortfolioOrder = async () => {
     if (!portfolioOrder || portfolioOrderLoading) return;
@@ -1154,19 +1154,27 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     if (!Number.isInteger(quantity) || quantity <= 0) { setPortfolioOrderError('Quantity must be a positive whole number.'); return; }
     if (!['BUY', 'SELL'].includes(portfolioOrder.side)) { setPortfolioOrderError('Transaction type must be BUY or SELL.'); return; }
     if (!['CNC', 'MIS'].includes(portfolioOrder.product)) { setPortfolioOrderError('Product must be CNC or MIS.'); return; }
-    if (!['LIMIT', 'MARKET'].includes(portfolioOrder.orderType)) { setPortfolioOrderError('Order type must be LIMIT or MARKET.'); return; }
-    if (portfolioOrder.orderType === 'LIMIT' && (!Number.isFinite(price) || price <= 0)) { setPortfolioOrderError('Enter a valid limit price.'); return; }
+    if (!['LIMIT', 'MARKET', 'GTT'].includes(portfolioOrder.orderType)) { setPortfolioOrderError('Select a valid order type.'); return; }
+    if (['LIMIT', 'GTT'].includes(portfolioOrder.orderType) && (!Number.isFinite(price) || price <= 0)) { setPortfolioOrderError('Enter a valid limit price.'); return; }
+    const triggerPrice = Number(portfolioOrder.triggerPrice);
+    const lastPrice = Number(portfolioOrder.lastPrice);
+    if (portfolioOrder.orderType === 'GTT' && (!Number.isFinite(triggerPrice) || triggerPrice <= 0)) { setPortfolioOrderError('Enter a valid GTT trigger price.'); return; }
+    if (portfolioOrder.orderType === 'GTT' && (!Number.isFinite(lastPrice) || lastPrice <= 0)) { setPortfolioOrderError('Current market price is unavailable for GTT creation.'); return; }
     try {
       setPortfolioOrderLoading(true); setPortfolioOrderError('');
       const result = await api('/kite/portfolio/order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
         symbol: portfolioOrder.symbol, exchange: portfolioOrder.exchange, transaction_type: portfolioOrder.side,
         quantity, product: portfolioOrder.product, order_type: portfolioOrder.orderType,
-        price: portfolioOrder.orderType === 'LIMIT' ? price : null,
+        price: ['LIMIT', 'GTT'].includes(portfolioOrder.orderType) ? price : null,
+        trigger_price: portfolioOrder.orderType === 'GTT' ? triggerPrice : null,
+        last_price: portfolioOrder.orderType === 'GTT' ? lastPrice : null,
       }) });
       setPortfolioOrder(null);
       setPortfolioOrderMessage(result.mode === 'PAPER'
         ? portfolioOrder.side + ' ' + quantity + ' ' + portfolioOrder.symbol + ': PAPER order accepted; no broker order was placed.'
-        : portfolioOrder.side + ' ' + quantity + ' ' + portfolioOrder.symbol + ': order submitted. Order ID: ' + (result.order_id || '—'));
+        : result.status === 'GTT_CREATED'
+          ? portfolioOrder.side + ' GTT created for ' + quantity + ' ' + portfolioOrder.symbol + '. Trigger ID: ' + (result.trigger_id || '—')
+          : portfolioOrder.side + ' ' + quantity + ' ' + portfolioOrder.symbol + ': order submitted. Order ID: ' + (result.order_id || '—'));
       if (onActionComplete) await onActionComplete();
     } catch (error) { setPortfolioOrderError(error.message || 'Unable to place portfolio order.'); }
     finally { setPortfolioOrderLoading(false); }
@@ -1203,8 +1211,9 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
           <div className="portfolio-order-field"><span>Transaction</span><div className="portfolio-choice-group"><button type="button" className={portfolioOrder.side === "BUY" ? "portfolio-choice active buy" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, side: "BUY" }))}>BUY</button><button type="button" className={portfolioOrder.side === "SELL" ? "portfolio-choice active sell" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, side: "SELL" }))}>SELL</button></div></div>
           <label>Quantity<input type="number" min="1" step="1" value={portfolioOrder.quantity} onChange={(e) => setPortfolioOrder((v) => ({ ...v, quantity: e.target.value }))}/></label>
           <div className="portfolio-order-field"><span>Product</span><div className="portfolio-choice-group"><button type="button" className={portfolioOrder.product === "CNC" ? "portfolio-choice active" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, product: "CNC" }))}>CNC</button><button type="button" className={portfolioOrder.product === "MIS" ? "portfolio-choice active" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, product: "MIS" }))}>MIS</button></div></div>
-          <div className="portfolio-order-field"><span>Order Type</span><div className="portfolio-choice-group"><button type="button" className={portfolioOrder.orderType === "LIMIT" ? "portfolio-choice active" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, orderType: "LIMIT" }))}>LIMIT</button><button type="button" className={portfolioOrder.orderType === "MARKET" ? "portfolio-choice active" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, orderType: "MARKET" }))}>MARKET</button></div></div>
+          <div className="portfolio-order-field"><span>Order Type</span><div className="portfolio-choice-group"><button type="button" className={portfolioOrder.orderType === "LIMIT" ? "portfolio-choice active" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, orderType: "LIMIT" }))}>LIMIT</button><button type="button" className={portfolioOrder.orderType === "MARKET" ? "portfolio-choice active" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, orderType: "MARKET" }))}>MARKET</button><button type="button" className={portfolioOrder.orderType === "GTT" ? "portfolio-choice active" : "portfolio-choice"} onClick={() => setPortfolioOrder((v) => ({ ...v, orderType: "GTT" }))}>GTT</button></div></div>
           {portfolioOrder.orderType === "LIMIT" && <label>Limit Price (₹)<input type="number" min="0.01" step="0.05" value={portfolioOrder.price} onChange={(e) => setPortfolioOrder((v) => ({ ...v, price: e.target.value }))}/></label>}
+          {portfolioOrder.orderType === "GTT" && <><label>Trigger Price (₹)<input type="number" min="0.01" step="0.05" value={portfolioOrder.triggerPrice} onChange={(e) => setPortfolioOrder((v) => ({ ...v, triggerPrice: e.target.value }))}/></label><label>Order Price (₹)<input type="number" min="0.01" step="0.05" value={portfolioOrder.price} onChange={(e) => setPortfolioOrder((v) => ({ ...v, price: e.target.value }))}/></label><div className="portfolio-order-help">GTT creates a single trigger. When the trigger is reached, Kite places the LIMIT order at your Order Price. Current LTP used: ₹{portfolioOrder.lastPrice || "—"}.</div></>}
         </div>
         {portfolioOrderError && <div className="portfolio-error">{portfolioOrderError}</div>}
         <div className="portfolio-order-modal-actions"><button type="button" className="portfolio-order-cancel-button" disabled={portfolioOrderLoading} onClick={() => setPortfolioOrder(null)}>Cancel</button><button type="button" className={portfolioOrder.side === "BUY" ? "portfolio-order-confirm-buy" : "portfolio-order-confirm-sell"} disabled={portfolioOrderLoading} onClick={submitPortfolioOrder}>{portfolioOrderLoading ? "Submitting…" : "Place Order"}</button></div>
