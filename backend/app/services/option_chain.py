@@ -2,6 +2,7 @@
 
 from datetime import UTC, date, datetime
 from time import monotonic
+from zoneinfo import ZoneInfo
 from typing import Any
 
 from sqlalchemy import text
@@ -56,20 +57,20 @@ def _quote_age_seconds(quote: dict[str, Any] | None, now: datetime | None = None
         return None
 
 
-def _get_rest_snapshots(tokens: list[int]) -> dict[int, dict[str, Any]]:
+def _get_rest_snapshots(instruments: dict[int, str]) -> dict[int, dict[str, Any]]:
     """Seed instruments that have not emitted a WebSocket tick yet, in one quote call."""
     global _rest_snapshot_at, _rest_snapshots
     now = monotonic()
-    missing = [token for token in tokens if token not in _rest_snapshots]
+    missing = {token: key for token, key in instruments.items() if token not in _rest_snapshots}
     if not missing or now - _rest_snapshot_at < REST_SNAPSHOT_TTL_SECONDS:
-        return {token: _rest_snapshots[token] for token in tokens if token in _rest_snapshots}
+        return {token: _rest_snapshots[token] for token in instruments if token in _rest_snapshots}
     try:
-        response = get_kite_provider().quotes(missing)
+        response = get_kite_provider().quotes(list(missing.values()))
     except KiteProviderError:
-        return {token: _rest_snapshots[token] for token in tokens if token in _rest_snapshots}
+        return {token: _rest_snapshots[token] for token in instruments if token in _rest_snapshots}
     received_at = datetime.now(UTC).isoformat()
-    for token in missing:
-        quote = response.get(str(token)) or response.get(token)
+    for token, quote_key in missing.items():
+        quote = response.get(quote_key)
         if quote:
             normalized = _normalize_quote({**quote, "received_at": received_at}, "REST_SNAPSHOT")
             if normalized:
@@ -85,12 +86,12 @@ def _get_quote(token: int, snapshots: dict[int, dict[str, Any]]) -> dict[str, An
     return snapshots.get(token)
 
 
-def _quote_price(token: int) -> float | None:
+def _quote_price(token: int, quote_key: str) -> float | None:
     cached = live_quotes.get(token)
     if cached and cached.get("last_price") is not None:
         return float(cached["last_price"])
     try:
-        quote = get_kite_provider().quote(token)
+        quote = get_kite_provider().quotes([quote_key]).get(quote_key, {})
     except KiteProviderError:
         return None
     price = quote.get("last_price")
@@ -133,7 +134,7 @@ def get_option_chain(
                 "AND tradingsymbol LIKE :prefix AND expiry >= :today "
                 "ORDER BY expiry"
             ),
-            {"prefix": f"{spec['option_prefix']}%", "today": date.today()},
+            {"prefix": f"{spec['option_prefix']}%", "today": datetime.now(ZoneInfo('Asia/Kolkata')).date()},
         ).scalars().all()
         if not expiries:
             raise RuntimeError(
@@ -154,7 +155,7 @@ def get_option_chain(
         ).mappings().all()
 
     index_token = int(index_row["instrument_token"])
-    spot = _quote_price(index_token)
+    spot = _quote_price(index_token, f"NSE:{spec['index_symbol']}")
     strikes = sorted({float(row["strike"]) for row in options if row["strike"] is not None})
     if not strikes:
         raise RuntimeError(f"No strikes found for {key} expiry {chosen_expiry.isoformat()}")
@@ -167,7 +168,8 @@ def get_option_chain(
     selected_rows = [row for row in options if float(row["strike"]) in selected_strikes]
     tokens = [int(row["instrument_token"]) for row in selected_rows]
     subscription = live_market_data.subscribe(tokens, mode="full")
-    snapshots = _get_rest_snapshots(tokens)
+    quote_keys = {int(row["instrument_token"]): f"NFO:{row['tradingsymbol']}" for row in selected_rows}
+    snapshots = _get_rest_snapshots(quote_keys)
 
     now = datetime.now(UTC)
     by_strike: dict[float, dict[str, Any]] = {
