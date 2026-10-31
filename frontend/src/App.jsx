@@ -965,7 +965,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
       <article className="panel price-vwap-panel historical-price-vwap-panel">
           <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
-              <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2><p className="settings-intro">Price, VWAP, signal markers, hover details, and entry-window markers for the selected saved date.</p></div><span className="data-count">{historicalIntradayRows.filter((row) => row.price != null || row.vwap != null).length} points</span></div>
+              <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><span className="data-count">{historicalIntradayRows.filter((row) => row.price != null || row.vwap != null).length} points</span></div>
               <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" />
             </div>
             <aside className="latest-candle-card">
