@@ -4,7 +4,6 @@ from typing import Any
 
 from kiteconnect import KiteConnect
 
-
 logger = logging.getLogger(__name__)
 
 
