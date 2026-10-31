@@ -158,7 +158,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const sessionEnd = 15 * 60 + 30;
   // Plot chronologically from 09:30 to 15:30 regardless of API response order.
   const usable = rows
-    .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer, enter: row.enter, optionSignal: row.optionSignal, vwapSignal: row.vwapSignal }))
+    .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer, strengthDiff: row.strengthDiff, enter: row.enter, optionSignal: row.optionSignal, vwapSignal: row.vwapSignal }))
     .filter((row) => row.minutes !== null && row.minutes >= sessionStart && row.minutes <= sessionEnd && (row.price !== null || row.vwap !== null))
     .sort((a, b) => a.minutes - b.minutes);
   const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
@@ -217,7 +217,22 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
-    <div className="series-summary price-vwap-summary">
+    <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
+      {[
+        ['Strength Diff', latest.strengthDiff == null ? '—' : formatHoverNumber(latest.strengthDiff)],
+        ['Price', formatHoverNumber(latest.price)],
+        ['VWAP', formatHoverNumber(latest.vwap)],
+        ['Buffer', latest.buffer == null ? '—' : formatHoverNumber(latest.buffer, 3) + '%'],
+        ['VWAP Signal', latest.vwapSignal || '—'],
+        ['Option Signal', latest.optionSignal || '—'],
+        ['PCR', formatHoverNumber(latest.pcr, 2)],
+      ].map(([label, value], index) => <React.Fragment key={label}>
+        {index > 0 && <span aria-hidden="true" style={{ color: '#38bdf8', fontWeight: 700, fontSize: '18px' }}>→</span>}
+        <span style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: '72px' }}>
+          <span style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>{label}</span>
+          <strong style={{ fontSize: '12px', color: label.includes('Signal') ? (value === 'BUY' ? '#22c55e' : value === 'SELL' ? '#f87171' : 'var(--text, #e5edf8)') : 'var(--text, #e5edf8)' }}>{value}</strong>
+        </span>
+      </React.Fragment>)}
     </div>
   </>;
 }
@@ -966,18 +981,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
               <div className="panel-header"><div><div className="eyebrow">HISTORICAL INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div></div>
               <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" />
             </div>
-            <aside className="latest-candle-card">
-              <div className="latest-record-grid" style={{ gridTemplateColumns: '1fr' }}>
-                <div><span>Strength Diff</span><strong>{historicalIntradayRows[0]?.strengthDiff == null ? '—' : number(historicalIntradayRows[0].strengthDiff)}</strong></div>
-                <div><span>Price</span><strong>{number(historicalIntradayRows[0]?.price)}</strong></div>
-                <div><span>VWAP</span><strong>{number(historicalIntradayRows[0]?.vwap)}</strong></div>
-                <div><span>Buffer (%)</span><strong>{historicalIntradayRows[0]?.buffer == null ? '—' : number(historicalIntradayRows[0].buffer, 3) + '%'}</strong></div>
-                <div><span>VWAP Signal</span><strong className="latest-signal">{historicalIntradayRows[0]?.vwapSignal || '—'}</strong></div>
-                <div><span>Option Signal</span><strong className="latest-signal">{historicalIntradayRows[0]?.optionSignal || '—'}</strong></div>
-                <div><span>PCR</span><strong>{number(historicalIntradayRows[0]?.pcr, 2)}</strong></div>
-              </div>
-              {!historicalIntradayRows.length && <div className="chart-empty">No historical intraday records returned for this date.</div>}
-            </aside>
+
           </div>
         </article>
       <section className="content-grid historical-dataset-grid">
@@ -1414,18 +1418,7 @@ export default function App() {
               <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><div className="chart-header-right"><div className="chart-enter-card"><span>Enter</span><strong className={'latest-enter ' + (calculatedRowsDescending[0]?.enter || 'wait').toLowerCase()}>{calculatedRowsDescending[0]?.enter || '—'}</strong></div></div></div>
               <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} />
             </div>
-            <aside className="latest-candle-card">
-              <div className="latest-record-grid" style={{ gridTemplateColumns: '1fr' }}>
-                <div><span>Strength Diff</span><strong className={calculatedRowsDescending[0]?.strengthDiff == null ? '' : calculatedRowsDescending[0].strengthDiff > 0 ? 'positive' : 'negative'}>{calculatedRowsDescending[0]?.strengthDiff == null ? '—' : number(calculatedRowsDescending[0].strengthDiff)}</strong></div>
-                <div><span>Price</span><strong>{number(calculatedRowsDescending[0]?.price)}</strong></div>
-                <div><span>VWAP</span><strong>{number(calculatedRowsDescending[0]?.vwap)}</strong></div>
-                <div><span>Buffer (%)</span><strong className={calculatedRowsDescending[0]?.buffer == null ? '' : calculatedRowsDescending[0].buffer > 0 ? 'positive' : 'negative'}>{calculatedRowsDescending[0]?.buffer == null ? '—' : number(calculatedRowsDescending[0].buffer, 3) + '%'}</strong></div>
-                <div><span>VWAP Signal</span><strong className="latest-signal">{calculatedRowsDescending[0]?.vwapSignal || '—'}</strong></div>
-                <div><span>Option Signal</span><strong className="latest-signal">{calculatedRowsDescending[0]?.optionSignal || '—'}</strong></div>
-                <div><span>PCR</span><strong>{number(calculatedRowsDescending[0]?.pcr, 2)}</strong></div>
-              </div>
-              {!calculatedRowsDescending.length && <div className="chart-empty">No intraday records returned.</div>}
-            </aside>
+
           </div>
         </article>
       </section>
