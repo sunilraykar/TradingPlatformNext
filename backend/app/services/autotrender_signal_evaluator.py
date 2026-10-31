@@ -1,8 +1,8 @@
 """Fail-closed AutoTrender signal evaluation for automatic PAPER entries.
 
-Direction comes from the signed put-minus-call strength percentage. VWAP Signal
-and Option Signal are confirmation filters: they must be valid and agree, but
-their labels do not determine bullish versus bearish direction.
+Strength difference is an absolute qualification filter. Trade direction comes
+from matching VWAP Signal and Option Signal values; PCR independently confirms
+that direction.
 """
 from __future__ import annotations
 
@@ -73,8 +73,6 @@ def evaluate_signal(
     total = call + put
     call_pct = call / total * 100
     put_pct = put / total * 100
-    # Positive Call-minus-Put difference is bullish; negative is bearish.
-    # This direction convention is shared with the frontend and test fixtures.
     signed_strength_difference = call_pct - put_pct
     strength_difference = abs(signed_strength_difference)
     strength_threshold = abs(call_put_strength_diff)
@@ -93,15 +91,15 @@ def evaluate_signal(
     if strength_difference < strength_threshold or at_strength_threshold:
         return Evaluation(False, None, "STRENGTH_DIFFERENCE_NOT_ABOVE_THRESHOLD", strength_difference, vwap_difference)
     if vwap_difference > abs(vwap_price_difference_buffer):
-        return Evaluation(False, None, "VWAP_GAP_NOT_BELOW_THRESHOLD", strength_difference, vwap_difference)
+        return Evaluation(False, None, "VWAP_GAP_ABOVE_THRESHOLD", strength_difference, vwap_difference)
 
+    # Direction is determined only by the two matching signal fields.
+    direction = vwap_signal
     pcr = _number(row.get("pcr", row.get("PCR")))
     if pcr is None:
         return Evaluation(False, None, "INVALID_OR_MISSING_PCR", strength_difference, vwap_difference)
-    if signed_strength_difference > 0 and pcr <= call_pcr:
+    if direction == "BUY" and pcr <= call_pcr:
         return Evaluation(False, None, "PCR_DIRECTION_CONDITION_FAILED", strength_difference, vwap_difference)
-    if signed_strength_difference < 0 and pcr >= put_pcr:
+    if direction == "SELL" and pcr >= put_pcr:
         return Evaluation(False, None, "PCR_DIRECTION_CONDITION_FAILED", strength_difference, vwap_difference)
-
-    direction = "BUY" if signed_strength_difference > 0 else "SELL"
     return Evaluation(True, direction, "ELIGIBLE", strength_difference, vwap_difference)
