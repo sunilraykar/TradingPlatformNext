@@ -147,7 +147,7 @@ def _read_settings() -> dict[str, Any]:
         "callPutStrengthDiff": 10.0,
         "callPcr": 1.0,
         "putPcr": 1.0,
-        "vwapPriceDifferenceBuffer": 0.3,
+        "vwapPriceDifferenceBuffer": 0.1,
         "autoTrenderEntryStartTime": "10:00",
         "autoTrenderEntryEndTime": "15:25",
         "autoTrenderMaxSignalAgeSeconds": DEFAULT_MAX_SIGNAL_AGE_SECONDS,
