@@ -1173,7 +1173,44 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
   };
   const isSymbol = (key) => normalizeColumn(key) === 'tradingsymbol';
   const heading = (key) => ({ time: 'Time', call: 'Call', put: 'Put', diff: 'Diff', pcr: 'PCR', price: 'Price', vwap: 'VWAP', vwapSignal: 'VWAP Signal', optionSignal: 'Option Signal', callStrength: 'Call Strength (%)', putStrength: 'Put Strength (%)', strengthDiff: 'Call-Put Strength Diff', vwapPriceBufferPct: 'Price − VWAP / Buffer (%)', enter: 'Enter', tradingsymbol: 'Instrument', quantity: 'Qty.', average_price: 'Avg. cost', last_price: 'LTP', pnl: 'P&L', day_change_percentage: 'Day chg.', net_change_percentage: 'Net chg.', invested_amount: 'Invested', current_amount: 'Cur. val' })[key] || (isSymbol(key) ? 'Symbol' : key.replaceAll('_', ' '));
-  return <div className="table-scroll kite-data-scroll"><table className={`kite-data-table ${holdingsMode ? 'holdings-data-table' : ''}`}><thead><tr>{columns.map((key) => <th key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }}><button type="button" onClick={() => toggleSort(key)} aria-label={`Sort by ${heading(key)}`} style={{ all: 'unset', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: isSymbol(key) ? 'flex-start' : 'center', gap: 5, width: '100%' }}>{heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : '↕'}</span></button></th>)}</tr></thead><tbody>{sortedRows.map((row, i) => { const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0); return <tr className={holdingsMode ? (pnl > 0 ? 'holding-gain' : pnl < 0 ? 'holding-loss' : 'holding-neutral') : ''} key={row.order_id || row.tradingsymbol || i} onClick={onRowSelect ? () => onRowSelect(row) : undefined} style={onRowSelect ? { cursor: 'pointer' } : undefined}>{columns.map((key) => <td key={key} style={{ textAlign: isSymbol(key) ? 'left' : 'center' }} className={holdingsMode && ['pnl','profit_and_loss','profit_loss'].includes(key.toLowerCase()) ? (pnl > 0 ? 'holding-pnl-positive' : pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero') : holdingsMode && ['day_change','day_change_percentage','daychange','daychangepercentage','net_change_percentage'].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? 'cell-positive' : Number(row[key] ?? 0) < 0 ? 'cell-negative' : '') : ''}>{renderCell(row[key], key, row)}</td>)}</tr>; })}</tbody></table></div>;
+
+  return <>
+    {portfolioOrderMessage && <div className="portfolio-order-message">{portfolioOrderMessage}</div>}
+    {portfolioOrderError && !portfolioOrder && <div className="portfolio-error">{portfolioOrderError}</div>}
+    <div className="table-scroll kite-data-scroll">
+      <table className={"kite-data-table " + (holdingsMode ? "holdings-data-table" : "")}>
+        <thead><tr>
+          {columns.map((key) => <th key={key} style={{ textAlign: holdingsMode || !isSymbol(key) ? "center" : "left" }}>
+            <button type="button" onClick={() => toggleSort(key)} aria-label={"Sort by " + heading(key)} style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: holdingsMode || !isSymbol(key) ? "center" : "flex-start", gap: 5, width: "100%" }}>
+              {heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === "asc" ? "↑" : "↓") : "↕"}</span>
+            </button>
+          </th>)}
+          {holdingsMode && <th className="holdings-actions-heading">Actions</th>}
+        </tr></thead>
+        <tbody>{sortedRows.map((row, i) => {
+          const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
+          return <tr className={holdingsMode ? (pnl > 0 ? "holding-gain" : pnl < 0 ? "holding-loss" : "holding-neutral") : ""} key={row.order_id || row.tradingsymbol || i}>
+            {columns.map((key) => <td key={key} style={{ textAlign: holdingsMode || !isSymbol(key) ? "center" : "left" }} className={holdingsMode && ["pnl","profit_and_loss","profit_loss"].includes(key.toLowerCase()) ? (pnl > 0 ? "holding-pnl-positive" : pnl < 0 ? "holding-pnl-negative" : "holding-pnl-zero") : holdingsMode && ["day_change","day_change_percentage","daychange","daychangepercentage","net_change_percentage"].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? "cell-positive" : Number(row[key] ?? 0) < 0 ? "cell-negative" : "") : ""}>{renderCell(row[key], key, row)}</td>)}
+            {holdingsMode && <td className="holdings-actions-cell"><button type="button" className="holding-buy-button" onClick={() => openPortfolioOrder(row, "BUY")}>Buy</button><button type="button" className="holding-sell-button" onClick={() => openPortfolioOrder(row, "SELL")}>Sell</button></td>}
+          </tr>;
+        })}</tbody>
+      </table>
+    </div>
+    {portfolioOrder && <div className="portfolio-order-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !portfolioOrderLoading) setPortfolioOrder(null); }}>
+      <section className="portfolio-order-modal" role="dialog" aria-modal="true" aria-labelledby="portfolio-order-title">
+        <header className="portfolio-order-modal-header"><div><h3 id="portfolio-order-title">{portfolioOrder.side} {portfolioOrder.symbol}</h3><span>{portfolioOrder.exchange} · Place Portfolio Order</span></div><button type="button" className="portfolio-order-modal-close" disabled={portfolioOrderLoading} onClick={() => setPortfolioOrder(null)} aria-label="Close">×</button></header>
+        <div className="portfolio-order-form">
+          <label>Transaction<select value={portfolioOrder.side} onChange={(e) => setPortfolioOrder((v) => ({ ...v, side: e.target.value }))}><option value="BUY">BUY</option><option value="SELL">SELL</option></select></label>
+          <label>Quantity<input type="number" min="1" step="1" value={portfolioOrder.quantity} onChange={(e) => setPortfolioOrder((v) => ({ ...v, quantity: e.target.value }))}/></label>
+          <label>Product<select value={portfolioOrder.product} onChange={(e) => setPortfolioOrder((v) => ({ ...v, product: e.target.value }))}><option value="CNC">CNC</option><option value="MIS">MIS</option></select></label>
+          <label>Order Type<select value={portfolioOrder.orderType} onChange={(e) => setPortfolioOrder((v) => ({ ...v, orderType: e.target.value }))}><option value="LIMIT">LIMIT</option><option value="MARKET">MARKET</option></select></label>
+          {portfolioOrder.orderType === "LIMIT" && <label>Limit Price (₹)<input type="number" min="0.01" step="0.05" value={portfolioOrder.price} onChange={(e) => setPortfolioOrder((v) => ({ ...v, price: e.target.value }))}/></label>}
+        </div>
+        {portfolioOrderError && <div className="portfolio-error">{portfolioOrderError}</div>}
+        <div className="portfolio-order-modal-actions"><button type="button" className="portfolio-order-cancel-button" disabled={portfolioOrderLoading} onClick={() => setPortfolioOrder(null)}>Cancel</button><button type="button" className={portfolioOrder.side === "BUY" ? "portfolio-order-confirm-buy" : "portfolio-order-confirm-sell"} disabled={portfolioOrderLoading} onClick={submitPortfolioOrder}>{portfolioOrderLoading ? "Submitting…" : "Place Order"}</button></div>
+      </section>
+    </div>}
+  </>;
 }
 export default function App() {
   const [applicationTab, setApplicationTab] = useState('autotrender');
@@ -1662,7 +1699,7 @@ export default function App() {
                   return <div className="holdings-concentration-row" key={symbolOf(row)}><span>{symbolOf(row)}</span><div><i style={{ width: `${share}%` }} /></div><strong>{share.toFixed(1)}%</strong></div>;
                 })}</div>
               </details>
-              <KiteDataTable rows={sortedHoldings} holdingsMode hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
+              <KiteDataTable rows={sortedHoldings} holdingsMode onActionComplete={loadKiteTab} hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
             </div>;
           })()}
           {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
