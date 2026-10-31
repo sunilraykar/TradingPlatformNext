@@ -113,14 +113,13 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   const refresh = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const params = new URLSearchParams();
-      if (mode !== 'ALL') params.set('mode', mode);
-      if (status !== 'ALL') params.set('status', status);
-      const result = await request('/trades' + (params.size ? `?${params}` : ''));
+      // Always load the complete canonical trade history. Mode, status and
+      // date are presentation filters and must not truncate the underlying data.
+      const result = await request('/trades');
       setTrades(result.trades || []); setTerminal(result.terminal || {});
     } catch (e) { setError(e.message || 'Unable to load canonical trade records.'); }
     finally { setLoading(false); }
-  }, [mode, status]);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -219,23 +218,31 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   };
 
   const sources = [...new Set(trades.map((trade) => trade.source).filter(Boolean))].sort();
+  const indiaDateKey = (value) => {
+    const date = value instanceof Date ? value : new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(date);
+  };
+  const todayKey = indiaDateKey(new Date());
+  const todayUtc = new Date(`${todayKey}T00:00:00Z`);
+  const mondayUtc = new Date(todayUtc);
+  mondayUtc.setUTCDate(todayUtc.getUTCDate() - ((todayUtc.getUTCDay() + 6) % 7));
+  const weekStartKey = mondayUtc.toISOString().slice(0, 10);
+  const monthStartKey = `${todayKey.slice(0, 7)}-01`;
   const tradesMatchingBaseFilters = trades.filter((trade) => {
-    const created = new Date(trade.created_at || trade.updated_at || 0);
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const startOfWeek = new Date(startOfToday);
-    startOfWeek.setDate(startOfToday.getDate() - ((startOfToday.getDay() + 6) % 7));
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const createdKey = indiaDateKey(trade.created_at || trade.updated_at);
     const normalizedSource = String(trade.source || '').toUpperCase();
     const sourceMatches = sourceFilter === 'ALL' || normalizedSource === sourceFilter ||
       (sourceFilter === 'AUTOTRENDER' && normalizedSource.includes('AUTO'));
     const statusValue = String(trade.status || '').toUpperCase();
     const statusMatches = status === 'ALL' || (status === 'OPEN' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(statusValue)) || statusValue === status;
     const dateMatches = dateFilter === 'ALL' ||
-      (dateFilter === 'TODAY' && created >= startOfToday) ||
-      (dateFilter === 'WEEK' && created >= startOfWeek) ||
-      (dateFilter === 'MONTH' && created >= startOfMonth) ||
-      (dateFilter === 'CUSTOM' && !!tradeDate && String(trade.created_at || '').slice(0, 10) === tradeDate);
+      (dateFilter === 'TODAY' && createdKey === todayKey) ||
+      (dateFilter === 'WEEK' && createdKey >= weekStartKey && createdKey <= todayKey) ||
+      (dateFilter === 'MONTH' && createdKey >= monthStartKey && createdKey <= todayKey) ||
+      (dateFilter === 'CUSTOM' && !!tradeDate && createdKey === tradeDate);
     return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches && dateMatches;
   });
   const underlyings = [...new Set(tradesMatchingBaseFilters.map((trade) => String(trade.underlying || '').trim()).filter(Boolean))].sort();
