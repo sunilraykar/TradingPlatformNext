@@ -757,7 +757,7 @@
 .trade-date-filter-panel .trade-filter-button{padding:7px 10px;white-space:nowrap}
 .trade-date-filter-panel .trade-sort-select{min-width:150px}
 .trade-date-filter-panel .trade-terminal-count{margin-left:auto;padding:0;white-space:nowrap}
-@media(max-width:1500px){
+@media(max-width:1100px){
   .trade-date-filter-panel{align-items:flex-start;flex-wrap:wrap;gap:10px 18px}
   .trade-date-filter-panel .trade-date-navigator{border-right:0;padding:0}
   .trade-date-filter-panel .trade-terminal-filters{flex-wrap:wrap}
