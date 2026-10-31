@@ -80,7 +80,7 @@ def test_nested_autotrend_values_and_formatted_numbers_are_supported():
         optionSignal={"type": "BUY"},
     ))
     assert not result.eligible  # price/VWAP gap exceeds the 0.3% threshold
-    assert result.reason == "VWAP_GAP_NOT_BELOW_THRESHOLD"
+    assert result.reason == "VWAP_GAP_ABOVE_THRESHOLD"
 
 
 
