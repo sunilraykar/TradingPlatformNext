@@ -1163,6 +1163,14 @@ export default function App() {
   const [liveEnterFilter, setLiveEnterFilter] = useState('ALL');
   const [selectedLiveIntradayTime, setSelectedLiveIntradayTime] = useState(null);
 
+  // Show the latest intraday row by default. A table-row drilldown is temporary
+  // and automatically returns to the latest row after 30 seconds.
+  useEffect(() => {
+    if (!selectedLiveIntradayTime) return undefined;
+    const timeoutId = setTimeout(() => setSelectedLiveIntradayTime(null), 30000);
+    return () => clearTimeout(timeoutId);
+  }, [selectedLiveIntradayTime]);
+
   const refresh = useCallback(async () => {
     // Prevent overlapping 1-second polls from returning out of order and
     // overwriting the currently selected index with an older index response.
