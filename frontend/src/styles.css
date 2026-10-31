@@ -572,3 +572,46 @@
 .holdings-concentration-row>div i{display:block;height:100%;border-radius:8px;background:var(--cyan)}
 .holdings-concentration-row>strong{text-align:right;font:600 10px 'DM Mono',monospace}
 @media(max-width:760px){.holdings-tools{align-items:stretch;flex-direction:column}.holdings-tools input{width:100%;box-sizing:border-box}.holdings-sort-actions{overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px}.holdings-sort-actions button{white-space:nowrap}.holdings-concentration-row{grid-template-columns:90px minmax(60px,1fr) 42px}}
+
+
+/* Kite dashboard compact layout: six account tiles and two low-height segment cards. */
+.kite-dashboard-panel .kite-panel-header{padding:18px 19px 10px}
+.kite-dashboard-panel .kite-panel-header h2{font-size:19px;margin:0}
+.kite-dashboard-content{padding:0 18px 16px}
+.kite-account-summary{grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin:0 0 14px}
+.kite-account-stat,.kite-account-balance{min-height:76px;padding:12px 13px;gap:7px;border-radius:9px;background:linear-gradient(145deg,#131f30,#101a29)}
+.kite-account-stat span,.kite-account-balance span{font-size:9px;letter-spacing:.65px;white-space:nowrap}
+.kite-account-stat strong{font-size:clamp(13px,1.15vw,17px);white-space:nowrap}
+.kite-account-balance strong{font-size:clamp(13px,1.15vw,17px)}
+.kite-dashboard-section-heading{margin:2px 0 9px}
+.kite-dashboard-section-heading h3{font-size:13px}
+.kite-segment-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.kite-segment-card{display:grid;grid-template-columns:minmax(115px,.85fr) minmax(0,2.15fr);align-items:center;gap:12px;min-height:88px;padding:12px 14px;border-radius:9px}
+.kite-segment-heading{justify-content:flex-start;flex-wrap:wrap;gap:7px;margin:0;min-width:0}
+.kite-segment-heading h3{font-size:13px}
+.kite-segment-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;align-items:center;gap:10px;min-width:0}
+.kite-segment-values>div{display:flex;flex-direction:column;gap:5px;min-width:0;padding-left:12px;border-left:1px solid var(--line)}
+.kite-segment-values>div span{font-size:9px;color:var(--muted)}
+.kite-segment-values>div strong{font:600 12px 'DM Mono',monospace;white-space:nowrap}
+.kite-segment-values .kite-margin-details{margin:0;padding:0 0 0 10px;border:0;white-space:nowrap}
+.kite-segment-values .kite-margin-details summary{font-size:10px}
+.kite-segment-values .kite-margin-details summary:after{content:'›';margin-left:5px;float:none}
+.kite-segment-values .kite-margin-details[open] summary:after{content:'⌄'}
+.kite-segment-values .kite-margin-columns{position:absolute;z-index:5;min-width:320px;margin:8px 0 0;padding:12px;border:1px solid var(--line);border-radius:8px;background:#101a29;box-shadow:0 12px 28px #0008}
+@media(max-width:1100px){
+  .kite-account-summary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kite-segment-card{grid-template-columns:1fr;gap:10px}
+  .kite-segment-values{grid-template-columns:repeat(3,minmax(0,1fr)) auto}
+}
+@media(max-width:650px){
+  .kite-account-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .kite-account-stat,.kite-account-balance{min-height:68px;padding:10px}
+  .kite-account-stat strong,.kite-account-balance strong{font-size:13px}
+  .kite-segment-grid{grid-template-columns:1fr}
+  .kite-segment-card{grid-template-columns:minmax(90px,.8fr) minmax(0,2fr);gap:8px;padding:11px}
+  .kite-segment-values{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+  .kite-segment-values>div{padding-left:6px}
+  .kite-segment-values>div strong{font-size:10px}
+  .kite-segment-values .kite-margin-details{grid-column:1/-1;padding:6px 0 0 6px}
+  .kite-segment-values .kite-margin-columns{position:static;min-width:0;grid-column:1/-1}
+}
