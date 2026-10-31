@@ -806,7 +806,6 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
   const [selected, setSelected] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState('FINNIFTY');
   const [showIntradayDetails, setShowIntradayDetails] = useState(false);
-  const [liveEnterFilter, setLiveEnterFilter] = useState('ALL');
   const [enterFilter, setEnterFilter] = useState('ALL');
   const [loading, setLoading] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -1131,6 +1130,7 @@ export default function App() {
   const [contractError, setContractError] = useState('');
   const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.1, autoTrenderEntryStartTime: '10:00', autoTrenderEntryEndTime: '15:25' });
   const [showIntradayDetails, setShowIntradayDetails] = useState(false);
+  const [liveEnterFilter, setLiveEnterFilter] = useState('ALL');
 
   const refresh = useCallback(async () => {
     // Prevent overlapping 1-second polls from returning out of order and
