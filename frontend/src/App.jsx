@@ -1488,9 +1488,9 @@ export default function App() {
           )}
         </nav>
         <section className={`kite-data-panel panel ${kiteTab === 'Dashboard' ? 'kite-dashboard-panel' : ''}`}>
-          <div className="panel-header">
-            <div><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || (kiteTab === 'Dashboard' ? 'Kite Dashboard' : kiteTab)}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || (kiteTab === 'Dashboard' ? 'Live account snapshot and margin overview' : 'Fetching data from Kite API…')}</div></div>
-            <button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button>
+          <div className="panel-header kite-panel-header">
+            <div>{kiteTab === 'Dashboard' ? <h2>Dashboard</h2> : <><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></>}</div>
+            {kiteTab !== 'Dashboard' && <button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button>}
           </div>
           {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and backend connection.</small></div>}
           {kiteTab === 'Dashboard' && kiteLoading && !kiteData && <div className="kite-data-empty">Loading account summary and margins…</div>}
@@ -1508,20 +1508,14 @@ export default function App() {
             const detailRows = (value) => value && typeof value === 'object' ? Object.entries(value).filter(([, amount]) => amount !== null && amount !== undefined && typeof amount !== 'object') : [];
             return <div className="kite-dashboard-content">
               <div className="kite-account-summary">
-                <div className="kite-account-balance">
-                  <span>AVAILABLE BALANCE · EQUITY</span>
-                  <strong>{money(availableBalance)}</strong>
-                  <small>Live balance</small>
-                </div>
+                <div className="kite-account-stat kite-account-balance"><span>AVAILABLE BALANCE</span><strong>{money(availableBalance)}</strong></div>
                 <div className="kite-account-stat"><span>NET EQUITY</span><strong>{money(equity.net)}</strong></div>
                 <div className="kite-account-stat"><span>ORDERS TODAY</span><strong>{dashboard.ordersToday}</strong></div>
                 <div className="kite-account-stat"><span>NET POSITIONS</span><strong>{dashboard.netPositions}</strong></div>
+                <div className="kite-account-stat"><span>DAY POSITIONS</span><strong>{dashboard.dayPositions}</strong></div>
+                <div className="kite-account-stat"><span>HOLDINGS</span><strong>{dashboard.holdingsCount}</strong></div>
               </div>
-              <div className="kite-dashboard-activity">
-                <div><span>DAY POSITIONS</span><strong>{dashboard.dayPositions}</strong></div>
-                <div><span>HOLDINGS</span><strong>{dashboard.holdingsCount}</strong></div>
-              </div>
-              <div className="kite-dashboard-section-heading"><div><h3>Segment margins</h3><p>Available and utilised funds by trading segment</p></div></div>
+              <div className="kite-dashboard-section-heading"><div><h3>Segment margins</h3></div></div>
               <div className="kite-segment-grid">
                 {segments.map(([segment, values]) => {
                   const available = values?.available || {};
@@ -1530,18 +1524,18 @@ export default function App() {
                   const utilisedItems = detailRows(utilised);
                   return <article className="kite-segment-card" key={segment}>
                     <div className="kite-segment-heading"><h3>{label(segment)}</h3><span className={values?.enabled ? 'kite-enabled' : 'kite-disabled'}>{values?.enabled ? 'Enabled' : 'Disabled'}</span></div>
-                    <div className="kite-segment-primary">
+                    <div className="kite-segment-values">
                       <div><span>Net</span><strong>{money(values?.net)}</strong></div>
                       <div><span>Available</span><strong>{money(available.live_balance ?? values?.net)}</strong></div>
+                      <div><span>Utilised</span><strong>{money(utilised.debits ?? 0)}</strong></div>
+                      <details className="kite-margin-details">
+                        <summary>View</summary>
+                        <div className="kite-margin-columns">
+                          <div><h4>Available components</h4>{availableItems.length ? availableItems.map(([key, amount]) => <div className="kite-margin-row" key={key}><span>{label(key)}</span><strong>{money(amount)}</strong></div>) : <p className="kite-margin-empty">No available-margin components returned.</p>}</div>
+                          <div><h4>Utilised components</h4>{utilisedItems.length ? utilisedItems.map(([key, amount]) => <div className="kite-margin-row" key={key}><span>{label(key)}</span><strong>{money(amount)}</strong></div>) : <p className="kite-margin-empty">No utilised-margin components returned.</p>}</div>
+                        </div>
+                      </details>
                     </div>
-                    <div className="kite-segment-secondary"><span>Utilised</span><strong>{money(utilised.debits ?? 0)}</strong></div>
-                    <details className="kite-margin-details">
-                      <summary>View margin breakdown</summary>
-                      <div className="kite-margin-columns">
-                        <div><h4>Available components</h4>{availableItems.length ? availableItems.map(([key, amount]) => <div className="kite-margin-row" key={key}><span>{label(key)}</span><strong>{money(amount)}</strong></div>) : <p className="kite-margin-empty">No available-margin components returned.</p>}</div>
-                        <div><h4>Utilised components</h4>{utilisedItems.length ? utilisedItems.map(([key, amount]) => <div className="kite-margin-row" key={key}><span>{label(key)}</span><strong>{money(amount)}</strong></div>) : <p className="kite-margin-empty">No utilised-margin components returned.</p>}</div>
-                      </div>
-                    </details>
                   </article>;
                 })}
                 {!segments.length && <div className="kite-data-empty">No segment margin data returned.</div>}
