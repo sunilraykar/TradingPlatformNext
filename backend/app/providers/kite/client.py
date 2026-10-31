@@ -1,11 +1,15 @@
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from kiteconnect import KiteConnect
 
 
+logger = logging.getLogger(__name__)
+
+
 class KiteProviderError(RuntimeError):
-    """Safe provider-facing error that avoids exposing secrets."""
+    """Provider-facing error with a safe, actionable message."""
 
 
 @dataclass(frozen=True)
@@ -77,7 +81,13 @@ class KiteProvider:
         try:
             return getattr(self._client, operation)(*args, **kwargs)
         except Exception as exc:
-            raise KiteProviderError(f"Kite {operation.replace('_', ' ')} request failed") from exc
+            # Keep the full traceback in backend logs and surface Kite's rejection
+            # message to the UI. Never log request headers, API keys or access tokens.
+            logger.exception("Kite %s request failed", operation)
+            detail = str(exc).strip() or exc.__class__.__name__
+            raise KiteProviderError(
+                f"Kite {operation.replace('_', ' ')} request failed: {detail}"
+            ) from exc
 
     def margins(self, segment: str | None = None) -> dict[str, Any]:
         return self._account_call("margins", segment) if segment else self._account_call("margins")
