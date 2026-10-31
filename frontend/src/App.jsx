@@ -1417,7 +1417,7 @@ export default function App() {
 
       <section className="price-vwap-section">
         <article className="panel price-vwap-panel">
-          <div className="price-vwap-layout">
+          <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
             <div className="price-vwap-graph-column">
               <div className="panel-header"><div><div className="eyebrow">INTRADAY PRICE ACTION</div><h2>Future Price &amp; VWAP</h2></div><div className="chart-header-right"><div className="chart-enter-card"><span>Enter</span><strong className={'latest-enter ' + (calculatedRowsDescending[0]?.enter || 'wait').toLowerCase()}>{calculatedRowsDescending[0]?.enter || '—'}</strong></div></div></div>
               <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} />
