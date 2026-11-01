@@ -146,3 +146,24 @@ def test_reset_stops_ticker_clears_subscriptions_and_quote_cache(monkeypatch):
     assert live_market_data.status()["subscribed_tokens"] == []
     assert live_market_data.live_quotes.get(123) is None
     assert live_market_data.status()["state"] == "stopped"
+
+
+def test_invalidate_session_closes_socket_and_preserves_desired_subscriptions():
+    class FakeTicker:
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    ticker = FakeTicker()
+    live_market_data._ticker = ticker
+    live_market_data._state = "connected"
+    live_market_data._subscriptions.update({101: "quote", 202: "ltp"})
+
+    result = live_market_data.invalidate_session()
+
+    assert ticker.closed is True
+    assert live_market_data._ticker is None
+    assert result["state"] == "login_required"
+    assert result["connected"] is False
+    assert result["subscribed_tokens"] == [101, 202]
