@@ -1564,7 +1564,7 @@ export default function App() {
               <td className={row.strengthDiff === null ? '' : row.strengthDiff > 0 ? 'cell-positive' : row.strengthDiff < 0 ? 'cell-negative' : ''}>{row.strengthDiff === null ? '—' : number(row.strengthDiff)}</td>
               <td className={row.price === null || row.vwap === null ? '' : row.price - row.vwap > 0 ? 'cell-positive' : row.price - row.vwap < 0 ? 'cell-negative' : ''}>{row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)} ({row.buffer === null ? '—' : number(row.buffer, 3) + '%'})</td>
               </tr>)}
-            {!filteredLiveIntradayRows.length && <tr><td colSpan={showIntradayDetails ? 14 : 10} className="empty-cell">Please wait for Market Data to load till 9:30AM</td></tr>}</tbody>
+            {!filteredLiveIntradayRows.length && <tr><td colSpan={showIntradayDetails ? 14 : 10} className="empty-cell">Waiting for market data. Updates begin at 9:30 AM.</td></tr>}</tbody>
           </table></div>
         </article>
 
