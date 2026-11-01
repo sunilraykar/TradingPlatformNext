@@ -1203,7 +1203,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
         </tr></thead>
         <tbody>{sortedRows.map((row, i) => {
           const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
-          return <tr className={holdingsMode ? (pnl > 0 ? "holding-gain" : pnl < 0 ? "holding-loss" : "holding-neutral") : ""} key={row.order_id || row.tradingsymbol || i}>
+          return <tr className={holdingsMode ? (pnl > 0 ? "holding-gain" : pnl < 0 ? "holding-loss" : "holding-neutral") : ""} key={row.order_id || row.tradingsymbol || i} onClick={onRowSelect ? () => onRowSelect(row) : undefined} style={onRowSelect ? { cursor: 'pointer' } : undefined}>
             {columns.map((key) => <td key={key} style={{ textAlign: holdingsMode || !isSymbol(key) ? "center" : "left" }} className={holdingsMode && ["pnl","profit_and_loss","profit_loss"].includes(key.toLowerCase()) ? (pnl > 0 ? "holding-pnl-positive" : pnl < 0 ? "holding-pnl-negative" : "holding-pnl-zero") : holdingsMode && ["day_change","day_change_percentage","daychange","daychangepercentage","net_change_percentage"].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? "cell-positive" : Number(row[key] ?? 0) < 0 ? "cell-negative" : "") : normalizeColumn(key) === "strengthdiff" ? (numericValue(row[key]) < 0 ? "cell-positive" : numericValue(row[key]) > 0 ? "cell-negative" : "") : ""}>{renderCell(row[key], key, row)}</td>)}
             {holdingsMode && <td className="holdings-actions-cell"><button type="button" className="holding-buy-button" onClick={() => openPortfolioOrder(row, "BUY")}>Buy</button><button type="button" className="holding-sell-button" onClick={() => openPortfolioOrder(row, "SELL")}>Sell</button></td>}
           </tr>;
