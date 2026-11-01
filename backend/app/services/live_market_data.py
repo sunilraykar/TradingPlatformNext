@@ -70,6 +70,20 @@ def _active_token() -> str:
     return get_active_kite_token()
 
 
+def invalidate_session(reason: str = "login_required") -> dict[str, Any]:
+    """Detach and close a stale authenticated socket while retaining desired subscriptions."""
+    global _ticker, _state
+    with _lock:
+        ticker, _ticker = _ticker, None
+        _state = "login_required" if reason == "login_required" else reason
+    if ticker is not None:
+        try:
+            ticker.close()
+        except (RuntimeError, OSError):
+            logger.exception("Failed to close invalid Kite ticker")
+    return status()
+
+
 def stop() -> None:
     global _ticker, _state
     with _lock:
