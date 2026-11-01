@@ -898,3 +898,13 @@
 .trade-terminal-overview .trade-terminal-metrics .metric strong.holding-pnl-positive{color:#55dfa8 !important}
 .trade-terminal-overview .trade-terminal-metrics .metric strong.holding-pnl-negative{color:#ff8793 !important}
 .trade-terminal-overview .trade-terminal-metrics .metric strong.holding-pnl-zero{color:#b7c3d5 !important}
+
+/* Strength dominance colors in both AutoTrender live and historical tables. */
+.calculated-table tbody td.cell-positive,
+.calculated-table tbody tr:hover td.cell-positive,
+.kite-data-table tbody td.cell-positive,
+.kite-data-table tbody tr:hover td.cell-positive { color: var(--green) !important; }
+.calculated-table tbody td.cell-negative,
+.calculated-table tbody tr:hover td.cell-negative,
+.kite-data-table tbody td.cell-negative,
+.kite-data-table tbody tr:hover td.cell-negative { color: var(--red) !important; }
