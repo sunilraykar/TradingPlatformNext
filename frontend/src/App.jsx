@@ -1239,6 +1239,7 @@ export default function App() {
   const [holdingsSearch, setHoldingsSearch] = useState('');
   const [holdingsSort, setHoldingsSort] = useState('SYMBOL');
   const [websocketStatus, setWebsocketStatus] = useState(null);
+  const kiteAuthInvalidRef = useRef(false);
   const [index, setIndex] = useState('NIFTY');
   const refreshInFlight = useRef(false);
   const kiteRefreshInFlight = useRef(false);
@@ -1334,8 +1335,14 @@ export default function App() {
   }, [refresh]);
 
   const refreshWebsocketStatus = useCallback(async () => {
-    try { setWebsocketStatus(await api('/kite/market-data/status')); }
-    catch (e) { setWebsocketStatus({ connected: false, state: 'unavailable', error: e.message }); }
+    try {
+      const status = await api('/kite/market-data/status');
+      setWebsocketStatus(kiteAuthInvalidRef.current
+        ? { ...status, connected: false, state: 'login_required', reason: 'Kite API authentication failed. Please log in again.' }
+        : status);
+    } catch (e) {
+      setWebsocketStatus({ connected: false, state: 'unavailable', error: e.message });
+    }
   }, []);
   useEffect(() => { refreshWebsocketStatus(); const timer = window.setInterval(refreshWebsocketStatus, 3000); return () => window.clearInterval(timer); }, [refreshWebsocketStatus]);
 
@@ -1378,14 +1385,26 @@ export default function App() {
           rows: [],
         });
       }
+      kiteAuthInvalidRef.current = false;
+      refreshWebsocketStatus();
     } catch (e) {
       setKiteData(null);
-      setKiteError(e.message || 'Unable to load Kite data. Check Kite login and backend.');
+      const message = e.message || 'Unable to load Kite data. Check Kite login and backend.';
+      setKiteError(message);
+      if (/incorrect.*api[_ ]?key|access[_ ]?token|token.*(expired|invalid)|unauthori[sz]ed/i.test(message)) {
+        kiteAuthInvalidRef.current = true;
+        setWebsocketStatus((current) => ({
+          ...(current || {}),
+          connected: false,
+          state: 'login_required',
+          reason: 'Kite rejected the API credentials. Please log in again.',
+        }));
+      }
     } finally {
       setKiteLoading(false);
       kiteRefreshInFlight.current = false;
     }
-  }, [applicationTab, kiteTab]);
+  }, [applicationTab, kiteTab, refreshWebsocketStatus]);
   useEffect(() => {
     loadKiteTab();
     if (applicationTab !== 'kite' || kiteTab !== 'Option Chain') return undefined;
@@ -1511,7 +1530,7 @@ export default function App() {
       </nav>
         <div className="topbar-right">
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
-          <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={'Kite WebSocket: ' + (websocketStatus?.state || 'checking')}><i />WS {websocketStatus?.connected ? 'Connected' : (websocketStatus?.state || 'Checking')}</span>
+          <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={websocketStatus?.reason || ('Kite WebSocket: ' + (websocketStatus?.state || 'checking'))}><i />WS {websocketStatus?.connected ? 'Connected' : websocketStatus?.state === 'login_required' ? 'Disconnected' : (websocketStatus?.state || 'Checking')}</span>
         </div>
       </header>
 
