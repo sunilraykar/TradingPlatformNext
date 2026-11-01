@@ -893,3 +893,8 @@
   .trade-terminal-overview .trade-terminal-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
   .trade-terminal-overview .trade-terminal-actions{flex-wrap:wrap}
 }
+
+/* Trade Terminal summary P&L colors */
+.trade-terminal-overview .trade-terminal-metrics .metric strong.holding-pnl-positive{color:#55dfa8 !important}
+.trade-terminal-overview .trade-terminal-metrics .metric strong.holding-pnl-negative{color:#ff8793 !important}
+.trade-terminal-overview .trade-terminal-metrics .metric strong.holding-pnl-zero{color:#b7c3d5 !important}
