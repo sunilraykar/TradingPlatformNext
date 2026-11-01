@@ -908,3 +908,9 @@
 .calculated-table tbody tr:hover td.cell-negative,
 .kite-data-table tbody td.cell-negative,
 .kite-data-table tbody tr:hover td.cell-negative { color: var(--red) !important; }
+
+/* Kite session recovery controls */
+.kite-reconnect-button{white-space:nowrap}
+.kite-error{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.kite-error .button{margin-left:auto;white-space:nowrap}
+@media(max-width:650px){.kite-error .button{margin-left:0}.kite-reconnect-button{font-size:10px;padding:8px 9px}}
