@@ -1348,61 +1348,6 @@ export default function App() {
   }, []);
   useEffect(() => { refreshWebsocketStatus(); const timer = window.setInterval(refreshWebsocketStatus, 3000); return () => window.clearInterval(timer); }, [refreshWebsocketStatus]);
 
-  const reconnectKite = useCallback(async () => {
-    if (kiteReconnecting) return;
-    // Open synchronously from the click so browser popup blockers allow the broker login.
-    const loginWindow = window.open('about:blank', 'trading-platform-kite-login');
-    if (!loginWindow) {
-      setKiteError('Allow pop-ups for TradingPlatformNext, then click Reconnect Kite again.');
-      return;
-    }
-    setKiteReconnecting(true);
-    setKiteError('');
-    try {
-      const { login_url: loginUrl } = await api('/kite/login-url');
-      if (!loginUrl) throw new Error('Kite login URL was not returned by the backend.');
-      loginWindow.location.href = loginUrl;
-      let attempts = 0;
-      if (reconnectPollingRef.current) window.clearInterval(reconnectPollingRef.current);
-      reconnectPollingRef.current = window.setInterval(async () => {
-        attempts += 1;
-        try {
-          const session = await api('/kite/session/status');
-          if (session.authenticated) {
-            window.clearInterval(reconnectPollingRef.current);
-            reconnectPollingRef.current = null;
-            loginWindow.close();
-            kiteAuthInvalidRef.current = false;
-            setKiteReconnecting(false);
-            setKiteError('');
-            await refreshWebsocketStatus();
-            await loadKiteTab();
-          } else if (attempts >= 90) {
-            window.clearInterval(reconnectPollingRef.current);
-            reconnectPollingRef.current = null;
-            setKiteReconnecting(false);
-            setKiteError('Kite login was not completed. Click Reconnect Kite to try again.');
-          }
-        } catch (error) {
-          if (attempts >= 90) {
-            window.clearInterval(reconnectPollingRef.current);
-            reconnectPollingRef.current = null;
-            setKiteReconnecting(false);
-            setKiteError(error.message || 'Unable to verify the Kite session.');
-          }
-        }
-      }, 2000);
-    } catch (error) {
-      loginWindow.close();
-      setKiteReconnecting(false);
-      setKiteError(error.message || 'Unable to start Kite login.');
-    }
-  }, [kiteReconnecting, loadKiteTab, refreshWebsocketStatus]);
-
-  useEffect(() => () => {
-    if (reconnectPollingRef.current) window.clearInterval(reconnectPollingRef.current);
-  }, []);
-
   const loadKiteTab = useCallback(async () => {
     if (applicationTab !== 'kite' || kiteRefreshInFlight.current) return;
     kiteRefreshInFlight.current = true;
@@ -1462,6 +1407,62 @@ export default function App() {
       kiteRefreshInFlight.current = false;
     }
   }, [applicationTab, kiteTab, refreshWebsocketStatus]);
+
+  const reconnectKite = useCallback(async () => {
+    if (kiteReconnecting) return;
+    // Open synchronously from the click so browser popup blockers allow the broker login.
+    const loginWindow = window.open('about:blank', 'trading-platform-kite-login');
+    if (!loginWindow) {
+      setKiteError('Allow pop-ups for TradingPlatformNext, then click Reconnect Kite again.');
+      return;
+    }
+    setKiteReconnecting(true);
+    setKiteError('');
+    try {
+      const { login_url: loginUrl } = await api('/kite/login-url');
+      if (!loginUrl) throw new Error('Kite login URL was not returned by the backend.');
+      loginWindow.location.href = loginUrl;
+      let attempts = 0;
+      if (reconnectPollingRef.current) window.clearInterval(reconnectPollingRef.current);
+      reconnectPollingRef.current = window.setInterval(async () => {
+        attempts += 1;
+        try {
+          const session = await api('/kite/session/status');
+          if (session.authenticated) {
+            window.clearInterval(reconnectPollingRef.current);
+            reconnectPollingRef.current = null;
+            loginWindow.close();
+            kiteAuthInvalidRef.current = false;
+            setKiteReconnecting(false);
+            setKiteError('');
+            await refreshWebsocketStatus();
+            await loadKiteTab();
+          } else if (attempts >= 90) {
+            window.clearInterval(reconnectPollingRef.current);
+            reconnectPollingRef.current = null;
+            setKiteReconnecting(false);
+            setKiteError('Kite login was not completed. Click Reconnect Kite to try again.');
+          }
+        } catch (error) {
+          if (attempts >= 90) {
+            window.clearInterval(reconnectPollingRef.current);
+            reconnectPollingRef.current = null;
+            setKiteReconnecting(false);
+            setKiteError(error.message || 'Unable to verify the Kite session.');
+          }
+        }
+      }, 2000);
+    } catch (error) {
+      loginWindow.close();
+      setKiteReconnecting(false);
+      setKiteError(error.message || 'Unable to start Kite login.');
+    }
+  }, [kiteReconnecting, loadKiteTab, refreshWebsocketStatus]);
+
+  useEffect(() => () => {
+    if (reconnectPollingRef.current) window.clearInterval(reconnectPollingRef.current);
+  }, []);
+
   useEffect(() => {
     loadKiteTab();
     if (applicationTab !== 'kite' || kiteTab !== 'Option Chain') return undefined;
