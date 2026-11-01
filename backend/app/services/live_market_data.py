@@ -15,9 +15,12 @@ _state = "stopped"
 _subscriptions: dict[int, str] = {}
 
 
-def _on_state(value: str) -> None:
+def _on_state(value: str, source: KiteTickerAdapter | None = None) -> None:
     global _state
     with _lock:
+        # Ignore late callbacks from a socket that has already been replaced.
+        if source is not None and _ticker is not source:
+            return
         _state = value
         ticker = _ticker if value == "connected" else None
         subscriptions = dict(_subscriptions) if ticker is not None else {}
@@ -51,7 +54,12 @@ def start() -> dict[str, Any]:
         # Import lazily to avoid a module cycle (trade_terminal imports this module).
         from app.services import trade_terminal
         live_quotes.add_listener(trade_terminal.apply_quote_to_open_trades)
-        ticker = KiteTickerAdapter(settings.kite_api_key, token, live_quotes, _on_state)
+        ticker_ref: dict[str, KiteTickerAdapter] = {}
+        ticker = KiteTickerAdapter(
+            settings.kite_api_key, token, live_quotes,
+            lambda value: _on_state(value, ticker_ref.get("ticker")),
+        )
+        ticker_ref["ticker"] = ticker
         _ticker = ticker
         _state = "connecting"
         try:
