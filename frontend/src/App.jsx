@@ -163,7 +163,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
     .sort((a, b) => a.minutes - b.minutes);
   const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
   if (usable.length < 2 || !values.length) {
-    return <div className="chart-empty">Price/VWAP history for 09:30–15:30 is unavailable in the current intraday API response.</div>;
+    return <div className="chart-empty">Waiting for market data. Updates begin at 9:30 AM.</div>;
   }
   const min = Math.min(...values);
   const max = Math.max(...values);
