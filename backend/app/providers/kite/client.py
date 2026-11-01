@@ -17,6 +17,24 @@ class KiteSession:
     user_id: str
 
 
+def _is_authentication_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return any(marker in message for marker in (
+        "incorrect api_key", "incorrect api key", "access_token",
+        "tokenexception", "invalid session", "session expired", "unauthorized",
+    ))
+
+
+def _provider_error(operation: str, exc: Exception) -> KiteProviderError:
+    if _is_authentication_error(exc):
+        from app.providers.kite.registry import clear_active_kite_session
+        from app.services.live_market_data import invalidate_session
+        invalidate_session()
+        clear_active_kite_session()
+    detail = str(exc).strip() or exc.__class__.__name__
+    return KiteProviderError("Kite " + operation.replace("_", " ") + " request failed: " + detail)
+
+
 class KiteProvider:
     """Thin Kite Connect adapter. No order-placement methods are exposed in milestone 1."""
 
@@ -50,7 +68,7 @@ class KiteProvider:
         try:
             return self._client.profile()
         except Exception as exc:
-            raise KiteProviderError("Kite session validation failed") from exc
+            raise _provider_error("session validation", exc) from exc
 
     def instruments(self, exchange: str | None = None) -> list[dict[str, Any]]:
         if not self._client.access_token:
@@ -58,7 +76,7 @@ class KiteProvider:
         try:
             records = self._client.instruments(exchange) if exchange else self._client.instruments()
         except Exception as exc:
-            raise KiteProviderError("Kite instrument master download failed") from exc
+            raise _provider_error("instrument master download", exc) from exc
         return records
 
     def quote(self, instrument_token: int) -> dict[str, Any]:
@@ -72,7 +90,7 @@ class KiteProvider:
         try:
             return self._client.quote(*keys)
         except Exception as exc:
-            raise KiteProviderError("Kite quote request failed") from exc
+            raise _provider_error("quote", exc) from exc
 
     def _account_call(self, operation: str, *args, **kwargs):
         if not self._client.access_token:
@@ -83,10 +101,7 @@ class KiteProvider:
             # Keep the full traceback in backend logs and surface Kite's rejection
             # message to the UI. Never log request headers, API keys or access tokens.
             logger.exception("Kite %s request failed", operation)
-            detail = str(exc).strip() or exc.__class__.__name__
-            raise KiteProviderError(
-                f"Kite {operation.replace('_', ' ')} request failed: {detail}"
-            ) from exc
+            raise _provider_error(operation, exc) from exc
 
     def margins(self, segment: str | None = None) -> dict[str, Any]:
         return self._account_call("margins", segment) if segment else self._account_call("margins")
