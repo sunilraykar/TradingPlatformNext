@@ -1106,6 +1106,12 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
   };
   const renderCell = (value, key, row) => {
     const normalizedKey = normalizeColumn(key);
+    if (normalizedKey === 'strengthdiff') {
+      const parsed = numericValue(value);
+      if (parsed === null) return '—';
+      const formatted = parsed.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      return parsed < 0 ? `${formatted} (Put>Call)` : parsed > 0 ? `${formatted} (Call>Put)` : formatted;
+    }
     if (normalizedKey === 'vwappricebufferpct') {
       const difference = numericValue(row?.price) !== null && numericValue(row?.vwap) !== null
         ? numericValue(row.price) - numericValue(row.vwap)
@@ -1561,7 +1567,7 @@ export default function App() {
             <tbody>{filteredLiveIntradayRows.slice(0, 100).map((row) => <tr key={row.key} onClick={() => setSelectedLiveIntradayTime(row.time)} style={{ cursor: 'pointer', background: selectedLiveIntradayTime === row.time ? 'rgba(56,189,248,0.10)' : undefined }} title={`Time: ${row.time || '—'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`}>
               <td>{row.time || '—'}</td><td><span className={'signal-tag ' + (row.vwapSignal === 'BUY' ? 'signal-buy' : row.vwapSignal === 'SELL' ? 'signal-sell' : '')}>{row.vwapSignal || '—'}</span></td><td><span className={'signal-tag ' + (row.optionSignal === 'BUY' ? 'signal-buy' : row.optionSignal === 'SELL' ? 'signal-sell' : '')}>{row.optionSignal || '—'}</span></td><td><span className={'signal-tag enter-tag ' + row.enter.toLowerCase()}>{row.enter}</span></td>{showIntradayDetails && <><td>{number(row.call)}</td><td>{number(row.put)}</td></>}<td>{number(row.diff)}</td><td>{number(row.pcr, 2)}</td><td>{number(row.price)}</td><td>{number(row.vwap)}</td>
               {showIntradayDetails && <><td>{row.callStrength === null ? '—' : number(row.callStrength) + '%'}</td><td>{row.putStrength === null ? '—' : number(row.putStrength) + '%'}</td></>}
-              <td className={row.strengthDiff === null ? '' : row.strengthDiff > 0 ? 'cell-positive' : row.strengthDiff < 0 ? 'cell-negative' : ''}>{row.strengthDiff === null ? '—' : number(row.strengthDiff)}</td>
+              <td className={row.strengthDiff === null ? '' : row.strengthDiff > 0 ? 'cell-positive' : row.strengthDiff < 0 ? 'cell-negative' : ''}>{row.strengthDiff === null ? '—' : `${number(row.strengthDiff)}${row.strengthDiff < 0 ? ' (Put>Call)' : row.strengthDiff > 0 ? ' (Call>Put)' : ''}`}</td>
               <td className={row.price === null || row.vwap === null ? '' : row.price - row.vwap > 0 ? 'cell-positive' : row.price - row.vwap < 0 ? 'cell-negative' : ''}>{row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)} ({row.buffer === null ? '—' : number(row.buffer, 3) + '%'})</td>
               </tr>)}
             {!filteredLiveIntradayRows.length && <tr><td colSpan={showIntradayDetails ? 14 : 10} className="empty-cell">Waiting for market data. Updates begin at 9:30 AM.</td></tr>}</tbody>
