@@ -121,6 +121,8 @@ def _exchange_and_save(request_token: str) -> str:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except KiteSessionStoreError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
+    # Replace any socket created with the previous token; desired subscriptions survive.
+    live_market_data.invalidate_session()
     configure_active_kite_session(session.access_token)
     try:
         live_market_data.start()
