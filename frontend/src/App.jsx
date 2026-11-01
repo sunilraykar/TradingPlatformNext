@@ -849,7 +849,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
   const [page, setPage] = useState(0);
   const [result, setResult] = useState({ snapshots: [], total: 0 });
   const [selected, setSelected] = useState(null);
-  const [selectedIndex, setSelectedIndex] = useState('FINNIFTY');
+  const [selectedIndex, setSelectedIndex] = useState('NIFTY');
   const [showIntradayDetails, setShowIntradayDetails] = useState(false);
   const [enterFilter, setEnterFilter] = useState('ALL');
   const [selectedIntradayTime, setSelectedIntradayTime] = useState(null);
@@ -1233,7 +1233,7 @@ export default function App() {
   const [holdingsSearch, setHoldingsSearch] = useState('');
   const [holdingsSort, setHoldingsSort] = useState('SYMBOL');
   const [websocketStatus, setWebsocketStatus] = useState(null);
-  const [index, setIndex] = useState('FINNIFTY');
+  const [index, setIndex] = useState('NIFTY');
   const refreshInFlight = useRef(false);
   const kiteRefreshInFlight = useRef(false);
   const selectedIndexRef = useRef(index);
