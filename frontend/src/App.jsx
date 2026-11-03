@@ -274,7 +274,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
 }
 
 
-function AutoTrenderActiveTrades({ underlyings }) {
+function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
   const underlyingKey = (Array.isArray(underlyings) ? underlyings : [underlyings])
     .map((value) => String(value || '').trim().toUpperCase()).filter(Boolean).join('|');
   const [trades, setTrades] = useState([]);
@@ -295,13 +295,13 @@ function AutoTrenderActiveTrades({ underlyings }) {
       try {
         const payload = await api('/trades');
         if (cancelled) return;
-        const today = indiaDate();
+        const tradeDate = selectedDate || indiaDate();
         const selectedUnderlyings = underlyingKey ? underlyingKey.split('|') : [];
         const rows = (Array.isArray(payload?.trades) ? payload.trades : [])
           .filter((trade) => ['OPEN', 'CLOSED'].includes(String(trade.status || 'OPEN').toUpperCase()))
           .filter((trade) => {
             const created = trade.created_at || trade.entry_time || trade.opened_at;
-            return created && indiaDate(new Date(created)) === today;
+            return created && indiaDate(new Date(created)) === tradeDate;
           })
           .filter((trade) => selectedUnderlyings.length === 0 || selectedUnderlyings.includes(String(trade.underlying || '').trim().toUpperCase()))
           .sort((a, b) => new Date(b.created_at || b.entry_time || 0).getTime() - new Date(a.created_at || a.entry_time || 0).getTime());
@@ -318,7 +318,7 @@ function AutoTrenderActiveTrades({ underlyings }) {
     load();
     const timer = window.setInterval(load, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [underlyingKey]);
+  }, [underlyingKey, selectedDate]);
 
   const tradePnl = (trade) => {
     const terminalStatus = String(trade.status || '').toUpperCase() === 'CLOSED';
@@ -338,9 +338,10 @@ function AutoTrenderActiveTrades({ underlyings }) {
 
   const cacheUnavailable = !trades.length && !loading && terminal?.cached_trades === 0 && terminal?.persistence_degraded;
 
-  return <aside className="panel autotrend-active-trades" aria-label="Today's open and closed trades">
+  const dateHeading = selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
+  return <aside className="panel autotrend-active-trades" aria-label={`${dateHeading} open and closed trades`}>
     <div className="autotrend-active-trades-heading">
-      <div><div className="eyebrow">TODAY · OPEN &amp; CLOSED</div><h3>Today's Trades</h3></div>
+      <div><div className="eyebrow">{dateHeading.toUpperCase()} · OPEN &amp; CLOSED</div><h3>{selectedDate ? 'Trades' : "Today's Trades"}</h3></div>
       <span className="autotrend-active-trades-count">{trades.length}</span>
     </div>
     {error && <div className="autotrend-active-trades-error">{error}</div>}
@@ -360,8 +361,8 @@ function AutoTrenderActiveTrades({ underlyings }) {
               <td className={pnl === null ? '' : pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}>{formatPnl(pnl)}</td>
             </tr>;
           })}
-          {!trades.length && !loading && !error && !cacheUnavailable && <tr><td colSpan="5" className="autotrend-trades-empty">No OPEN or CLOSED trades recorded today.</td></tr>}
-          {!trades.length && loading && <tr><td colSpan="5" className="autotrend-trades-empty">Loading today's trades…</td></tr>}
+          {!trades.length && !loading && !error && !cacheUnavailable && <tr><td colSpan="5" className="autotrend-trades-empty">No OPEN or CLOSED trades recorded for this date.</td></tr>}
+          {!trades.length && loading && <tr><td colSpan="5" className="autotrend-trades-empty">Loading trades…</td></tr>}
         </tbody>
       </table>
     </div>
@@ -1162,6 +1163,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
           <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
             <div className="price-vwap-graph-column">
               <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedIntradayTime} enterValue={historicalIntradayRows.length ? historicalIntradayRows[historicalIntradayRows.length - 1]?.enter || '—' : '—'} showHeading headingEyebrow="HISTORICAL INTRADAY PRICE ACTION" />
+              <AutoTrenderActiveTrades underlyings={[selectedIndex]} selectedDate={selected.trading_date} />
             </div>
 
           </div>
