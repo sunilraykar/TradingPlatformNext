@@ -1274,6 +1274,9 @@ export default function App() {
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState(null);
   const [selectedContract, setSelectedContract] = useState(null);
+  const [manualTradeLoading, setManualTradeLoading] = useState(false);
+  const [manualTradeMessage, setManualTradeMessage] = useState('');
+  const [manualTradeError, setManualTradeError] = useState('');
   const [contractLoading, setContractLoading] = useState(false);
   const [contractError, setContractError] = useState('');
   const [autotrendSettings, setAutotrendSettings] = useState({ callPutStrengthDiff: 10, callPcr: 1, putPcr: 1, vwapPriceDifferenceBuffer: 0.1, autoTrenderEntryStartTime: '10:00', autoTrenderEntryEndTime: '15:25' });
@@ -1585,6 +1588,29 @@ export default function App() {
     const close = numericValue(liveIndexRecord?.close ?? liveIndexRecord?.close_price ?? liveIndexRecord?.ohlc?.close);
     return last !== null && close !== null ? last - close : null;
   })();
+  const enterManualAutoTrenderTrade = async () => {
+    if (!selectedContract || selectedContract.status !== 'SELECTED' ||
+        !['BUY', 'SELL'].includes(contractSignal) || selectedContract.signal !== contractSignal) return;
+    setManualTradeLoading(true);
+    setManualTradeMessage('');
+    setManualTradeError('');
+    try {
+      const result = await api('/trades/autotrender/manual-entry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          index,
+          signal: contractSignal,
+          signal_timestamp: new Date().toISOString(),
+        }),
+      });
+      setManualTradeMessage(`Trade entered: ${result.trade?.instrument_symbol || selectedContract.tradingsymbol}. Available in Trade Terminal.`);
+    } catch (e) {
+      setManualTradeError(e.message || 'Unable to enter the trade.');
+    } finally {
+      setManualTradeLoading(false);
+    }
+  };
   const graph = oi?.data?.graph || {};
   const optionSeries = Array.isArray(graph.option) ? graph.option : [];
   const futureSeries = Array.isArray(graph.future) ? graph.future : [];
@@ -1640,6 +1666,17 @@ export default function App() {
         </div>
         <div className="selected-contract-footnote">{selectedContract.expiry_rule}{selectedContract.used_next_expiry ? ' · Switched to next expiry' : ''} · Signal: {selectedContract.signal}. Paper-trade selection only; no order has been placed.</div>
         {selectedContract.calendar_note && <div className="selected-contract-calendar-note">{selectedContract.calendar_note}</div>}
+        <div className="selected-contract-actions">
+          <div aria-live="polite" className="selected-contract-action-feedback">
+            {manualTradeError && <span className="manual-trade-error">{manualTradeError}</span>}
+            {manualTradeMessage && <span className="manual-trade-success">{manualTradeMessage}</span>}
+          </div>
+          <button type="button" className="button primary enter-autotrend-trade-button"
+            onClick={enterManualAutoTrenderTrade}
+            disabled={manualTradeLoading || !['BUY', 'SELL'].includes(contractSignal) || selectedContract.signal !== contractSignal}>
+            {manualTradeLoading ? 'Entering…' : 'Enter Trade'}
+          </button>
+        </div>
       </section>}
 
       <section className="price-vwap-section">
