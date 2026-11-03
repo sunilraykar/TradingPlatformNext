@@ -1730,6 +1730,33 @@ export default function App() {
               </div>
             </div>;
           })()}
+          {kiteTab === 'Positions' && Array.isArray(kiteData?.rows) && kiteData.rows.length > 0 && (() => {
+            const positions = kiteData.rows;
+            const netPositions = positions.filter((row) => String(row.book || '').toUpperCase() === 'NET');
+            const dayPositions = positions.filter((row) => String(row.book || '').toUpperCase() === 'DAY');
+            const amount = (row, keys) => {
+              for (const key of keys) {
+                const value = numericValue(row?.[key]);
+                if (value !== null) return value;
+              }
+              return 0;
+            };
+            const sum = (rows, keys) => rows.reduce((total, row) => total + amount(row, keys), 0);
+            const money = (value) => Math.abs(value).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const pnlCard = (label, value) => <div className="positions-summary-card">
+              <span>{label}</span>
+              <strong className={value > 0 ? 'positive' : value < 0 ? 'negative' : 'neutral'}>{value > 0 ? '+' : value < 0 ? '−' : ''}₹{money(value)}</strong>
+            </div>;
+            const netPnl = sum(netPositions, ['pnl', 'profit_and_loss', 'profit_loss']);
+            const dayPnl = sum(dayPositions, ['pnl', 'profit_and_loss', 'profit_loss']);
+            const m2m = sum(netPositions, ['m2m', 'mtm']);
+            return <div className="positions-summary" aria-label="Positions summary">
+              <div className="positions-summary-card"><span>Net Positions</span><strong>{netPositions.length.toLocaleString('en-IN')}</strong></div>
+              {pnlCard('Net P&L', netPnl)}
+              {pnlCard('Day P&L', dayPnl)}
+              {pnlCard('Total M2M', m2m)}
+            </div>;
+          })()}
           {kiteTab === 'Holdings' && Array.isArray(kiteData?.rows) && kiteData.rows.length > 0 && (() => {
             const holdings = kiteData.rows;
             const quantityOf = (row) => Number(row.quantity ?? row.net_quantity ?? 0);
@@ -1827,7 +1854,7 @@ export default function App() {
               <KiteDataTable rows={sortedHoldings} holdingsMode onActionComplete={loadKiteTab} hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
             </div>;
           })()}
-          {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
+          {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} positionsMode={kiteTab === 'Positions'} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
           {kiteTab === 'Holdings' && (!Array.isArray(kiteData?.rows) || kiteData.rows.length === 0) && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading holdings…</div> : <KiteDataTable rows={[]} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No holdings returned by Kite.'} />)}
           <div className="panel-footer">{kiteTab === 'Option Chain' ? 'Option-chain quotes refresh every 3 seconds. Quote freshness is based on the time the backend received the Kite tick; stale or missing values are identified in the panel subtitle.' : kiteTab === "Holdings" ? "Place BUY/SELL orders directly from your holdings." : "Read-only data view. No order placement or modification is performed by these tabs."}</div>
         </section>
