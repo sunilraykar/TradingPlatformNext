@@ -1587,7 +1587,7 @@ export default function App() {
         <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
       </nav>
         <div className="topbar-right">
-          {applicationTab === 'kite' && <button type="button" className="button primary kite-reconnect-button" onClick={reconnectKite} disabled={kiteReconnecting || websocketStatus?.connected}>{kiteReconnecting ? 'Waiting for Kite login…' : websocketStatus?.connected ? 'Kite Connected' : 'Reconnect Kite'}</button>}
+          {applicationTab === 'kite' && <button type="button" className={`status-pill kite-reconnect-button ${websocketStatus?.connected ? 'online' : 'offline'}`} onClick={reconnectKite} disabled={kiteReconnecting || websocketStatus?.connected}><i />{kiteReconnecting ? 'Waiting for Kite login…' : websocketStatus?.connected ? 'Kite Connected' : 'Reconnect Kite'}</button>}
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
           <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={websocketStatus?.reason || ('Kite WebSocket: ' + (websocketStatus?.state || 'checking'))}><i />WS {websocketStatus?.connected ? 'Connected' : websocketStatus?.state === 'login_required' ? 'Disconnected' : (websocketStatus?.state || 'Checking')}</span>
         </div>
@@ -1751,11 +1751,20 @@ export default function App() {
               return close !== null && close !== undefined && close !== '' ? Math.abs(quantityOf(row)) * (ltpOf(row) - Number(close || 0)) : 0;
             };
             const availableLetters = [...new Set(holdings.map((row) => symbolOf(row).trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
+            const hasNumericSymbols = holdings.some((row) => /^\\d/.test(symbolOf(row).trim()));
+            const hasSpecialSymbols = holdings.some((row) => /^[^A-Z0-9]/i.test(symbolOf(row).trim()));
+            const normalizeHoldingSearch = (value) => String(value || '').normalize('NFKC').replace(/&amp;/gi, '&').trim().toUpperCase();
             const filtered = holdings.filter((row) => {
-              const symbol = symbolOf(row).trim().toUpperCase();
+              const symbol = normalizeHoldingSearch(symbolOf(row));
+              const firstCharacter = symbol.charAt(0);
               const pnl = pnlOf(row);
-              const matchesSearch = !holdingsSearch.trim() || symbol.includes(holdingsSearch.trim().toUpperCase());
-              return matchesSearch && (holdingsLetter === 'ALL' || symbol.startsWith(holdingsLetter)) &&
+              const searchTerm = normalizeHoldingSearch(holdingsSearch);
+              const matchesSearch = !searchTerm || symbol.includes(searchTerm);
+              const matchesLetter = holdingsLetter === 'ALL' ||
+                (holdingsLetter === '0-9' && /^\\d/.test(symbol)) ||
+                (holdingsLetter === '#' && /^[^A-Z0-9]/i.test(symbol)) ||
+                firstCharacter === holdingsLetter;
+              return matchesSearch && matchesLetter &&
                 (holdingsProfitFilter === 'ALL' || (holdingsProfitFilter === 'PROFITABLE' && pnl > 0) || (holdingsProfitFilter === 'LOSS' && pnl < 0) || (holdingsProfitFilter === 'BREAKEVEN' && pnl === 0));
             });
             const sortedHoldings = [...filtered].sort((left, right) => {
@@ -1777,19 +1786,21 @@ export default function App() {
               <div className="holdings-portfolio-summary" aria-label="Holdings portfolio summary">
                 <div className="holdings-summary-item"><span>Total investment</span><strong>₹{formatMoney(investment)}</strong></div>
                 <div className="holdings-summary-item"><span>Current value</span><strong>₹{formatMoney(currentValue)}</strong></div>
-                <div className="holdings-summary-item"><span>Day's P&amp;L</span><strong className={dayPnl >= 0 ? 'positive' : 'negative'}>{dayPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(dayPnl))}<small className={dayPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(dayBase ? dayPnl / Math.abs(dayBase) * 100 : 0)}</small></strong></div>
-                <div className="holdings-summary-item"><span>Total P&amp;L</span><strong className={totalPnl >= 0 ? 'positive' : 'negative'}>{totalPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(totalPnl))}<small className={totalPnl >= 0 ? 'positive' : 'negative'}>{formatPercent(investment ? totalPnl / investment * 100 : 0)}</small></strong></div>
+                <div className="holdings-summary-item holdings-pnl-card"><span>Day's P&amp;L</span><strong><span className={`holdings-pnl-amount ${dayPnl > 0 ? 'positive' : dayPnl < 0 ? 'negative' : 'neutral'}`}>{dayPnl > 0 ? '+' : dayPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(dayPnl))}</span><small className={`holdings-pnl-percent ${dayPnl > 0 ? 'positive' : dayPnl < 0 ? 'negative' : 'neutral'}`}>{formatPercent(dayBase ? dayPnl / Math.abs(dayBase) * 100 : 0)}</small></strong></div>
+                <div className="holdings-summary-item holdings-pnl-card"><span>Total P&amp;L</span><strong><span className={`holdings-pnl-amount ${totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : 'neutral'}`}>{totalPnl > 0 ? '+' : totalPnl < 0 ? '−' : ''}₹{formatMoney(Math.abs(totalPnl))}</span><small className={`holdings-pnl-percent ${totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : 'neutral'}`}>{formatPercent(investment ? totalPnl / investment * 100 : 0)}</small></strong></div>
               </div>
               <div className="holdings-tools">
                 <input type="search" value={holdingsSearch} onChange={(event) => setHoldingsSearch(event.target.value)} placeholder="Search instrument…" aria-label="Search holdings by instrument" />
                 <div className="holdings-sort-actions" aria-label="Sort holdings">
-                  {[['SYMBOL','Symbol'],['PNL_DESC','Highest P&amp;L'],['PNL_ASC','Lowest P&amp;L'],['INVESTED','Highest investment'],['DAY_LOSS','Largest day loss']].map(([key,label]) => <button type="button" key={key} className={holdingsSort === key ? 'active' : ''} onClick={() => setHoldingsSort(key)}>{label}</button>)}
+                  {[['SYMBOL','Symbol'],['PNL_DESC','Highest P&L'],['PNL_ASC','Lowest P&L'],['INVESTED','Highest investment'],['DAY_LOSS','Largest day loss']].map(([key,label]) => <button type="button" key={key} className={holdingsSort === key ? 'active' : ''} onClick={() => setHoldingsSort(key)}>{label}</button>)}
                 </div>
               </div>
               <div className="holdings-filter-secondary-row">
                 <div className="holdings-alphabet" aria-label="Filter portfolio holdings by first letter">
                   <button type="button" className={holdingsLetter === 'ALL' ? 'active' : ''} onClick={() => setHoldingsLetter('ALL')}>All</button>
                   {availableLetters.map((letter) => <button key={letter} type="button" className={holdingsLetter === letter ? 'active' : ''} onClick={() => setHoldingsLetter(letter)}>{letter}</button>)}
+                  {hasNumericSymbols && <button type="button" className={holdingsLetter === '0-9' ? 'active' : ''} onClick={() => setHoldingsLetter('0-9')}>0–9</button>}
+                  {hasSpecialSymbols && <button type="button" className={holdingsLetter === '#' ? 'active' : ''} onClick={() => setHoldingsLetter('#')}>#</button>}
                 </div>
                 <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
                   {[['ALL','All'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,labelText]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{labelText}<span>{counts[key]}</span></button>)}
