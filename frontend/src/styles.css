@@ -1020,8 +1020,8 @@
 
 @media(max-width:600px){.all-indices-heading{align-items:flex-start;flex-direction:column}.all-indices-card .price-vwap-chart{height:190px}.all-indices-card .price-vwap-top-metrics{flex-wrap:wrap!important;justify-content:center!important;gap:6px!important}.all-indices-card .price-vwap-top-metrics>div{min-width:0!important;padding:0 7px!important}.all-indices-card .price-vwap-top-metrics strong{font-size:14px!important}}
 
-/* AutoTrender workspace: 60% index charts, 40% all-trades table. */
-.price-vwap-workspace,.all-indices-workspace{display:grid;grid-template-columns:minmax(0,3fr) minmax(320px,2fr);gap:12px;align-items:stretch;width:100%}
+/* AutoTrender workspace: 70% index charts, 30% all-trades table. */
+.price-vwap-workspace,.all-indices-workspace{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,3fr);gap:12px;align-items:stretch;width:100%}
 .price-vwap-workspace .price-vwap-section,.all-indices-workspace .all-indices-dashboard{min-width:0}
 .price-vwap-workspace .price-vwap-section{margin:0}
 .price-vwap-workspace .price-vwap-panel{height:100%}
