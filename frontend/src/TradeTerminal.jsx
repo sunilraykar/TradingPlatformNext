@@ -87,6 +87,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   const [underlyingFilter, setUnderlyingFilter] = useState('INDICES');
   const [symbolLetter, setSymbolLetter] = useState('ALL');
   const [selectedTradingDate, setSelectedTradingDate] = useState(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
+  const [showAllOpen, setShowAllOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -242,17 +243,19 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
     const nextKey = next.toISOString().slice(0, 10);
     if (nextKey <= todayKey) setSelectedTradingDate(nextKey);
   };
-  const tradesMatchingBaseFilters = trades.filter((trade) => {
-    const createdKey = indiaDateKey(trade.created_at || trade.updated_at);
-    const normalizedSource = String(trade.source || '').toUpperCase();
-    const sourceMatches = sourceFilter === 'ALL' || normalizedSource === sourceFilter ||
-      (sourceFilter === 'AUTOTRENDER' && normalizedSource.includes('AUTO'));
-    const statusValue = String(trade.status || '').toUpperCase();
-    const statusMatches = status === 'ALL' || (status === 'OPEN' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(statusValue)) || statusValue === status;
-    return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches && createdKey === selectedTradingDate;
-  });
+  const tradesMatchingBaseFilters = showAllOpen
+    ? trades.filter((trade) => !isTerminalStatus(trade.status))
+    : trades.filter((trade) => {
+      const createdKey = indiaDateKey(trade.created_at || trade.updated_at);
+      const normalizedSource = String(trade.source || '').toUpperCase();
+      const sourceMatches = sourceFilter === 'ALL' || normalizedSource === sourceFilter ||
+        (sourceFilter === 'AUTOTRENDER' && normalizedSource.includes('AUTO'));
+      const statusValue = String(trade.status || '').toUpperCase();
+      const statusMatches = status === 'ALL' || (status === 'OPEN' && !['CLOSED','CANCELLED','REJECTED','EXPIRED'].includes(statusValue)) || statusValue === status;
+      return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches && createdKey === selectedTradingDate;
+    });
   const underlyings = [...new Set(tradesMatchingBaseFilters.map((trade) => String(trade.underlying || '').trim()).filter(Boolean))].sort();
-  const tradesMatchingOtherFilters = tradesMatchingBaseFilters.filter((trade) => {
+  const tradesMatchingOtherFilters = showAllOpen ? tradesMatchingBaseFilters : tradesMatchingBaseFilters.filter((trade) => {
     const underlyingValue = String(trade.underlying || '').toUpperCase();
     return underlyingFilter === 'ALL' ||
       (underlyingFilter === 'INDICES' && ['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(underlyingValue)) ||
@@ -265,7 +268,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       .map((value) => String(value || '').trim().charAt(0).toUpperCase())
       .filter((letter) => /^[A-Z]$/.test(letter))
   ))].sort();
-  const visibleTrades = tradesMatchingOtherFilters.filter((trade) =>
+  const visibleTrades = showAllOpen ? tradesMatchingOtherFilters : tradesMatchingOtherFilters.filter((trade) =>
     symbolLetter === 'ALL' ||
     String(trade.instrument_symbol || '').trim().toUpperCase().startsWith(symbolLetter) ||
     String(trade.underlying || '').trim().toUpperCase().startsWith(symbolLetter)
@@ -594,6 +597,13 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       </div>
       <button type="button" className="trade-date-nav-button" aria-label="Next trading date" onClick={() => shiftTradingDate(1)} disabled={selectedTradingDate >= todayKey}>›</button>
     </div>
+    <button
+      type="button"
+      className={showAllOpen ? 'trade-filter-button active' : 'trade-filter-button'}
+      aria-pressed={showAllOpen}
+      onClick={() => setShowAllOpen((current) => !current)}
+      title="Show every open trade across all dates, ignoring the other data filters"
+    >Show All Open</button>
     <div className="trade-terminal-filters">
       <div className="trade-filter-group"><span className="trade-filter-label">Mode</span><div className="trade-filter-buttons">{[['ALL','All'],['PAPER','Paper'],['LIVE','Live']].map(([value,label]) => <button key={value} type="button" className={mode === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setMode(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
