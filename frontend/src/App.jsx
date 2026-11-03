@@ -191,7 +191,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
-    {!compact && <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: 'none', borderRadius: '0', background: 'transparent' }} aria-label="Intraday price action and market summary">
+    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: 'none', borderRadius: '0', background: 'transparent' }} aria-label="Intraday price action and market summary">
       {showHeading && <div style={{ flex: '0 0 220px', minWidth: '180px' }}><div className="eyebrow">{headingEyebrow}</div><h2 style={{ margin: '5px 0 0', fontSize: '18px' }}>Future Price &amp; VWAP</h2></div>}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minWidth: 0 }}>
       <div style={{ minWidth: '150px', padding: '0 18px', textAlign: 'center' }}>
@@ -213,7 +213,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       </div>
       </div>
       {enterValue !== null && <div className="chart-enter-card" style={{ flex: '0 0 150px', marginLeft: 'auto' }}><span>Enter</span><strong className={'latest-enter ' + String(enterValue || 'wait').toLowerCase()}>{enterValue || '—'}</strong></div>}
-    </div>}
+    </div>
     <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
       <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart from 09:30 to 15:30" preserveAspectRatio="none">
@@ -252,7 +252,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
-    {!compact && <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
+    <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
       {[
         ['VWAP Signal', displayed.vwapSignal || '—'],
         ['Option Signal', displayed.optionSignal || '—'],
@@ -269,7 +269,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
           <strong style={{ fontSize: '12px', color: label.includes('Signal') || label === 'Enter' ? (value === 'BUY' ? '#22c55e' : value === 'SELL' ? '#f87171' : 'var(--text, #e5edf8)') : 'var(--text, #e5edf8)' }}>{value}</strong>
         </span>
       </React.Fragment>)}
-    </div>}
+    </div>
   </>;
 }
 
