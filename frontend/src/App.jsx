@@ -275,6 +275,8 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
 
 
 function AutoTrenderActiveTrades({ underlyings }) {
+  const underlyingKey = (Array.isArray(underlyings) ? underlyings : [underlyings])
+    .map((value) => String(value || '').trim().toUpperCase()).filter(Boolean).join('|');
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -294,8 +296,7 @@ function AutoTrenderActiveTrades({ underlyings }) {
         const payload = await api('/trades');
         if (cancelled) return;
         const today = indiaDate();
-        const selectedUnderlyings = (Array.isArray(underlyings) ? underlyings : [underlyings])
-          .map((value) => String(value || '').trim().toUpperCase()).filter(Boolean);
+        const selectedUnderlyings = underlyingKey ? underlyingKey.split('|') : [];
         const rows = (Array.isArray(payload?.trades) ? payload.trades : [])
           .filter((trade) => ['OPEN', 'CLOSED'].includes(String(trade.status || 'OPEN').toUpperCase()))
           .filter((trade) => {
@@ -317,7 +318,7 @@ function AutoTrenderActiveTrades({ underlyings }) {
     load();
     const timer = window.setInterval(load, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [underlyings]);
+  }, [underlyingKey]);
 
   const tradePnl = (trade) => {
     const terminalStatus = String(trade.status || '').toUpperCase() === 'CLOSED';
