@@ -1009,7 +1009,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
       <article className="panel price-vwap-panel historical-price-vwap-panel">
           <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
             <div className="price-vwap-graph-column">
-              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime="10:00" entryEndTime="15:30" selectedTime={selectedIntradayTime} enterValue={historicalIntradayRows.length ? historicalIntradayRows[historicalIntradayRows.length - 1]?.enter || '—' : '—'} showHeading headingEyebrow="HISTORICAL INTRADAY PRICE ACTION" />
+              <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedIntradayTime} enterValue={historicalIntradayRows.length ? historicalIntradayRows[historicalIntradayRows.length - 1]?.enter || '—' : '—'} showHeading headingEyebrow="HISTORICAL INTRADAY PRICE ACTION" />
             </div>
 
           </div>
