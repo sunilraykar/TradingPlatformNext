@@ -273,6 +273,90 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   </>;
 }
 
+
+function AutoTrenderActiveTrades({ underlyings }) {
+  const [trades, setTrades] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const normalizedUnderlyings = useMemo(
+    () => (Array.isArray(underlyings) ? underlyings : [underlyings]).map((value) => String(value || '').trim().toUpperCase()).filter(Boolean),
+    [underlyings]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    let inFlight = false;
+    const load = async () => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const payload = await api('/trades');
+        if (cancelled) return;
+        const terminalStatuses = ['CLOSED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
+        const rows = (Array.isArray(payload?.trades) ? payload.trades : [])
+          .filter((trade) => !terminalStatuses.includes(String(trade.status || 'OPEN').toUpperCase()))
+          .filter((trade) => normalizedUnderlyings.includes(String(trade.underlying || '').trim().toUpperCase()))
+          .sort((a, b) => new Date(b.entry_time || b.created_at || 0).getTime() - new Date(a.entry_time || a.created_at || 0).getTime());
+        setTrades(rows);
+        setError('');
+      } catch (e) {
+        if (!cancelled) setError(e.message || 'Unable to load active trades.');
+      } finally {
+        inFlight = false;
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    const timer = window.setInterval(load, 5000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [normalizedUnderlyings]);
+
+  const formatPnl = (trade) => {
+    const entry = Number(trade.average_entry_price ?? trade.entry_price);
+    const ltp = Number(trade.last_price);
+    const quantity = Number(trade.open_quantity ?? trade.quantity);
+    if (!Number.isFinite(entry) || !Number.isFinite(ltp) || !Number.isFinite(quantity)) return '—';
+    const value = (ltp - entry) * quantity * (String(trade.direction || 'BUY').toUpperCase() === 'SELL' ? -1 : 1);
+    return value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
+  };
+
+  return <aside className="panel autotrend-active-trades" aria-label="Active trades for selected underlying">
+    <div className="autotrend-active-trades-heading">
+      <div><div className="eyebrow">TRADE TERMINAL</div><h3>Active Trades</h3></div>
+      <span className="autotrend-active-trades-count">{trades.length}</span>
+    </div>
+    <div className="autotrend-active-trades-filter">{normalizedUnderlyings.join(' · ')}</div>
+    {error && <div className="autotrend-active-trades-error">{error}</div>}
+    <div className="autotrend-active-trades-list">
+      {trades.map((trade) => {
+        const direction = String(trade.direction || 'BUY').toUpperCase();
+        const pnl = formatPnl(trade);
+        const pnlNumber = Number(pnl.replace(/[₹,]/g, ''));
+        return <article className="autotrend-active-trade" key={trade.trade_id}>
+          <div className="autotrend-active-trade-top">
+            <strong title={trade.instrument_symbol}>{trade.instrument_symbol || trade.underlying}</strong>
+            <span className={direction === 'SELL' ? 'signal-sell' : 'signal-buy'}>{direction}</span>
+          </div>
+          <div className="autotrend-active-trade-meta">
+            <span>{trade.underlying}</span><span>{trade.execution_mode || 'PAPER'}</span><span>Qty {number(trade.open_quantity ?? trade.quantity, 0)}</span>
+          </div>
+          <div className="autotrend-active-trade-values">
+            <div><span>Entry</span><strong>{number(trade.average_entry_price ?? trade.entry_price)}</strong></div>
+            <div><span>LTP</span><strong>{number(trade.last_price)}</strong></div>
+            <div><span>P&amp;L</span><strong className={Number.isFinite(pnlNumber) ? pnlNumber > 0 ? 'positive' : pnlNumber < 0 ? 'negative' : '' : ''}>{pnl}</strong></div>
+          </div>
+          <div className="autotrend-active-trade-risk">
+            <span>SL {number(trade.stop_loss)}</span><span>Target {number(trade.target)}</span>
+          </div>
+        </article>;
+      })}
+      {!trades.length && !loading && !error && <div className="autotrend-active-trades-empty">No active trades for {normalizedUnderlyings.join(', ')}.</div>}
+      {!trades.length && loading && <div className="autotrend-active-trades-empty">Loading active trades…</div>}
+    </div>
+    <div className="autotrend-active-trades-footer">Auto-refresh · 5 sec</div>
+  </aside>;
+}
+
 function AllIndicesDashboard({ mins, settings }) {
   const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
   const inFlight = useRef(false);
@@ -308,7 +392,8 @@ function AllIndicesDashboard({ mins, settings }) {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [mins, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
 
-  return <section className="all-indices-dashboard" aria-label="Dashboard live charts">
+  return <section className="all-indices-workspace" aria-label="Dashboard and active trades">
+    <div className="all-indices-dashboard">
     
     <div className="all-indices-grid">
       {DEFAULT_INDICES.map((symbol) => {
@@ -320,6 +405,7 @@ function AllIndicesDashboard({ mins, settings }) {
         </article>;
       })}
     </div>
+    <AutoTrenderActiveTrades underlyings={DEFAULT_INDICES} />
   </section>;
 }
 
@@ -1733,14 +1819,16 @@ export default function App() {
       </section>}
 
       <section className="price-vwap-section">
-        <article className="panel price-vwap-panel">
-          <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
-            <div className="price-vwap-graph-column">
-              <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} showHeading />
+        <div className="price-vwap-workspace">
+          <article className="panel price-vwap-panel">
+            <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 7fr) minmax(260px, 3fr)' }}>
+              <div className="price-vwap-graph-column">
+                <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} showHeading />
+              </div>
             </div>
-
-          </div>
-        </article>
+          </article>
+          <AutoTrenderActiveTrades underlyings={[index]} />
+        </div>
       </section>
 
       <section className="content-grid">
