@@ -308,8 +308,8 @@ function AllIndicesDashboard({ mins, settings }) {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [mins, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
 
-  return <section className="all-indices-dashboard" aria-label="All indices live charts">
-    <div className="all-indices-heading"><div><div className="eyebrow">LIVE MARKET OVERVIEW</div><h2>All Indices</h2></div><span>Price &amp; VWAP · Auto-refresh every 5 seconds</span></div>
+  return <section className="all-indices-dashboard" aria-label="Dashboard live charts">
+    <div className="all-indices-heading"><div><div className="eyebrow">LIVE MARKET OVERVIEW</div><h2>Dashboard</h2></div><span>Price &amp; VWAP · Auto-refresh every 5 seconds</span></div>
     <div className="all-indices-grid">
       {DEFAULT_INDICES.map((symbol) => {
         const item = series[symbol] || { rows: [], loading: true, error: '' };
@@ -1690,7 +1690,7 @@ export default function App() {
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
           {DEFAULT_INDICES.map((item) => <button key={item} className={!showAllIndices && index === item ? 'selected' : ''} onClick={() => { setIndex(item); setShowAllIndices(false); }}>{item}</button>)}
-          <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => setShowAllIndices(true)}>ALL INDICES</button>
+          <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => setShowAllIndices(true)}>DASHBOARD</button>
         </div>
         <div className="interval-select">Refresh Interval: <strong>{mins} min</strong></div>
         <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
