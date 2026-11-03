@@ -306,7 +306,7 @@ function AllIndicesDashboard({ mins, settings }) {
     load();
     const timer = window.setInterval(load, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [mins, settings]);
+  }, [mins, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
 
   return <section className="all-indices-dashboard" aria-label="All indices live charts">
     <div className="all-indices-heading"><div><div className="eyebrow">LIVE MARKET OVERVIEW</div><h2>All Indices</h2></div><span>Price &amp; VWAP · Auto-refresh every 5 seconds</span></div>
