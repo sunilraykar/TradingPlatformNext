@@ -33,6 +33,12 @@ class TradeCreate(BaseModel):
     signal_timestamp: str | None = Field(default=None, max_length=80)
 
 
+class AutoTrenderManualEntry(BaseModel):
+    index: str = Field(min_length=2, max_length=20)
+    signal: Literal["BUY", "SELL"]
+    signal_timestamp: str = Field(min_length=10, max_length=80)
+
+
 class TradeUpdate(BaseModel):
     status: str | None = Field(default=None, min_length=2, max_length=40)
     quantity: int | None = Field(default=None, gt=0, le=1000000)
@@ -196,6 +202,21 @@ def _enforce_autotrender_entry_window(source: str, signal_timestamp: str | None)
         raise HTTPException(status_code=503, detail="AutoTrender maximum signal age must be between 1 and 3600 seconds")
     if age_seconds > max_age_seconds:
         raise HTTPException(status_code=422, detail="AutoTrender signal is stale; a fresh signal is required")
+
+
+@router.post("/autotrender/manual-entry")
+def create_manual_autotrender_trade(payload: AutoTrenderManualEntry) -> dict[str, Any]:
+    """Manually enter the currently selected AutoTrender option into the canonical terminal."""
+    _enforce_autotrender_entry_window("AUTOTRENDER_MANUAL", payload.signal_timestamp)
+    try:
+        from app.services.autotrender_paper_trade_worker import create_manual_paper_trade
+        timestamp = datetime.fromisoformat(payload.signal_timestamp.strip())
+        trade = create_manual_paper_trade(payload.index, payload.signal, timestamp)
+        return {"trade": trade, "message": "Manual AutoTrender PAPER trade created"}
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
 @router.post("")
