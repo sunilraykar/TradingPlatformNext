@@ -946,3 +946,25 @@
     align-items:flex-end!important;
   }
 }
+
+
+/* Consistent connection status chips, including the interactive Kite reconnect control. */
+.status-pill.offline{color:#f0a0a0}
+.status-pill.offline i{background:var(--red)}
+.kite-reconnect-button{appearance:none;background:transparent;white-space:nowrap;line-height:1.2;font-family:inherit}
+.kite-reconnect-button:disabled{opacity:1;cursor:default}
+
+/* Compact holdings summary cards with explicit positive/negative P&L treatment. */
+.holdings-portfolio-summary{grid-template-columns:repeat(4,minmax(0,340px));justify-content:start;gap:10px}
+.holdings-summary-item{max-width:340px}
+.holdings-pnl-card>strong{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.holdings-pnl-amount{font:600 clamp(14px,1.2vw,18px) 'DM Mono',monospace;white-space:nowrap}
+.holdings-pnl-amount.positive{color:var(--green)}
+.holdings-pnl-amount.negative{color:var(--red)}
+.holdings-pnl-amount.neutral{color:var(--text)}
+.holdings-pnl-percent{display:inline-flex;align-items:center;padding:4px 7px;border-radius:6px;font:600 10px 'DM Mono',monospace;white-space:nowrap}
+.holdings-pnl-percent.positive{color:var(--green);background:rgba(56,217,169,.12)}
+.holdings-pnl-percent.negative{color:var(--red);background:rgba(248,113,113,.12)}
+.holdings-pnl-percent.neutral{color:var(--muted);background:rgba(148,163,184,.12)}
+@media(max-width:1100px){.holdings-portfolio-summary{grid-template-columns:repeat(2,minmax(0,340px))}}
+@media(max-width:760px){.holdings-portfolio-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.holdings-summary-item{max-width:none}}
