@@ -63,6 +63,10 @@ def list_terminal_trades(
     source: str | None = None,
     underlying: str | None = None,
 ) -> dict[str, Any]:
+    # Recover the in-memory trade cache if startup hydration was unavailable.
+    terminal_state = trade_terminal.status()
+    if terminal_state.get("cached_trades", 0) == 0:
+        trade_terminal.hydrate_cache()
     trade_terminal.refresh_open_trade_quotes_from_cache()
     return {"trades": trade_terminal.list_trades(mode=mode, status_filter=status, source=source, underlying=underlying),
             "terminal": trade_terminal.status()}
