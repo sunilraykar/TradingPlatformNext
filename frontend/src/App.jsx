@@ -1159,15 +1159,16 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
     {selected && <section className="historical-records-content">
-      <article className="panel price-vwap-panel historical-price-vwap-panel">
-          <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
+      <div className="price-vwap-workspace historical-price-vwap-workspace">
+        <article className="panel price-vwap-panel historical-price-vwap-panel">
+          <div className="price-vwap-layout">
             <div className="price-vwap-graph-column">
               <PriceVwapChart rows={buildIntradayRows(historicalIntradayRows, autotrendSettings)} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedIntradayTime} enterValue={historicalIntradayRows.length ? historicalIntradayRows[historicalIntradayRows.length - 1]?.enter || '—' : '—'} showHeading headingEyebrow="HISTORICAL INTRADAY PRICE ACTION" />
-              <AutoTrenderActiveTrades underlyings={[selectedIndex]} selectedDate={selected.trading_date} />
             </div>
-
           </div>
         </article>
+        <AutoTrenderActiveTrades underlyings={[selectedIndex]} selectedDate={selected.trading_date} />
+      </div>
       <section className="content-grid historical-dataset-grid">
         <article className="panel historical-intraday-table-panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div><div className="historical-enter-filters" role="group" aria-label="Filter intraday records by Enter signal"><button type="button" className={enterFilter === 'ALL' ? 'selected' : 'button secondary'} onClick={() => setEnterFilter('ALL')}>All ({historicalIntradayRows.length})</button>{enterFilterValues.map((value) => <button key={value} type="button" className={enterFilter === value ? 'selected' : 'button secondary'} onClick={() => setEnterFilter(value)}>{value} ({historicalIntradayRows.filter((row) => String(row.enter ?? '').trim().toUpperCase() === value).length})</button>)}</div><KiteDataTable columnsOverride={['time','vwapSignal','optionSignal','enter', ...(!showIntradayDetails ? [] : ['call','put']), 'diff','pcr','price','vwap', ...(!showIntradayDetails ? [] : ['callStrength','putStrength']), 'strengthDiff','vwapPriceBufferPct']} rows={filteredHistoricalIntradayRows} onRowSelect={(row) => setSelectedIntradayTime(row.time)} /></article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
