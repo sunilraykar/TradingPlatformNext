@@ -281,6 +281,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [terminal, setTerminal] = useState(null);
+  const [streamState, setStreamState] = useState('connecting');
 
   const indiaDate = (value = new Date()) => new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
@@ -288,36 +289,113 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
 
   useEffect(() => {
     let cancelled = false;
-    let inFlight = false;
-    const load = async () => {
-      if (inFlight) return;
-      inFlight = true;
+    let syncInFlight = false;
+    let socket;
+    let reconnectTimer;
+    let quoteSyncTimer;
+
+    const selectedUnderlyings = underlyingKey ? underlyingKey.split('|') : [];
+    const filterTrades = (items) => {
+      const tradeDate = selectedDate || indiaDate();
+      return (Array.isArray(items) ? items : [])
+        .filter((trade) => ['OPEN', 'CLOSED'].includes(String(trade.status || 'OPEN').toUpperCase()))
+        .filter((trade) => {
+          const created = trade.created_at || trade.entry_time || trade.opened_at;
+          return created && indiaDate(new Date(created)) === tradeDate;
+        })
+        .filter((trade) => selectedUnderlyings.length === 0 || selectedUnderlyings.includes(String(trade.underlying || '').trim().toUpperCase()))
+        .sort((a, b) => new Date(b.created_at || b.entry_time || 0).getTime() - new Date(a.created_at || a.entry_time || 0).getTime());
+    };
+
+    const loadSnapshot = async (showError = true) => {
+      if (syncInFlight || cancelled) return;
+      syncInFlight = true;
       try {
         const payload = await api('/trades');
         if (cancelled) return;
-        const tradeDate = selectedDate || indiaDate();
-        const selectedUnderlyings = underlyingKey ? underlyingKey.split('|') : [];
-        const rows = (Array.isArray(payload?.trades) ? payload.trades : [])
-          .filter((trade) => ['OPEN', 'CLOSED'].includes(String(trade.status || 'OPEN').toUpperCase()))
-          .filter((trade) => {
-            const created = trade.created_at || trade.entry_time || trade.opened_at;
-            return created && indiaDate(new Date(created)) === tradeDate;
-          })
-          .filter((trade) => selectedUnderlyings.length === 0 || selectedUnderlyings.includes(String(trade.underlying || '').trim().toUpperCase()))
-          .sort((a, b) => new Date(b.created_at || b.entry_time || 0).getTime() - new Date(a.created_at || a.entry_time || 0).getTime());
-        setTrades(rows);
+        setTrades(filterTrades(payload?.trades));
         setTerminal(payload?.terminal || null);
         setError('');
       } catch (e) {
-        if (!cancelled) setError(e.message || 'Unable to load today\'s trades.');
+        if (!cancelled && showError) setError(e.message || 'Unable to load trade records.');
       } finally {
-        inFlight = false;
+        syncInFlight = false;
         if (!cancelled) setLoading(false);
       }
     };
-    load();
-    const timer = window.setInterval(load, 5000);
-    return () => { cancelled = true; window.clearInterval(timer); };
+
+    const mergeTrade = (incoming, tradeId = incoming?.trade_id) => {
+      if (!incoming || !tradeId || cancelled) return;
+      setTrades((current) => {
+        const index = current.findIndex((item) => item.trade_id === tradeId);
+        const merged = index < 0
+          ? [incoming, ...current]
+          : current.map((item) => item.trade_id === tradeId ? { ...item, ...incoming } : item);
+        return filterTrades(merged);
+      });
+    };
+
+    const connect = () => {
+      if (cancelled) return;
+      const wsApi = API
+        ? API.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:')
+        : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+      try {
+        socket = new WebSocket(`${wsApi}/api/v1/trades/stream`);
+      } catch (e) {
+        setStreamState('disconnected');
+        reconnectTimer = window.setTimeout(connect, 1500);
+        return;
+      }
+
+      socket.onopen = () => {
+        if (!cancelled) setStreamState('connected');
+      };
+      socket.onmessage = (event) => {
+        let message;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (message.type === 'snapshot') {
+          setTrades(filterTrades(message.trades));
+          setTerminal(message.terminal || null);
+          setError('');
+          setLoading(false);
+        } else if (message.type === 'trade_upsert' && message.trade) {
+          if (message.terminal) setTerminal(message.terminal);
+          mergeTrade(message.trade);
+        } else if (message.type === 'trade_quote' && message.trade) {
+          mergeTrade(message.trade, message.trade_id || message.trade.trade_id);
+        } else if (message.type === 'trade_status') {
+          setTerminal(message.terminal || null);
+        }
+      };
+      socket.onclose = () => {
+        if (cancelled) return;
+        setStreamState('reconnecting');
+        loadSnapshot(false);
+        reconnectTimer = window.setTimeout(connect, 1500);
+      };
+      socket.onerror = () => socket.close();
+    };
+
+    // REST establishes the first view; WebSocket then delivers the same live
+    // snapshots and incremental trade/quote events used by Trade Terminal.
+    loadSnapshot();
+    connect();
+
+    // Match Trade Terminal's two-second REST cache reconciliation as a safety net.
+    quoteSyncTimer = window.setInterval(() => {
+      if (document.visibilityState !== 'hidden') loadSnapshot(false);
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      if (quoteSyncTimer) window.clearInterval(quoteSyncTimer);
+      if (socket) {
+        socket.onclose = null;
+        socket.close();
+      }
+    };
   }, [underlyingKey, selectedDate]);
 
   const tradePnl = (trade) => {
@@ -337,7 +415,6 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
     : value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'exceptZero' });
 
   const cacheUnavailable = !trades.length && !loading && terminal?.cached_trades === 0 && terminal?.persistence_degraded;
-
   const dateHeading = selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
   return <aside className="panel autotrend-active-trades" aria-label={`${dateHeading} open and closed trades`}>
     <div className="autotrend-active-trades-heading">
@@ -366,10 +443,9 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
         </tbody>
       </table>
     </div>
-    <div className="autotrend-active-trades-footer">India time · Auto-refresh 5 sec</div>
+    <div className="autotrend-active-trades-footer">India time · {streamState === 'connected' ? 'Live WebSocket · 2 sec recovery sync' : 'WebSocket reconnecting · 2 sec recovery sync'}</div>
   </aside>;
 }
-
 
 function AllIndicesDashboard({ mins, settings }) {
   const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
