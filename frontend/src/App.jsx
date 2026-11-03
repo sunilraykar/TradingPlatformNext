@@ -1309,7 +1309,7 @@ export default function App() {
   const reconnectPollingRef = useRef(null);
   const [kiteReconnecting, setKiteReconnecting] = useState(false);
   const [index, setIndex] = useState('NIFTY');
-  const [showAllIndices, setShowAllIndices] = useState(false);
+  const [showAllIndices, setShowAllIndices] = useState(true);
   const refreshInFlight = useRef(false);
   const kiteRefreshInFlight = useRef(false);
   const selectedIndexRef = useRef(index);
@@ -1689,8 +1689,8 @@ export default function App() {
       {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
-          {DEFAULT_INDICES.map((item) => <button key={item} className={!showAllIndices && index === item ? 'selected' : ''} onClick={() => { setIndex(item); setShowAllIndices(false); }}>{item}</button>)}
           <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => setShowAllIndices(true)}>DASHBOARD</button>
+          {DEFAULT_INDICES.map((item) => <button key={item} className={!showAllIndices && index === item ? 'selected' : ''} onClick={() => { setIndex(item); setShowAllIndices(false); }}>{item}</button>)}
         </div>
         <div className="interval-select">Refresh Interval: <strong>{mins} min</strong></div>
         <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
