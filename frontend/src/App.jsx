@@ -419,7 +419,7 @@ function AllIndicesDashboard({ mins, settings }) {
       })}
     </div>
     </div>
-    <AutoTrenderActiveTrades underlyings={DEFAULT_INDICES} />
+
   </section>;
 }
 
