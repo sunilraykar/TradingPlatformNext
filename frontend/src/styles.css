@@ -1019,3 +1019,38 @@
 .all-indices-card .chart-empty{min-height:180px;margin:10px 0;padding:18px}
 @media(max-width:900px){.all-indices-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.all-indices-heading{align-items:flex-start;flex-direction:column}.all-indices-card .price-vwap-chart{height:190px}.all-indices-card .price-vwap-top-metrics{flex-wrap:wrap!important;justify-content:center!important;gap:6px!important}.all-indices-card .price-vwap-top-metrics>div{min-width:0!important;padding:0 7px!important}.all-indices-card .price-vwap-top-metrics strong{font-size:14px!important}}
+
+/* AutoTrender workspace: 70% index charts, 30% matching active trades. */
+.price-vwap-workspace,.all-indices-workspace{display:grid;grid-template-columns:minmax(0,7fr) minmax(280px,3fr);gap:12px;align-items:stretch;width:100%}
+.price-vwap-workspace .price-vwap-section,.all-indices-workspace .all-indices-dashboard{min-width:0}
+.price-vwap-workspace .price-vwap-section{margin:0}
+.price-vwap-workspace .price-vwap-panel{height:100%}
+.price-vwap-workspace .price-vwap-layout{display:block!important}
+.price-vwap-workspace .price-vwap-graph-column{border:0;padding:10px 12px}
+.all-indices-workspace .all-indices-dashboard{margin:0}
+.all-indices-workspace .all-indices-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+.all-indices-workspace .all-indices-card .price-vwap-chart{height:180px}
+.autotrend-active-trades{min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:760px}
+.autotrend-active-trades-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.autotrend-active-trades-heading h3{font-size:15px;margin:4px 0 0}
+.autotrend-active-trades-count{display:grid;place-items:center;min-width:26px;height:26px;padding:0 7px;border-radius:7px;background:#1b2c40;color:var(--cyan);font:700 12px 'DM Mono',monospace}
+.autotrend-active-trades-filter{font-size:9px;color:var(--muted);letter-spacing:.35px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.autotrend-active-trades-list{display:flex;flex-direction:column;gap:9px;overflow:auto;min-height:80px;flex:1}
+.autotrend-active-trade{padding:10px;border:1px solid var(--line);border-radius:8px;background:#0d1726;min-width:0}
+.autotrend-active-trade-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.autotrend-active-trade-top strong{font:600 11px 'DM Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.autotrend-active-trade-top>span{font-size:9px;font-weight:700;padding:3px 6px;border-radius:4px;background:#15372e}
+.autotrend-active-trade-top>span.signal-sell{background:#40242b}
+.autotrend-active-trade-meta{display:flex;flex-wrap:wrap;gap:7px;margin-top:7px;color:var(--muted);font-size:9px}
+.autotrend-active-trade-values{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:10px}
+.autotrend-active-trade-values>div{min-width:0;display:flex;flex-direction:column;gap:4px}
+.autotrend-active-trade-values span,.autotrend-active-trade-risk{font-size:8px;color:var(--muted)}
+.autotrend-active-trade-values strong{font:600 10px 'DM Mono',monospace;overflow-wrap:anywhere}
+.autotrend-active-trade-values strong.positive{color:var(--green)}
+.autotrend-active-trade-values strong.negative{color:var(--red)}
+.autotrend-active-trade-risk{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;margin-top:9px;padding-top:7px;border-top:1px solid #1e2b3d}
+.autotrend-active-trades-empty{padding:22px 8px;text-align:center;color:var(--muted);font-size:10px}
+.autotrend-active-trades-error{color:var(--red);font-size:10px}
+.autotrend-active-trades-footer{font-size:8px;color:var(--muted);text-align:right;padding-top:6px;border-top:1px solid var(--line)}
+@media(max-width:1100px){.price-vwap-workspace,.all-indices-workspace{grid-template-columns:minmax(0,1fr)}.autotrend-active-trades{max-height:420px}.all-indices-workspace .all-indices-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.all-indices-workspace .all-indices-grid{grid-template-columns:minmax(0,1fr)}}
