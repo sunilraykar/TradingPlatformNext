@@ -274,7 +274,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
 }
 
 
-function AutoTrenderActiveTrades() {
+function AutoTrenderActiveTrades({ underlyings }) {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -294,12 +294,15 @@ function AutoTrenderActiveTrades() {
         const payload = await api('/trades');
         if (cancelled) return;
         const today = indiaDate();
+        const selectedUnderlyings = (Array.isArray(underlyings) ? underlyings : [underlyings])
+          .map((value) => String(value || '').trim().toUpperCase()).filter(Boolean);
         const rows = (Array.isArray(payload?.trades) ? payload.trades : [])
           .filter((trade) => ['OPEN', 'CLOSED'].includes(String(trade.status || 'OPEN').toUpperCase()))
           .filter((trade) => {
             const created = trade.created_at || trade.entry_time || trade.opened_at;
             return created && indiaDate(new Date(created)) === today;
           })
+          .filter((trade) => selectedUnderlyings.length === 0 || selectedUnderlyings.includes(String(trade.underlying || '').trim().toUpperCase()))
           .sort((a, b) => new Date(b.created_at || b.entry_time || 0).getTime() - new Date(a.created_at || a.entry_time || 0).getTime());
         setTrades(rows);
         setTerminal(payload?.terminal || null);
@@ -314,7 +317,7 @@ function AutoTrenderActiveTrades() {
     load();
     const timer = window.setInterval(load, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, []);
+  }, [underlyings]);
 
   const tradePnl = (trade) => {
     const terminalStatus = String(trade.status || '').toUpperCase() === 'CLOSED';
@@ -415,7 +418,7 @@ function AllIndicesDashboard({ mins, settings }) {
       })}
     </div>
     </div>
-    <AutoTrenderActiveTrades />
+    <AutoTrenderActiveTrades underlyings={DEFAULT_INDICES} />
   </section>;
 }
 
@@ -1837,7 +1840,7 @@ export default function App() {
               </div>
             </div>
           </article>
-          <AutoTrenderActiveTrades />
+          <AutoTrenderActiveTrades underlyings={[index]} />
         </div>
       </section>
 
