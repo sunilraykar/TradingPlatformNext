@@ -447,7 +447,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
   </aside>;
 }
 
-function AllIndicesDashboard({ mins, settings }) {
+function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
   const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
   const inFlight = useRef(false);
   useEffect(() => {
@@ -487,9 +487,19 @@ function AllIndicesDashboard({ mins, settings }) {
       {DEFAULT_INDICES.map((symbol) => {
         const item = series[symbol] || { rows: [], loading: true, error: '' };
         const latest = item.rows[item.rows.length - 1];
+        const quote = kiteIndexQuotes?.data?.[symbol] || null;
+        const rawChangePercent = quote?.day_change_percentage ?? quote?.change_percentage ?? quote?.changePercent ?? quote?.change_percent;
+        const dayChangePercent = rawChangePercent === null || rawChangePercent === undefined || rawChangePercent === '' ? null : numericValue(rawChangePercent);
+        const explicitDayChange = quote?.day_change ?? quote?.change ?? quote?.net_change;
+        const quotePrice = numericValue(quote?.last_price ?? quote?.price ?? quote?.ltp);
+        const quoteClose = numericValue(quote?.close ?? quote?.close_price ?? quote?.ohlc?.close);
+        const dayChangeAbsolute = explicitDayChange !== null && explicitDayChange !== undefined && explicitDayChange !== ''
+          ? numericValue(explicitDayChange)
+          : quotePrice !== null && quoteClose !== null ? quotePrice - quoteClose : null;
+        const summaryPrice = quotePrice ?? latest?.price ?? latest?.close ?? latest?.ltp;
         return <article className="panel all-indices-card" key={symbol}>
-          <div className="all-indices-card-heading"><h3>{symbol}</h3><div>{latest ? <><span>PRICE</span><strong>{number(latest.price)}</strong><span>VWAP</span><strong>{number(latest.vwap)}</strong></> : <span>{item.loading ? 'Loading…' : item.error ? 'Data unavailable' : 'Waiting for data'}</span>}</div></div>
-          {item.error && !item.rows.length ? <div className="chart-empty">{item.error}</div> : <PriceVwapChart rows={item.rows} entryStartTime={settings.autoTrenderEntryStartTime} entryEndTime={settings.autoTrenderEntryEndTime} compact />}
+          <div className="all-indices-card-heading"><h3>{symbol}</h3><div>{latest ? <><span>PRICE</span><strong>{number(summaryPrice)}</strong><span>VWAP</span><strong>{number(latest.vwap)}</strong></> : <span>{item.loading ? 'Loading…' : item.error ? 'Data unavailable' : 'Waiting for data'}</span>}</div></div>
+          {item.error && !item.rows.length ? <div className="chart-empty">{item.error}</div> : <PriceVwapChart rows={item.rows} entryStartTime={settings.autoTrenderEntryStartTime} entryEndTime={settings.autoTrenderEntryEndTime} summary={{ price: summaryPrice, dayChangePercent, dayChangeAbsolute }} compact />}
         </article>;
       })}
     </div>
@@ -1880,7 +1890,7 @@ export default function App() {
 
 
 
-      {showAllIndices ? <AllIndicesDashboard mins={mins} settings={autotrendSettings} /> : <>
+      {showAllIndices ? <AllIndicesDashboard mins={mins} settings={autotrendSettings} kiteIndexQuotes={kiteIndexQuotes} /> : <>
       {selectedContract?.status === 'SELECTED' && <section className="selected-contract-panel panel" aria-live="polite">
         <div className="selected-contract-heading">
           <div><div className="eyebrow">ATM CONTRACT SELECTION</div><h2>Selected option strike</h2></div>
