@@ -274,13 +274,10 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
 }
 
 
-function AutoTrenderActiveTrades({ underlyings }) {
+function AutoTrenderActiveTrades() {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const underlyingKey = (Array.isArray(underlyings) ? underlyings : [underlyings])
-    .map((value) => String(value || '').trim().toUpperCase()).filter(Boolean).join('|');
-  const normalizedUnderlyings = underlyingKey ? underlyingKey.split('|') : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -291,15 +288,12 @@ function AutoTrenderActiveTrades({ underlyings }) {
       try {
         const payload = await api('/trades');
         if (cancelled) return;
-        const terminalStatuses = ['CLOSED', 'CANCELLED', 'REJECTED', 'EXPIRED'];
         const rows = (Array.isArray(payload?.trades) ? payload.trades : [])
-          .filter((trade) => !terminalStatuses.includes(String(trade.status || 'OPEN').toUpperCase()))
-          .filter((trade) => normalizedUnderlyings.includes(String(trade.underlying || '').trim().toUpperCase()))
           .sort((a, b) => new Date(b.entry_time || b.created_at || 0).getTime() - new Date(a.entry_time || a.created_at || 0).getTime());
         setTrades(rows);
         setError('');
       } catch (e) {
-        if (!cancelled) setError(e.message || 'Unable to load active trades.');
+        if (!cancelled) setError(e.message || 'Unable to load trades.');
       } finally {
         inFlight = false;
         if (!cancelled) setLoading(false);
@@ -308,53 +302,53 @@ function AutoTrenderActiveTrades({ underlyings }) {
     load();
     const timer = window.setInterval(load, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [underlyingKey]);
+  }, []);
 
-  const formatPnl = (trade) => {
+  const tradePnl = (trade) => {
+    const terminal = ['CLOSED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(String(trade.status || '').toUpperCase());
+    const storedPnl = terminal ? trade.realized_pnl : trade.unrealized_pnl;
+    if (storedPnl !== null && storedPnl !== undefined && storedPnl !== '' && Number.isFinite(Number(storedPnl))) {
+      return Number(storedPnl);
+    }
     const entry = Number(trade.average_entry_price ?? trade.entry_price);
-    const ltp = Number(trade.last_price);
-    const quantity = Number(trade.open_quantity ?? trade.quantity);
-    if (!Number.isFinite(entry) || !Number.isFinite(ltp) || !Number.isFinite(quantity)) return '—';
-    const value = (ltp - entry) * quantity * (String(trade.direction || 'BUY').toUpperCase() === 'SELL' ? -1 : 1);
-    return value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 });
+    const mark = Number(terminal ? (trade.average_exit_price ?? trade.exit_price) : trade.last_price);
+    const quantity = Number(terminal ? trade.quantity : (trade.open_quantity ?? trade.quantity));
+    if (!Number.isFinite(entry) || !Number.isFinite(mark) || !Number.isFinite(quantity)) return null;
+    return (mark - entry) * quantity * (String(trade.direction || 'BUY').toUpperCase() === 'SELL' ? -1 : 1);
   };
+  const formatPnl = (value) => value === null
+    ? '—'
+    : value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'exceptZero' });
 
-  return <aside className="panel autotrend-active-trades" aria-label="Active trades for selected underlying">
+  return <aside className="panel autotrend-active-trades" aria-label="All trades">
     <div className="autotrend-active-trades-heading">
-      <div><div className="eyebrow">TRADE TERMINAL</div><h3>Active Trades</h3></div>
+      <div><div className="eyebrow">TRADE TERMINAL</div><h3>All Trades</h3></div>
       <span className="autotrend-active-trades-count">{trades.length}</span>
     </div>
-    <div className="autotrend-active-trades-filter">{normalizedUnderlyings.join(' · ')}</div>
     {error && <div className="autotrend-active-trades-error">{error}</div>}
     <div className="autotrend-active-trades-list">
-      {trades.map((trade) => {
-        const direction = String(trade.direction || 'BUY').toUpperCase();
-        const pnl = formatPnl(trade);
-        const pnlNumber = Number(pnl.replace(/[₹,]/g, ''));
-        return <article className="autotrend-active-trade" key={trade.trade_id}>
-          <div className="autotrend-active-trade-top">
-            <strong title={trade.instrument_symbol}>{trade.instrument_symbol || trade.underlying}</strong>
-            <span className={direction === 'SELL' ? 'signal-sell' : 'signal-buy'}>{direction}</span>
-          </div>
-          <div className="autotrend-active-trade-meta">
-            <span>{trade.underlying}</span><span>{trade.execution_mode || 'PAPER'}</span><span>Qty {number(trade.open_quantity ?? trade.quantity, 0)}</span>
-          </div>
-          <div className="autotrend-active-trade-values">
-            <div><span>Entry</span><strong>{number(trade.average_entry_price ?? trade.entry_price)}</strong></div>
-            <div><span>LTP</span><strong>{number(trade.last_price)}</strong></div>
-            <div><span>P&amp;L</span><strong className={Number.isFinite(pnlNumber) ? pnlNumber > 0 ? 'positive' : pnlNumber < 0 ? 'negative' : '' : ''}>{pnl}</strong></div>
-          </div>
-          <div className="autotrend-active-trade-risk">
-            <span>SL {number(trade.stop_loss)}</span><span>Target {number(trade.target)}</span>
-          </div>
-        </article>;
-      })}
-      {!trades.length && !loading && !error && <div className="autotrend-active-trades-empty">No active trades for {normalizedUnderlyings.join(', ')}.</div>}
-      {!trades.length && loading && <div className="autotrend-active-trades-empty">Loading active trades…</div>}
+      <table className="autotrend-trades-table">
+        <thead><tr><th>Symbol</th><th>Entry</th><th>LTP</th><th>Target</th><th>P&amp;L</th></tr></thead>
+        <tbody>
+          {trades.map((trade) => {
+            const pnl = tradePnl(trade);
+            return <tr key={trade.trade_id}>
+              <td title={trade.instrument_symbol || trade.underlying}>{trade.instrument_symbol || trade.underlying || '—'}</td>
+              <td>{number(trade.average_entry_price ?? trade.entry_price)}</td>
+              <td>{number(trade.last_price)}</td>
+              <td>{number(trade.target)}</td>
+              <td className={pnl === null ? '' : pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}>{formatPnl(pnl)}</td>
+            </tr>;
+          })}
+          {!trades.length && !loading && !error && <tr><td colSpan="5" className="autotrend-trades-empty">No trades found.</td></tr>}
+          {!trades.length && loading && <tr><td colSpan="5" className="autotrend-trades-empty">Loading trades…</td></tr>}
+        </tbody>
+      </table>
     </div>
     <div className="autotrend-active-trades-footer">Auto-refresh · 5 sec</div>
   </aside>;
 }
+
 
 function AllIndicesDashboard({ mins, settings }) {
   const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
@@ -405,7 +399,7 @@ function AllIndicesDashboard({ mins, settings }) {
       })}
     </div>
     </div>
-    <AutoTrenderActiveTrades underlyings={DEFAULT_INDICES} />
+    <AutoTrenderActiveTrades />
   </section>;
 }
 
@@ -1827,7 +1821,7 @@ export default function App() {
               </div>
             </div>
           </article>
-          <AutoTrenderActiveTrades underlyings={[index]} />
+          <AutoTrenderActiveTrades />
         </div>
       </section>
 
