@@ -178,6 +178,11 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const side = callStrength == null || putStrength == null ? '—' : callStrength < putStrength ? 'BULLISH' : callStrength > putStrength ? 'BEARISH' : 'NEUTRAL';
   const sideColor = side === 'BULLISH' ? '#22c55e' : side === 'BEARISH' ? '#f87171' : 'var(--text, #e5edf8)';
   const summaryPrice = summary?.price ?? displayed.price;
+  const indexChangeDirection = Number(summary?.dayChangePercent ?? summary?.dayChangeAbsolute ?? 0) > 0
+    ? 'positive'
+    : Number(summary?.dayChangePercent ?? summary?.dayChangeAbsolute ?? 0) < 0
+      ? 'negative'
+      : 'neutral';
   const gap = displayed.price !== null && displayed.vwap !== null ? displayed.price - displayed.vwap : null;
   const buffer = displayed.buffer ?? (displayed.price !== null && displayed.vwap !== null && displayed.vwap !== 0 ? ((displayed.price - displayed.vwap) / displayed.vwap) * 100 : null);
   const ticks = Array.from({ length: 13 }, (_, i) => sessionStart + i * 30);
@@ -190,7 +195,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minWidth: 0 }}>
       <div style={{ minWidth: '150px', padding: '0 18px', textAlign: 'center' }}>
         <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>PRICE</div>
-        <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px' }}>{formatHoverNumber(summaryPrice, 2)}</strong>
+        <strong className={'index-price-value ' + indexChangeDirection} style={{ display: 'block', marginTop: '4px', fontSize: '18px' }}>{formatHoverNumber(summaryPrice, 2)}</strong>
         {summary?.dayChangePercent != null && <strong className={summary.dayChangePercent >= 0 ? 'positive' : 'negative'} style={{ display: 'block', marginTop: '2px', fontSize: '12px' }}>{number(summary.dayChangePercent)}%{summary.dayChangeAbsolute == null ? '' : ` (${summary.dayChangeAbsolute > 0 ? '+' : ''}${number(summary.dayChangeAbsolute)})`}</strong>}
       </div>
       <div style={{ minWidth: '130px', padding: '0 18px', textAlign: 'center', borderLeft: '1px solid var(--border-color, #263449)' }}>
