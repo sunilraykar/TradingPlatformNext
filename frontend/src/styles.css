@@ -1028,7 +1028,7 @@
 .price-vwap-workspace .price-vwap-layout{display:block!important}
 .price-vwap-workspace .price-vwap-graph-column{border:0;padding:10px 12px}
 .all-indices-workspace .all-indices-dashboard{margin:0}
-.all-indices-workspace .all-indices-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+.all-indices-workspace .all-indices-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .all-indices-workspace .all-indices-card .price-vwap-chart{height:180px}
 .autotrend-active-trades{min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:760px}
 .autotrend-active-trades-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
