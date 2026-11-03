@@ -987,3 +987,7 @@
 .manual-trade-success{color:#34d399}
 .enter-autotrend-trade-button{flex:0 0 auto;padding:7px 12px;min-height:30px}
 @media(max-width:650px){.selected-contract-actions{align-items:stretch;flex-direction:column}.enter-autotrend-trade-button{width:100%}}
+
+/* Center every column in the AutoTrender intraday table. */
+.intraday-panel .calculated-table th,
+.intraday-panel .calculated-table td{text-align:center;vertical-align:middle}
