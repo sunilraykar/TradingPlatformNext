@@ -146,7 +146,7 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
-function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, showHeading = false, headingEyebrow = 'INTRADAY PRICE ACTION' }) {
+function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, showHeading = false, compact = false, headingEyebrow = 'INTRADAY PRICE ACTION' }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
@@ -191,7 +191,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
-    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: 'none', borderRadius: '0', background: 'transparent' }} aria-label="Intraday price action and market summary">
+    {!compact && <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: 'none', borderRadius: '0', background: 'transparent' }} aria-label="Intraday price action and market summary">
       {showHeading && <div style={{ flex: '0 0 220px', minWidth: '180px' }}><div className="eyebrow">{headingEyebrow}</div><h2 style={{ margin: '5px 0 0', fontSize: '18px' }}>Future Price &amp; VWAP</h2></div>}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minWidth: 0 }}>
       <div style={{ minWidth: '150px', padding: '0 18px', textAlign: 'center' }}>
@@ -213,7 +213,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       </div>
       </div>
       {enterValue !== null && <div className="chart-enter-card" style={{ flex: '0 0 150px', marginLeft: 'auto' }}><span>Enter</span><strong className={'latest-enter ' + String(enterValue || 'wait').toLowerCase()}>{enterValue || '—'}</strong></div>}
-    </div>
+    </div>}
     <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
       <svg className="oi-chart price-vwap-chart" viewBox="0 0 720 220" role="img" aria-label="Intraday price and VWAP chart from 09:30 to 15:30" preserveAspectRatio="none">
@@ -252,7 +252,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
-    <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
+    {!compact && <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
       {[
         ['VWAP Signal', displayed.vwapSignal || '—'],
         ['Option Signal', displayed.optionSignal || '—'],
@@ -269,8 +269,58 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
           <strong style={{ fontSize: '12px', color: label.includes('Signal') || label === 'Enter' ? (value === 'BUY' ? '#22c55e' : value === 'SELL' ? '#f87171' : 'var(--text, #e5edf8)') : 'var(--text, #e5edf8)' }}>{value}</strong>
         </span>
       </React.Fragment>)}
-    </div>
+    </div>}
   </>;
+}
+
+function AllIndicesDashboard({ mins, settings }) {
+  const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
+  const inFlight = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (inFlight.current || !isAutoTrenderMarketWindowOpen()) return;
+      inFlight.current = true;
+      try {
+        const results = await Promise.allSettled(DEFAULT_INDICES.map((symbol) => api(`/autotrender/indices/${symbol}/intraday?mins=${mins}`)));
+        if (!cancelled) {
+          setSeries((current) => {
+            const next = { ...current };
+            results.forEach((result, index) => {
+              const symbol = DEFAULT_INDICES[index];
+              if (result.status === 'fulfilled') {
+                const payload = result.value;
+                const rawRows = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.rows) ? payload.rows : [];
+                next[symbol] = { rows: buildIntradayRows(rawRows, settings), loading: false, error: '' };
+              } else {
+                next[symbol] = { ...current[symbol], loading: false, error: result.reason?.message || 'Unable to load index data' };
+              }
+            });
+            return next;
+          });
+        }
+      } finally {
+        inFlight.current = false;
+      }
+    };
+    load();
+    const timer = window.setInterval(load, 5000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [mins, settings]);
+
+  return <section className="all-indices-dashboard" aria-label="All indices live charts">
+    <div className="all-indices-heading"><div><div className="eyebrow">LIVE MARKET OVERVIEW</div><h2>All Indices</h2></div><span>Price &amp; VWAP · Auto-refresh every 5 seconds</span></div>
+    <div className="all-indices-grid">
+      {DEFAULT_INDICES.map((symbol) => {
+        const item = series[symbol] || { rows: [], loading: true, error: '' };
+        const latest = item.rows[item.rows.length - 1];
+        return <article className="panel all-indices-card" key={symbol}>
+          <div className="all-indices-card-heading"><h3>{symbol}</h3><div>{latest ? <><span>PRICE</span><strong>{number(latest.price)}</strong><span>VWAP</span><strong>{number(latest.vwap)}</strong></> : <span>{item.loading ? 'Loading…' : item.error ? 'Data unavailable' : 'Waiting for data'}</span>}</div></div>
+          {item.error && !item.rows.length ? <div className="chart-empty">{item.error}</div> : <PriceVwapChart rows={item.rows} entryStartTime={settings.autoTrenderEntryStartTime} entryEndTime={settings.autoTrenderEntryEndTime} compact />}
+        </article>;
+      })}
+    </div>
+  </section>;
 }
 
 function OiChart({ series }) {
@@ -1259,6 +1309,7 @@ export default function App() {
   const reconnectPollingRef = useRef(null);
   const [kiteReconnecting, setKiteReconnecting] = useState(false);
   const [index, setIndex] = useState('NIFTY');
+  const [showAllIndices, setShowAllIndices] = useState(false);
   const refreshInFlight = useRef(false);
   const kiteRefreshInFlight = useRef(false);
   const selectedIndexRef = useRef(index);
@@ -1638,7 +1689,8 @@ export default function App() {
       {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
-          {DEFAULT_INDICES.map((item) => <button key={item} className={index === item ? 'selected' : ''} onClick={() => setIndex(item)}>{item}</button>)}
+          {DEFAULT_INDICES.map((item) => <button key={item} className={!showAllIndices && index === item ? 'selected' : ''} onClick={() => { setIndex(item); setShowAllIndices(false); }}>{item}</button>)}
+          <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => setShowAllIndices(true)}>ALL INDICES</button>
         </div>
         <div className="interval-select">Refresh Interval: <strong>{mins} min</strong></div>
         <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
@@ -1653,6 +1705,7 @@ export default function App() {
 
 
 
+      {showAllIndices ? <AllIndicesDashboard mins={mins} settings={autotrendSettings} /> : <>
       {selectedContract?.status === 'SELECTED' && <section className="selected-contract-panel panel" aria-live="polite">
         <div className="selected-contract-heading">
           <div><div className="eyebrow">ATM CONTRACT SELECTION</div><h2>Selected option strike</h2></div>
@@ -1712,6 +1765,7 @@ export default function App() {
         <span>{hasMarketData ? 'Data received from AutoTrender API' : 'Waiting for AutoTrender market data'}</span>
         <span>Cache {cache?.cached ? `${number(cache.cache_age_seconds, 1)}s old` : 'not populated'} · API proxy: local backend</span>
       </footer>
+      </>}
       </>) : <>
                 <nav className="kite-tabs" aria-label="Kite sections">
           {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings'].map((tab) =>
