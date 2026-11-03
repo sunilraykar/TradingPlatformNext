@@ -309,7 +309,7 @@ function AllIndicesDashboard({ mins, settings }) {
   }, [mins, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
 
   return <section className="all-indices-dashboard" aria-label="Dashboard live charts">
-    <div className="all-indices-heading"><div><div className="eyebrow">LIVE MARKET OVERVIEW</div><h2>Dashboard</h2></div><span>Price &amp; VWAP · Auto-refresh every 5 seconds</span></div>
+    <div className="all-indices-heading"><h2>Dashboard - <span className="eyebrow">LIVE MARKET OVERVIEW</span></h2></div>
     <div className="all-indices-grid">
       {DEFAULT_INDICES.map((symbol) => {
         const item = series[symbol] || { rows: [], loading: true, error: '' };
