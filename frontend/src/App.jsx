@@ -404,6 +404,7 @@ function AllIndicesDashboard({ mins, settings }) {
         </article>;
       })}
     </div>
+    </div>
     <AutoTrenderActiveTrades underlyings={DEFAULT_INDICES} />
   </section>;
 }
