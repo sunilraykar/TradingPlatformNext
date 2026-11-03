@@ -996,3 +996,26 @@
 .historical-intraday-table-panel .kite-data-table th,
 .historical-intraday-table-panel .kite-data-table td{text-align:center!important;vertical-align:middle}
 .historical-intraday-table-panel .kite-data-table th button{justify-content:center!important}
+
+/* Four-index live overview: two independent Price/VWAP charts per row. */
+.all-indices-dashboard{margin:0 0 18px}
+.all-indices-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin:4px 0 14px}
+.all-indices-heading h2{font-size:18px;margin:5px 0 0}
+.all-indices-heading>span{font-size:10px;color:var(--muted)}
+.all-indices-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.all-indices-card{padding:12px 12px 10px;min-width:0}
+.all-indices-card-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:3px 5px 8px;border-bottom:1px solid var(--line)}
+.all-indices-card-heading h3{font-size:13px;margin:0;color:var(--cyan);letter-spacing:.4px}
+.all-indices-card-heading>div{display:flex;align-items:center;gap:7px;font-family:'DM Mono',monospace;font-size:10px}
+.all-indices-card-heading>div span{color:var(--muted);font-size:8px}
+.all-indices-card-heading>div strong{color:var(--text);font-size:10px;margin-right:7px}
+.all-indices-card .price-vwap-wrap{padding:8px 8px 0 42px}
+.all-indices-card .price-vwap-chart{height:145px}
+.all-indices-card .chart-axis{left:5px;top:18px;bottom:27px;font-size:8px}
+.all-indices-card .price-vwap-times{font-size:7px;padding-top:5px}
+.all-indices-card .price-vwap-legend{font-size:8px;gap:9px;flex-wrap:wrap;margin-top:5px}
+.all-indices-card .price-vwap-legend span{gap:4px}
+.all-indices-card .price-vwap-legend span:nth-child(n+3){display:none}
+.all-indices-card .chart-empty{min-height:145px;margin:10px 0;padding:18px}
+@media(max-width:760px){.all-indices-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.all-indices-heading{align-items:flex-start;flex-direction:column}.all-indices-card .price-vwap-chart{height:165px}}
