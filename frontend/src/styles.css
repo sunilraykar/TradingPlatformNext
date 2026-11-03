@@ -991,3 +991,8 @@
 /* Center every column in the AutoTrender intraday table. */
 .intraday-panel .calculated-table th,
 .intraday-panel .calculated-table td{text-align:center;vertical-align:middle}
+
+/* Center all columns in the historical AutoTrender intraday table. */
+.historical-intraday-table-panel .kite-data-table th,
+.historical-intraday-table-panel .kite-data-table td{text-align:center!important;vertical-align:middle}
+.historical-intraday-table-panel .kite-data-table th button{justify-content:center!important}
