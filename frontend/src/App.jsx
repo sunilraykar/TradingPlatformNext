@@ -405,9 +405,7 @@ function AllIndicesDashboard({ mins, settings }) {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [mins, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
 
-  return <section className="all-indices-workspace" aria-label="Dashboard and active trades">
-    <div className="all-indices-dashboard">
-    
+  return <section className="all-indices-dashboard" aria-label="Dashboard index charts">
     <div className="all-indices-grid">
       {DEFAULT_INDICES.map((symbol) => {
         const item = series[symbol] || { rows: [], loading: true, error: '' };
@@ -418,8 +416,6 @@ function AllIndicesDashboard({ mins, settings }) {
         </article>;
       })}
     </div>
-    </div>
-
   </section>;
 }
 
