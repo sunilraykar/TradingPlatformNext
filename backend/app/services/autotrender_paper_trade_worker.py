@@ -474,6 +474,23 @@ def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_
             connection.execute(text("SELECT RELEASE_LOCK(:name)"), {"name": lock_name})
 
 
+def create_manual_paper_trade(index: str, direction: str, signal_timestamp: datetime) -> dict[str, Any]:
+    """Create the same managed PAPER option trade as the worker, on an explicit user action."""
+    settings = _read_settings()
+    normalized_index = str(index or "").strip().upper()
+    if normalized_index not in INDEX_CATEGORIES:
+        raise ValueError("unsupported_autotrender_index")
+    if signal_timestamp.tzinfo is None:
+        signal_timestamp = signal_timestamp.replace(tzinfo=IST)
+    return _create_paper_trade(
+        normalized_index,
+        direction,
+        {},
+        signal_timestamp.astimezone(IST),
+        float(settings.get("targetFallbackPercent", 1.0)),
+    )
+
+
 def run_cycle(now: datetime | None = None) -> dict[str, Any]:
     """Evaluate each enabled index and create a paper trade for each fresh eligible signal."""
     global _LAST_CYCLE
