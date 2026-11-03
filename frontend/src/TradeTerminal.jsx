@@ -597,14 +597,16 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       </div>
       <button type="button" className="trade-date-nav-button" aria-label="Next trading date" onClick={() => shiftTradingDate(1)} disabled={selectedTradingDate >= todayKey}>›</button>
     </div>
-    <button
-      type="button"
-      className={showAllOpen ? 'trade-filter-button active' : 'trade-filter-button'}
-      aria-pressed={showAllOpen}
-      onClick={() => setShowAllOpen((current) => !current)}
-      title="Show every open trade across all dates, ignoring the other data filters"
-    >Show All Open</button>
     <div className="trade-terminal-filters">
+      <div className="trade-filter-group trade-show-all-group">
+        <button
+          type="button"
+          className={showAllOpen ? 'trade-filter-button active' : 'trade-filter-button'}
+          aria-pressed={showAllOpen}
+          onClick={() => setShowAllOpen((current) => !current)}
+          title="Show every open trade across all dates, ignoring the other data filters"
+        >Show All Open</button>
+      </div>
       <div className="trade-filter-group"><span className="trade-filter-label">Mode</span><div className="trade-filter-buttons">{[['ALL','All'],['PAPER','Paper'],['LIVE','Live']].map(([value,label]) => <button key={value} type="button" className={mode === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setMode(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Source</span><div className="trade-filter-buttons">{[['ALL','All'],...['AUTOTRENDER','MANUAL','KITE'].map(value => [value, value === 'AUTOTRENDER' ? 'AutoTrender' : value.charAt(0)+value.slice(1).toLowerCase()])].map(([value,label]) => <button key={value} type="button" className={sourceFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSourceFilter(value)}>{label}</button>)}</div></div>
