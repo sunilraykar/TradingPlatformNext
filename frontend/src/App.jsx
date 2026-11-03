@@ -973,7 +973,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
       : historicalIntradayRows.filter((row) => String(row.enter ?? '').trim().toUpperCase() === enterFilter)
   ), [historicalIntradayRows, enterFilter]);
 
-  const formatDateTime = (value) => value ? new Date(/[zZ]|[+-]\\d{2}:?\\d{2}$/.test(value) ? value : value + '+05:30').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
+  const formatDateTime = (value) => value ? new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? value : value + '+05:30').toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST' : '—';
   const first = result.total ? page * pageSize + 1 : 0;
   const last = Math.min((page + 1) * pageSize, result.total || 0);
 
@@ -1751,7 +1751,7 @@ export default function App() {
               return close !== null && close !== undefined && close !== '' ? Math.abs(quantityOf(row)) * (ltpOf(row) - Number(close || 0)) : 0;
             };
             const availableLetters = [...new Set(holdings.map((row) => symbolOf(row).trim().charAt(0).toUpperCase()).filter((letter) => /^[A-Z]$/.test(letter)))].sort();
-            const hasNumericSymbols = holdings.some((row) => /^\\d/.test(symbolOf(row).trim()));
+            const hasNumericSymbols = holdings.some((row) => /^\d/.test(symbolOf(row).trim()));
             const hasSpecialSymbols = holdings.some((row) => /^[^A-Z0-9]/i.test(symbolOf(row).trim()));
             const normalizeHoldingSearch = (value) => String(value || '').normalize('NFKC').replace(/&amp;/gi, '&').trim().toUpperCase();
             const filtered = holdings.filter((row) => {
@@ -1761,7 +1761,7 @@ export default function App() {
               const searchTerm = normalizeHoldingSearch(holdingsSearch);
               const matchesSearch = !searchTerm || symbol.includes(searchTerm);
               const matchesLetter = holdingsLetter === 'ALL' ||
-                (holdingsLetter === '0-9' && /^\\d/.test(symbol)) ||
+                (holdingsLetter === '0-9' && /^\d/.test(symbol)) ||
                 (holdingsLetter === '#' && /^[^A-Z0-9]/i.test(symbol)) ||
                 firstCharacter === holdingsLetter;
               return matchesSearch && matchesLetter &&
