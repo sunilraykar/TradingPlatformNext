@@ -977,3 +977,13 @@
 
 /* AutoTrender index day-change values: positive green, zero/negative red. */
 .price-vwap-top-metrics .positive{color:var(--green,#34d399)!important}.price-vwap-top-metrics .negative{color:var(--red,#f87171)!important}
+
+/* Compact AutoTrender selectors: approximately half the previous control height. */
+.control-panel .index-switch button,
+.control-panel .kite-tabs button{padding:4px 7px;font-size:10px;line-height:1;min-height:18px}
+.selected-contract-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
+.selected-contract-action-feedback{min-width:0;font-size:11px}
+.manual-trade-error{color:#f87171}
+.manual-trade-success{color:#34d399}
+.enter-autotrend-trade-button{flex:0 0 auto;padding:7px 12px;min-height:30px}
+@media(max-width:650px){.selected-contract-actions{align-items:stretch;flex-direction:column}.enter-autotrend-trade-button{width:100%}}
