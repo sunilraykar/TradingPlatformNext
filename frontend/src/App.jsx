@@ -278,10 +278,9 @@ function AutoTrenderActiveTrades({ underlyings }) {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const normalizedUnderlyings = useMemo(
-    () => (Array.isArray(underlyings) ? underlyings : [underlyings]).map((value) => String(value || '').trim().toUpperCase()).filter(Boolean),
-    [underlyings]
-  );
+  const underlyingKey = (Array.isArray(underlyings) ? underlyings : [underlyings])
+    .map((value) => String(value || '').trim().toUpperCase()).filter(Boolean).join('|');
+  const normalizedUnderlyings = underlyingKey ? underlyingKey.split('|') : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -309,7 +308,7 @@ function AutoTrenderActiveTrades({ underlyings }) {
     load();
     const timer = window.setInterval(load, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [normalizedUnderlyings]);
+  }, [underlyingKey]);
 
   const formatPnl = (trade) => {
     const entry = Number(trade.average_entry_price ?? trade.entry_price);
