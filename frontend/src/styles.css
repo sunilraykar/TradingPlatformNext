@@ -1010,12 +1010,12 @@
 .all-indices-card-heading>div span{color:var(--muted);font-size:8px}
 .all-indices-card-heading>div strong{color:var(--text);font-size:10px;margin-right:7px}
 .all-indices-card .price-vwap-wrap{padding:8px 8px 0 42px}
-.all-indices-card .price-vwap-chart{height:145px}
+.all-indices-card .price-vwap-chart{height:180px}
 .all-indices-card .chart-axis{left:5px;top:18px;bottom:27px;font-size:8px}
 .all-indices-card .price-vwap-times{font-size:7px;padding-top:5px}
-.all-indices-card .price-vwap-legend{font-size:8px;gap:9px;flex-wrap:wrap;margin-top:5px}
+.all-indices-card .price-vwap-legend{font-size:8px;gap:9px;flex-wrap:wrap;margin-top:7px;padding-left:4px;padding-right:4px}
 .all-indices-card .price-vwap-legend span{gap:4px}
-.all-indices-card .price-vwap-legend span:nth-child(n+3){display:none}
-.all-indices-card .chart-empty{min-height:145px;margin:10px 0;padding:18px}
-@media(max-width:760px){.all-indices-grid{grid-template-columns:minmax(0,1fr)}}
-@media(max-width:600px){.all-indices-heading{align-items:flex-start;flex-direction:column}.all-indices-card .price-vwap-chart{height:165px}}
+.all-indices-card .price-vwap-legend span{display:flex}
+.all-indices-card .chart-empty{min-height:180px;margin:10px 0;padding:18px}
+@media(max-width:900px){.all-indices-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.all-indices-heading{align-items:flex-start;flex-direction:column}.all-indices-card .price-vwap-chart{height:190px}.all-indices-card .price-vwap-top-metrics{flex-wrap:wrap!important;justify-content:center!important;gap:6px!important}.all-indices-card .price-vwap-top-metrics>div{min-width:0!important;padding:0 7px!important}.all-indices-card .price-vwap-top-metrics strong{font-size:14px!important}}
