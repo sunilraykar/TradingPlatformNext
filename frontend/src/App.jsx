@@ -1205,7 +1205,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
       <table className={"kite-data-table " + (holdingsMode ? "holdings-data-table" : positionsMode ? "positions-data-table" : "")}>
         <thead><tr>
           {columns.map((key) => <th key={key} className={positionsMode ? 'positions-column-' + normalizeColumn(key) : ''} style={{ textAlign: positionsMode ? ['book','tradingsymbol','trading_symbol','symbol','exchange','product','segment'].includes(normalizeColumn(key)) ? 'left' : 'right' : holdingsMode || !isSymbol(key) ? "center" : "left" }}>
-            <button type="button" onClick={() => toggleSort(key)} aria-label={"Sort by " + heading(key)} style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: holdingsMode || !isSymbol(key) ? "center" : "flex-start", gap: 5, width: "100%" }}>
+            <button type="button" onClick={() => toggleSort(key)} aria-label={"Sort by " + heading(key)} style={{ all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: positionsMode ? ['book','tradingsymbol','trading_symbol','symbol','exchange','product','segment'].includes(normalizeColumn(key)) ? 'flex-start' : 'flex-end' : holdingsMode || !isSymbol(key) ? "center" : "flex-start", gap: 5, width: "100%" }}>
               {heading(key)}<span aria-hidden="true">{sortConfig.key === key ? (sortConfig.direction === "asc" ? "↑" : "↓") : "↕"}</span>
             </button>
           </th>)}
