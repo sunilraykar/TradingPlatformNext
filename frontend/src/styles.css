@@ -914,3 +914,35 @@
 .kite-error{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .kite-error .button{margin-left:auto;white-space:nowrap}
 @media(max-width:650px){.kite-error .button{margin-left:0}.kite-reconnect-button{font-size:10px;padding:8px 9px}}
+
+
+/* Align the date navigation and every Trade Terminal filter button on one baseline. */
+.trade-date-filter-panel{
+  align-items:flex-end!important;
+}
+.trade-date-filter-panel .trade-date-navigator{
+  align-items:flex-end!important;
+}
+.trade-date-filter-panel .trade-terminal-filters{
+  align-items:flex-end!important;
+}
+.trade-date-filter-panel .trade-filter-group{
+  align-self:flex-end!important;
+}
+.trade-date-filter-panel .trade-show-all-group{
+  padding-top:15px;
+}
+.trade-date-filter-panel .trade-show-all-group .trade-filter-button{
+  min-height:34px;
+}
+@media(max-width:1100px){
+  .trade-date-filter-panel{
+    align-items:flex-start!important;
+  }
+  .trade-date-filter-panel .trade-date-navigator{
+    align-items:center!important;
+  }
+  .trade-date-filter-panel .trade-terminal-filters{
+    align-items:flex-end!important;
+  }
+}
