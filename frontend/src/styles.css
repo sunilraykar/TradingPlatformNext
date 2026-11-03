@@ -1017,7 +1017,7 @@
 .all-indices-card .price-vwap-legend span{gap:4px}
 .all-indices-card .price-vwap-legend span{display:flex}
 .all-indices-card .chart-empty{min-height:180px;margin:10px 0;padding:18px}
-@media(max-width:900px){.all-indices-grid{grid-template-columns:minmax(0,1fr)}}
+
 @media(max-width:600px){.all-indices-heading{align-items:flex-start;flex-direction:column}.all-indices-card .price-vwap-chart{height:190px}.all-indices-card .price-vwap-top-metrics{flex-wrap:wrap!important;justify-content:center!important;gap:6px!important}.all-indices-card .price-vwap-top-metrics>div{min-width:0!important;padding:0 7px!important}.all-indices-card .price-vwap-top-metrics strong{font-size:14px!important}}
 
 /* AutoTrender workspace: 60% index charts, 40% all-trades table. */
@@ -1027,9 +1027,9 @@
 .price-vwap-workspace .price-vwap-panel{height:100%}
 .price-vwap-workspace .price-vwap-layout{display:block!important}
 .price-vwap-workspace .price-vwap-graph-column{border:0;padding:10px 12px}
-.all-indices-workspace .all-indices-dashboard{margin:0}
-.all-indices-workspace .all-indices-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.all-indices-workspace .all-indices-card .price-vwap-chart{height:180px}
+
+
+
 .autotrend-active-trades{min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:760px}
 .autotrend-active-trades-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .autotrend-active-trades-heading h3{font-size:15px;margin:4px 0 0}
@@ -1044,5 +1044,20 @@
 .autotrend-trades-empty{text-align:center!important;color:var(--muted)!important;padding:24px 5px!important}
 .autotrend-active-trades-list{display:block;overflow:auto;min-height:80px;flex:1}
 .autotrend-active-trades-footer{font-size:8px;color:var(--muted);text-align:right;padding-top:6px;border-top:1px solid var(--line)}
-@media(max-width:1100px){.price-vwap-workspace,.all-indices-workspace{grid-template-columns:minmax(0,1fr)}.autotrend-active-trades{max-height:420px}.all-indices-workspace .all-indices-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:650px){.all-indices-workspace .all-indices-grid{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:1100px){.price-vwap-workspace{grid-template-columns:minmax(0,1fr)}.autotrend-active-trades{max-height:420px}}
+
+
+/* Dashboard remains a clean 2x2 chart-only grid at every viewport width. */
+.all-indices-dashboard{width:100%;margin:0}
+.all-indices-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.all-indices-card{min-width:0}
+@media(max-width:600px){
+  .all-indices-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+  .all-indices-card{padding:7px 5px}
+  .all-indices-card .price-vwap-chart{height:145px}
+  .all-indices-card .price-vwap-wrap{padding-left:30px;padding-right:3px}
+  .all-indices-card .price-vwap-top-metrics{flex-wrap:wrap!important;gap:3px!important}
+  .all-indices-card .price-vwap-top-metrics>div{padding:0 3px!important}
+  .all-indices-card .price-vwap-top-metrics strong{font-size:11px!important}
+  .all-indices-card .price-vwap-legend{font-size:7px;gap:4px}
+}
