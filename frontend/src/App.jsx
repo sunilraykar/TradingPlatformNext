@@ -278,6 +278,11 @@ function AutoTrenderActiveTrades() {
   const [trades, setTrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [terminal, setTerminal] = useState(null);
+
+  const indiaDate = (value = new Date()) => new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(value);
 
   useEffect(() => {
     let cancelled = false;
@@ -288,12 +293,19 @@ function AutoTrenderActiveTrades() {
       try {
         const payload = await api('/trades');
         if (cancelled) return;
+        const today = indiaDate();
         const rows = (Array.isArray(payload?.trades) ? payload.trades : [])
-          .sort((a, b) => new Date(b.entry_time || b.created_at || 0).getTime() - new Date(a.entry_time || a.created_at || 0).getTime());
+          .filter((trade) => ['OPEN', 'CLOSED'].includes(String(trade.status || 'OPEN').toUpperCase()))
+          .filter((trade) => {
+            const created = trade.created_at || trade.entry_time || trade.opened_at;
+            return created && indiaDate(new Date(created)) === today;
+          })
+          .sort((a, b) => new Date(b.created_at || b.entry_time || 0).getTime() - new Date(a.created_at || a.entry_time || 0).getTime());
         setTrades(rows);
+        setTerminal(payload?.terminal || null);
         setError('');
       } catch (e) {
-        if (!cancelled) setError(e.message || 'Unable to load trades.');
+        if (!cancelled) setError(e.message || 'Unable to load today\'s trades.');
       } finally {
         inFlight = false;
         if (!cancelled) setLoading(false);
@@ -305,14 +317,14 @@ function AutoTrenderActiveTrades() {
   }, []);
 
   const tradePnl = (trade) => {
-    const terminal = ['CLOSED', 'CANCELLED', 'REJECTED', 'EXPIRED'].includes(String(trade.status || '').toUpperCase());
-    const storedPnl = terminal ? trade.realized_pnl : trade.unrealized_pnl;
+    const terminalStatus = String(trade.status || '').toUpperCase() === 'CLOSED';
+    const storedPnl = terminalStatus ? trade.realized_pnl : trade.unrealized_pnl;
     if (storedPnl !== null && storedPnl !== undefined && storedPnl !== '' && Number.isFinite(Number(storedPnl))) {
       return Number(storedPnl);
     }
     const entry = Number(trade.average_entry_price ?? trade.entry_price);
-    const mark = Number(terminal ? (trade.average_exit_price ?? trade.exit_price) : trade.last_price);
-    const quantity = Number(terminal ? trade.quantity : (trade.open_quantity ?? trade.quantity));
+    const mark = Number(terminalStatus ? (trade.average_exit_price ?? trade.exit_price) : trade.last_price);
+    const quantity = Number(terminalStatus ? trade.quantity : (trade.open_quantity ?? trade.quantity));
     if (!Number.isFinite(entry) || !Number.isFinite(mark) || !Number.isFinite(quantity)) return null;
     return (mark - entry) * quantity * (String(trade.direction || 'BUY').toUpperCase() === 'SELL' ? -1 : 1);
   };
@@ -320,32 +332,36 @@ function AutoTrenderActiveTrades() {
     ? '—'
     : value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'exceptZero' });
 
-  return <aside className="panel autotrend-active-trades" aria-label="All trades">
+  const cacheUnavailable = !trades.length && !loading && terminal?.cached_trades === 0 && terminal?.persistence_degraded;
+
+  return <aside className="panel autotrend-active-trades" aria-label="Today's open and closed trades">
     <div className="autotrend-active-trades-heading">
-      <div><div className="eyebrow">TRADE TERMINAL</div><h3>All Trades</h3></div>
+      <div><div className="eyebrow">TODAY · OPEN &amp; CLOSED</div><h3>Today's Trades</h3></div>
       <span className="autotrend-active-trades-count">{trades.length}</span>
     </div>
     {error && <div className="autotrend-active-trades-error">{error}</div>}
+    {cacheUnavailable && <div className="autotrend-active-trades-error">Trade history could not be loaded from the database. Check backend database connectivity.</div>}
     <div className="autotrend-active-trades-list">
       <table className="autotrend-trades-table">
         <thead><tr><th>Symbol</th><th>Entry</th><th>LTP</th><th>Target</th><th>P&amp;L</th></tr></thead>
         <tbody>
           {trades.map((trade) => {
             const pnl = tradePnl(trade);
+            const ltp = trade.last_price ?? trade.exit_price ?? trade.average_exit_price;
             return <tr key={trade.trade_id}>
               <td title={trade.instrument_symbol || trade.underlying}>{trade.instrument_symbol || trade.underlying || '—'}</td>
               <td>{number(trade.average_entry_price ?? trade.entry_price)}</td>
-              <td>{number(trade.last_price)}</td>
+              <td>{number(ltp)}</td>
               <td>{number(trade.target)}</td>
               <td className={pnl === null ? '' : pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}>{formatPnl(pnl)}</td>
             </tr>;
           })}
-          {!trades.length && !loading && !error && <tr><td colSpan="5" className="autotrend-trades-empty">No trades found.</td></tr>}
-          {!trades.length && loading && <tr><td colSpan="5" className="autotrend-trades-empty">Loading trades…</td></tr>}
+          {!trades.length && !loading && !error && !cacheUnavailable && <tr><td colSpan="5" className="autotrend-trades-empty">No OPEN or CLOSED trades recorded today.</td></tr>}
+          {!trades.length && loading && <tr><td colSpan="5" className="autotrend-trades-empty">Loading today's trades…</td></tr>}
         </tbody>
       </table>
     </div>
-    <div className="autotrend-active-trades-footer">Auto-refresh · 5 sec</div>
+    <div className="autotrend-active-trades-footer">India time · Auto-refresh 5 sec</div>
   </aside>;
 }
 
