@@ -4,6 +4,7 @@ import webbrowser
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.account import router as account_router
 from app.api.autotrender_auth import router as autotrender_auth_router
@@ -127,6 +128,13 @@ async def lifespan(application: FastAPI):
 
 settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type", "Authorization"],
+)
 app.include_router(router, prefix="/api/v1")
 app.include_router(account_router, prefix="/api/v1")
 app.include_router(autotrender_auth_router, prefix="/api/v1")
