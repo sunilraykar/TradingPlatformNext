@@ -45,3 +45,22 @@ def test_notification_status_preflight_allows_vite_origin():
     )
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_notification_dispatch_test_route_is_registered():
+    paths = {route.path for route in app.routes}
+    assert "/api/v1/notifications/test-dispatch" in paths
+
+
+def test_notification_dispatch_test_preflight_allows_vite_origin():
+    response = TestClient(app).options(
+        "/api/v1/notifications/test-dispatch",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+    assert "POST" in response.headers["access-control-allow-methods"]
