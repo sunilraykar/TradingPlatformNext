@@ -14,7 +14,6 @@ from app.api.routes import router
 from app.api.subscription_test import router as subscription_test_router
 from app.api.trades import router as trades_router
 from app.api.telegram import router as telegram_router
-from app.api.notifications import router as notifications_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.autotrender.auth import AutoTrenderAuth
@@ -30,9 +29,7 @@ from app.services import (
     live_market_data,
     paper_option_market_close,
     trade_terminal,
-    telegram_dispatcher,
 )
-from app.services.notification_events import ensure_notification_schema
 from app.services.autotrender_cache import AutoTrenderCache
 from app.services.kite_instrument_master import run_daily_instrument_refresh_scheduler
 from app.services.kite_session_reset import run_daily_reset_scheduler
@@ -83,7 +80,7 @@ async def _restore_kite_session() -> None:
             try:
                 live_market_data.start()
             except Exception:
-                logger.exception("Configured Kite access token is valid but WebSocket startup failed")
+                logger.exception("Configured Kite session is valid but WebSocket startup failed")
             return
         except KiteProviderError:
             logger.info("Configured Kite access token is no longer valid")
@@ -98,7 +95,6 @@ async def _restore_kite_session() -> None:
 async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
-    ensure_notification_schema()
     if not hasattr(application.state, "autotrender_auth"):
         application.state.autotrender_auth = AutoTrenderAuth()
     if not hasattr(application.state, "autotrender_cache"):
@@ -119,18 +115,13 @@ async def lifespan(application: FastAPI):
     autotrender_snapshot_task = asyncio.create_task(
         autotrender_cache_snapshot.run_daily_snapshot_scheduler(application.state.autotrender_auth)
     )
-    telegram_dispatch_task = asyncio.create_task(telegram_dispatcher.run_scheduler())
     try:
         yield
     finally:
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
-        tasks = (
-            reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task,
-            autotrender_worker_task, autotrender_snapshot_task, telegram_dispatch_task,
-        )
-        for task in tasks:
+        for task in (reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task, autotrender_worker_task, autotrender_snapshot_task):
             task.cancel()
-        for task in tasks:
+        for task in (reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task, autotrender_worker_task, autotrender_snapshot_task):
             with suppress(asyncio.CancelledError):
                 await task
 
@@ -151,7 +142,6 @@ app.include_router(autotrender_market_data_router, prefix="/api/v1")
 app.include_router(subscription_test_router, prefix="/api/v1")
 app.include_router(trades_router, prefix="/api/v1")
 app.include_router(telegram_router, prefix="/api/v1")
-app.include_router(notifications_router, prefix="/api/v1")
 app.include_router(kite_instruments_router, prefix="/api/v1")
 
 

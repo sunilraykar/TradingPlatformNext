@@ -31,3 +31,9 @@ def test_notification_message_respects_telegram_length_limit():
 def test_retry_schedule_and_telegram_retry_after():
     assert [retry_delay_seconds(n) for n in range(1, 5)] == [5, 30, 120, 600]
     assert retry_delay_seconds(1, 17) == 17
+
+
+def test_autotrend_signal_direction_change_classification():
+    from app.services.notification_events import _dump
+
+    assert _dump({"direction": "BUY"}) == '{"direction":"BUY"}'

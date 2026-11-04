@@ -22,6 +22,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.db.session import get_engine
 from app.services import live_market_data
 from app.services.live_quotes import live_quotes
+from app.services.notification_events import enqueue_notification, notifications_enabled
 from app.services.trade_terminal_stream import publish
 
 logger = logging.getLogger(__name__)
@@ -191,6 +192,71 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                 "event_at": _naive_datetime(trade["updated_at"]),
                 "payload": _dump(event_payload),
             })
+
+            # Queue PAPER lifecycle messages in the same transaction as the
+            # trade snapshot. A savepoint isolates notification-table failures
+            # so Telegram infrastructure can never roll back a trade update.
+            paper_mode = str(trade.get("execution_mode") or "").upper() == "PAPER"
+            notification_kind = (
+                "PAPER_TRADE_ENTERED" if paper_mode and event_type == "TRADE_CREATED"
+                else "PAPER_TRADE_CLOSED" if paper_mode and event_payload.get("notification_final_exit")
+                else None
+            )
+            if notification_kind and notifications_enabled(conn):
+                try:
+                    with conn.begin_nested():
+                        if notification_kind == "PAPER_TRADE_ENTERED":
+                            fields = (
+                                "trade_id", "underlying", "instrument_symbol", "strategy",
+                                "direction", "quantity", "entry_price", "target", "stop_loss",
+                                "source", "created_at",
+                            )
+                            label = "Paper trade entered"
+                            dedupe = "paper-entry:" + str(trade["trade_id"])
+                        else:
+                            fields = (
+                                "trade_id", "underlying", "instrument_symbol", "strategy",
+                                "direction", "quantity", "entry_price", "exit_price",
+                                "average_exit_price", "exit_reason", "exit_method",
+                                "gross_realized_pnl", "net_realized_pnl", "realized_pnl",
+                                "closed_at", "source",
+                            )
+                            label = "Paper trade closed"
+                            dedupe = "paper-exit:" + str(trade["trade_id"])
+                        details = {
+                            key: trade.get(key) for key in fields
+                            if trade.get(key) is not None
+                        }
+                        symbol = trade.get("instrument_symbol") or trade.get("underlying") or "Unknown"
+                        side = str(trade.get("direction") or "").upper()
+                        quantity = trade.get("quantity")
+                        price = trade.get("entry_price") if notification_kind == "PAPER_TRADE_ENTERED" else trade.get("exit_price", trade.get("average_exit_price"))
+                        telegram_text = f"{label}: {symbol}"
+                        if side:
+                            telegram_text += f" | {side}"
+                        if quantity is not None:
+                            telegram_text += f" | Qty {quantity}"
+                        if price is not None:
+                            telegram_text += f" | Price {price}"
+                        pnl = trade.get("net_realized_pnl", trade.get("realized_pnl", trade.get("gross_realized_pnl")))
+                        if notification_kind == "PAPER_TRADE_CLOSED" and pnl is not None:
+                            telegram_text += f" | Realized P&L {pnl}"
+                        enqueue_notification(
+                            event_type=notification_kind,
+                            category="PAPER_TRADE",
+                            source=str(trade.get("source") or "TRADE_TERMINAL"),
+                            entity_type="TRADE",
+                            entity_id=str(trade["trade_id"]),
+                            payload={**details, "telegram_text": telegram_text},
+                            deduplication_key=dedupe,
+                            occurred_at=trade.get("closed_at") or trade.get("created_at") or trade.get("updated_at"),
+                            connection=conn,
+                        )
+                except Exception:
+                    logger.exception(
+                        "Could not enqueue Telegram notification for PAPER trade %s",
+                        trade.get("trade_id"),
+                    )
         with _lock:
             _dirty.discard(trade["trade_id"])
             _persistence_error = None
@@ -647,8 +713,14 @@ def update_trade(
         updated["persistence_state"] = "PENDING"
         _cache[trade_id] = updated
         _dirty.add(trade_id)
+    lifecycle_payload = {"changed_fields": sorted(changes), "changes": changes}
+    if (
+        str(current.get("execution_mode") or "").upper() == "PAPER"
+        and not was_terminal and is_terminal
+    ):
+        lifecycle_payload["notification_final_exit"] = True
     try:
-        _persist(updated, event_type, {"changed_fields": sorted(changes), "changes": changes})
+        _persist(updated, event_type, lifecycle_payload)
     except RuntimeError:
         updated["persistence_state"] = "DEGRADED"
         with _lock:

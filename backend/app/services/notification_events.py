@@ -96,6 +96,28 @@ def ensure_notification_schema() -> None:
             connection.execute(text(statement))
 
 
+def notifications_enabled(connection=None) -> bool:
+    """Return whether Telegram notifications are enabled without exposing credentials."""
+    def _read(conn) -> bool:
+        row = conn.execute(text(
+            "SELECT setting_value FROM app_settings WHERE setting_key = 'integration.telegram.enabled'"
+        )).first()
+        if not row:
+            return False
+        value = row[0]
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except (TypeError, ValueError):
+                return value.strip().lower() in {"1", "true", "yes", "on"}
+        return bool(value)
+
+    if connection is not None:
+        return _read(connection)
+    with get_engine().connect() as owned_connection:
+        return _read(owned_connection)
+
+
 def enqueue_notification(
     *,
     event_type: str,
@@ -162,6 +184,93 @@ def enqueue_notification(
         return _insert_event_and_queue(connection)
     with get_engine().begin() as owned_connection:
         return _insert_event_and_queue(owned_connection)
+
+
+
+def record_autotrender_signal(
+    *,
+    index: str,
+    direction: str,
+    signal_timestamp: str,
+    signal_row: dict[str, Any],
+    metrics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Persist eligible signal transitions and queue one deduplicated notification."""
+    normalized_index = str(index or "").strip().upper()
+    normalized_direction = str(direction or "").strip().upper()
+    if not normalized_index or normalized_direction not in {"BUY", "SELL"} or not signal_timestamp:
+        raise ValueError("index, BUY/SELL direction and signal_timestamp are required")
+
+    state_key = "autotrend-signal:" + normalized_index
+    with get_engine().begin() as connection:
+        # Materialize the state row before locking it, including on first use.
+        connection.execute(text("""
+            INSERT INTO notification_rule_state (state_key, state_json)
+            VALUES (:state_key, CAST('{}' AS JSON))
+            ON DUPLICATE KEY UPDATE state_key = VALUES(state_key)
+        """), {"state_key": state_key})
+        row = connection.execute(text("""
+            SELECT state_json FROM notification_rule_state
+            WHERE state_key = :state_key FOR UPDATE
+        """), {"state_key": state_key}).first()
+        previous = row[0] if row else {}
+        if isinstance(previous, str):
+            previous = json.loads(previous)
+        previous = previous if isinstance(previous, dict) else {}
+
+        if previous.get("signal_timestamp") == signal_timestamp:
+            return {"queued": False, "reason": "duplicate_signal"}
+        previous_direction = str(previous.get("direction") or "").upper()
+        event_type = None
+        if notifications_enabled(connection):
+            if not previous_direction:
+                event_type = "AUTOTRENDER_SIGNAL_CREATED"
+            elif previous_direction != normalized_direction:
+                event_type = "AUTOTRENDER_SIGNAL_CHANGED"
+
+        result = {"queued": False, "reason": "same_direction" if previous_direction == normalized_direction else "notifications_disabled"}
+        if event_type:
+            spot = next((signal_row.get(key) for key in ("price", "close", "ltp") if signal_row.get(key) is not None), None)
+            vwap = next((signal_row.get(key) for key in ("vWap", "vwap") if signal_row.get(key) is not None), None)
+            pcr = signal_row.get("pcr", signal_row.get("PCR"))
+            payload = {
+                "index": normalized_index,
+                "direction": normalized_direction,
+                "signal_timestamp": signal_timestamp,
+                "spot_price": spot,
+                "vwap": vwap,
+                "pcr": pcr,
+                **(metrics or {}),
+                "telegram_text": (
+                    f"AutoTrender {event_type.replace('AUTOTRENDER_', '').replace('_', ' ').title()}: "
+                    f"{normalized_index} {normalized_direction} | Spot {spot if spot is not None else 'N/A'}"
+                ),
+            }
+            result = enqueue_notification(
+                event_type=event_type,
+                category="AUTOTRENDER",
+                source="AUTOTRENDER",
+                entity_type="SIGNAL",
+                entity_id=normalized_index,
+                payload=payload,
+                deduplication_key=f"autotrend-signal:{normalized_index}:{signal_timestamp}:{normalized_direction}",
+                occurred_at=signal_timestamp,
+                connection=connection,
+            )
+
+        connection.execute(text("""
+            UPDATE notification_rule_state
+            SET state_json = CAST(:state_json AS JSON)
+            WHERE state_key = :state_key
+        """), {
+            "state_key": state_key,
+            "state_json": _dump({
+                "index": normalized_index,
+                "direction": normalized_direction,
+                "signal_timestamp": signal_timestamp,
+            }),
+        })
+        return result
 
 
 def get_rule_state(state_key: str) -> dict[str, Any] | None:
