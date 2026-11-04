@@ -1061,3 +1061,21 @@
   .all-indices-card .price-vwap-top-metrics strong{font-size:11px!important}
   .all-indices-card .price-vwap-legend{font-size:7px;gap:4px}
 }
+
+/* Telegram settings */
+.telegram-settings{display:grid;gap:14px}
+.telegram-settings-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.telegram-settings-heading h2{margin:0}
+.telegram-settings-card{display:grid;gap:14px;max-width:920px}
+.telegram-settings-card h3{margin:0}
+.telegram-settings-card .settings-control{max-width:640px}
+.telegram-settings-card .settings-control input{width:100%;min-height:42px}
+.telegram-status{display:inline-flex;align-items:center;gap:8px;padding:7px 11px;border:1px solid var(--line);border-radius:99px;font-size:12px;font-weight:700;white-space:nowrap}
+.telegram-status>span{width:8px;height:8px;border-radius:50%;background:#94a3b8}
+.telegram-status.is-enabled{color:var(--green);border-color:rgba(34,197,94,.35)}
+.telegram-status.is-enabled>span{background:var(--green)}
+.telegram-status.is-disabled{color:var(--muted)}
+.telegram-credential-state{display:flex;gap:22px;flex-wrap:wrap;color:var(--muted);font-size:12px}
+.telegram-credential-state strong{color:var(--text)}
+.telegram-settings .settings-actions{display:flex;gap:9px;flex-wrap:wrap}
+@media(max-width:600px){.telegram-settings-heading{display:grid}.telegram-settings-card{padding:12px}.telegram-credential-state{display:grid;gap:8px}}
