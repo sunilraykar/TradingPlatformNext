@@ -1,0 +1,163 @@
+import logging
+from typing import Any
+
+import requests
+from cryptography.fernet import Fernet, InvalidToken
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+
+from app.core.config import get_settings
+from app.db.session import get_engine
+
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/telegram", tags=["telegram"])
+
+
+class TelegramConfigRequest(BaseModel):
+    enabled: bool = False
+    chat_id: str = Field(default="", max_length=128)
+    bot_token: str | None = Field(default=None, max_length=512)
+
+
+def _encryption():
+    key = get_settings().kite_token_encryption_key
+    if not key:
+        raise HTTPException(
+            status_code=503,
+            detail="Configure KITE_TOKEN_ENCRYPTION_KEY in backend/.env before saving a Telegram Bot Token.",
+        )
+    try:
+        return Fernet(key.encode("utf-8"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="KITE_TOKEN_ENCRYPTION_KEY is not a valid Fernet key.",
+        ) from exc
+
+
+def _read_setting(connection, key: str):
+    row = connection.execute(
+        text("SELECT setting_value FROM app_settings WHERE setting_key = :key"),
+        {"key": key},
+    ).first()
+    if not row:
+        return None
+    value = row[0]
+    if isinstance(value, str):
+        import json
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            return value
+    return value
+
+
+def _write_setting(connection, key: str, value: Any, *, secret: bool = False):
+    import json
+    connection.execute(
+        text(
+            "INSERT INTO app_settings (setting_key, setting_value, description, is_secret) "
+            "VALUES (:key, CAST(:value AS JSON), :description, :secret) "
+            "ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), "
+            "description = VALUES(description), is_secret = VALUES(is_secret), "
+            "version = version + 1"
+        ),
+        {
+            "key": key,
+            "value": json.dumps(value, separators=(",", ":")),
+            "description": "Telegram integration credential" if secret else "Telegram integration setting",
+            "secret": secret,
+        },
+    )
+
+
+def _load_config(connection):
+    encrypted = _read_setting(connection, "integration.telegram.bot_token")
+    chat_id = _read_setting(connection, "integration.telegram.chat_id") or ""
+    enabled = _read_setting(connection, "integration.telegram.enabled")
+    return {
+        "enabled": bool(enabled),
+        "chat_id": str(chat_id),
+        "bot_configured": bool(encrypted),
+    }
+
+
+@router.get("/config")
+def get_telegram_config():
+    try:
+        with get_engine().connect() as connection:
+            return _load_config(connection)
+    except SQLAlchemyError as exc:
+        logger.exception("Unable to load Telegram configuration")
+        raise HTTPException(status_code=503, detail="Unable to load Telegram settings from MySQL.") from exc
+
+
+@router.put("/config")
+def save_telegram_config(payload: TelegramConfigRequest):
+    try:
+        with get_engine().begin() as connection:
+            current = _read_setting(connection, "integration.telegram.bot_token")
+            if payload.bot_token and payload.bot_token.strip():
+                encrypted = _encryption().encrypt(payload.bot_token.strip().encode("utf-8")).decode("ascii")
+                _write_setting(connection, "integration.telegram.bot_token", encrypted, secret=True)
+                current = encrypted
+            if payload.enabled and not current:
+                raise HTTPException(status_code=422, detail="Enter a Bot Token before enabling Telegram.")
+            if payload.enabled and not payload.chat_id.strip():
+                raise HTTPException(status_code=422, detail="Enter a Telegram Chat ID before enabling Telegram.")
+            _write_setting(connection, "integration.telegram.chat_id", payload.chat_id.strip())
+            _write_setting(connection, "integration.telegram.enabled", bool(payload.enabled))
+        return {"saved": True, "config": get_telegram_config()}
+    except HTTPException:
+        raise
+    except SQLAlchemyError as exc:
+        logger.exception("Unable to save Telegram configuration")
+        raise HTTPException(status_code=503, detail="Unable to save Telegram settings to MySQL.") from exc
+
+
+@router.post("/test-message")
+def send_telegram_test_message():
+    try:
+        with get_engine().connect() as connection:
+            encrypted = _read_setting(connection, "integration.telegram.bot_token")
+            chat_id = str(_read_setting(connection, "integration.telegram.chat_id") or "").strip()
+            enabled = bool(_read_setting(connection, "integration.telegram.enabled"))
+        if not enabled:
+            raise HTTPException(status_code=409, detail="Enable Telegram integration before sending a test message.")
+        if not encrypted or not chat_id:
+            raise HTTPException(status_code=422, detail="Save a Bot Token and Chat ID before sending a test message.")
+        try:
+            token = _encryption().decrypt(str(encrypted).encode("ascii")).decode("utf-8")
+        except InvalidToken as exc:
+            raise HTTPException(status_code=503, detail="Stored Telegram Bot Token cannot be decrypted. Check KITE_TOKEN_ENCRYPTION_KEY.") from exc
+        response = requests.post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={
+                "chat_id": chat_id,
+                "text": "TradingPlatformNext Telegram test message. Your bot integration is working.",
+                "disable_web_page_preview": True,
+            },
+            timeout=15,
+        )
+        try:
+            result = response.json()
+        except ValueError:
+            result = {}
+        if not response.ok or not result.get("ok"):
+            description = result.get("description") or f"Telegram API returned HTTP {response.status_code}."
+            raise HTTPException(status_code=502, detail=description)
+        return {
+            "sent": True,
+            "chat_id": chat_id,
+            "message_id": (result.get("result") or {}).get("message_id"),
+        }
+    except HTTPException:
+        raise
+    except requests.RequestException as exc:
+        logger.warning("Telegram test message failed: %s", exc)
+        raise HTTPException(status_code=502, detail="Could not reach Telegram Bot API. Check backend network connectivity.") from exc
+    except SQLAlchemyError as exc:
+        logger.exception("Unable to read Telegram configuration for test message")
+        raise HTTPException(status_code=503, detail="Unable to read Telegram settings from MySQL.") from exc
