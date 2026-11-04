@@ -108,6 +108,7 @@ def enqueue_notification(
     account_id: str | None = None,
     occurred_at: datetime | str | None = None,
     schema_version: int = 1,
+    connection=None,
 ) -> dict[str, Any]:
     """Persist an immutable event and its queue row in one MySQL transaction."""
     if not deduplication_key or len(deduplication_key) > 191:
@@ -121,7 +122,7 @@ def enqueue_notification(
         event_time = occurred_at.astimezone(UTC).replace(tzinfo=None) if occurred_at.tzinfo else occurred_at
 
     candidate_id = str(uuid.uuid4())
-    with get_engine().begin() as connection:
+    def _insert_event_and_queue(connection):
         connection.execute(text("""
             INSERT INTO notification_events
               (event_id, event_type, category, source, entity_type, entity_id, account_id,
@@ -152,8 +153,14 @@ def enqueue_notification(
             VALUES (:event_id, 'PENDING', UTC_TIMESTAMP(6))
             ON DUPLICATE KEY UPDATE queue_id = LAST_INSERT_ID(queue_id)
         """), {"event_id": event_id})
-        queued = result.rowcount == 1
-    return {"event_id": event_id, "queued": queued}
+        return {"event_id": event_id, "queued": result.rowcount == 1}
+
+    # Passing the caller's transaction enables a true transactional outbox when
+    # a future trade-lifecycle integration writes its trade and notification together.
+    if connection is not None:
+        return _insert_event_and_queue(connection)
+    with get_engine().begin() as owned_connection:
+        return _insert_event_and_queue(owned_connection)
 
 
 def get_rule_state(state_key: str) -> dict[str, Any] | None:
