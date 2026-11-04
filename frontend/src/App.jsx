@@ -549,6 +549,7 @@ const SETTINGS_TABS = [
   ['cache-viewer', 'Cache Viewer'],
   ['instruments', 'Instruments'],
   ['live-data-cache', 'Live Data & Cache'],
+  ['telegram', 'Telegram'],
 ];
 
 const SETTINGS_FIELDS = {
@@ -861,6 +862,138 @@ function InstrumentsViewer() {
   </div>;
 }
 
+
+function TelegramSettings() {
+  const [config, setConfig] = useState({ enabled: false, chat_id: '', bot_configured: false });
+  const [botToken, setBotToken] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await api('/telegram/config');
+      setConfig({
+        enabled: Boolean(result.enabled),
+        chat_id: result.chat_id || '',
+        bot_configured: Boolean(result.bot_configured),
+      });
+    } catch (e) {
+      setError(e.message || 'Unable to load Telegram configuration.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    setMessage('');
+    try {
+      const payload = { ...config, bot_token: botToken.trim() || null };
+      const result = await api('/telegram/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      setConfig({
+        enabled: Boolean(result.config?.enabled),
+        chat_id: result.config?.chat_id || '',
+        bot_configured: Boolean(result.config?.bot_configured),
+      });
+      setBotToken('');
+      setMessage('Telegram settings saved. The Bot Token is stored encrypted on the backend.');
+    } catch (e) {
+      setError(e.message || 'Unable to save Telegram settings.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sendTest = async () => {
+    setTesting(true);
+    setError('');
+    setMessage('');
+    try {
+      const result = await api('/telegram/test-message', { method: 'POST' });
+      setMessage('Test message sent successfully to Chat ID ' + result.chat_id + '.');
+    } catch (e) {
+      setError(e.message || 'Unable to send Telegram test message.');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  if (loading) return <div className="settings-section">Loading Telegram settings…</div>;
+
+  return <div className="telegram-settings">
+    <div className="telegram-settings-heading">
+      <div>
+        <h2>Telegram Integration</h2>
+        <p className="settings-intro">Connect a Telegram bot to this application. This step only configures the connection and sends an optional test message. No trading workers or automated notifications are connected.</p>
+      </div>
+      <span className={'telegram-status ' + (config.enabled ? 'is-enabled' : 'is-disabled')}>
+        <span />{config.enabled ? 'Integration enabled' : 'Integration disabled'}
+      </span>
+    </div>
+    {error && <div className="error-banner"><strong>Telegram issue</strong><span>{error}</span></div>}
+    {message && <div className="settings-success">{message}</div>}
+    <section className="panel telegram-settings-card">
+      <h3>Bot Credentials</h3>
+      <label className="settings-control">
+        <span>Telegram Bot Token</span>
+        <input
+          type="password"
+          autoComplete="new-password"
+          placeholder={config.bot_configured ? 'Saved token — enter only to replace' : 'Enter Telegram Bot Token'}
+          value={botToken}
+          onChange={(event) => setBotToken(event.target.value)}
+        />
+        <small>The token is encrypted by the backend before it is stored in MySQL. It is never returned to the browser.</small>
+      </label>
+      <label className="settings-control">
+        <span>Telegram Chat ID</span>
+        <input
+          type="text"
+          inputMode="text"
+          placeholder="Enter your personal or group Chat ID"
+          value={config.chat_id}
+          onChange={(event) => setConfig((current) => ({ ...current, chat_id: event.target.value }))}
+        />
+        <small>Start a conversation with your bot first, or add it to the target group and obtain that chat's ID.</small>
+      </label>
+      <label className="settings-toggle">
+        <input
+          type="checkbox"
+          checked={config.enabled}
+          onChange={(event) => setConfig((current) => ({ ...current, enabled: event.target.checked }))}
+        />
+        <span><strong>Enable Telegram Integration</strong><small>Enables the saved bot connection. Automated trade alerts are not part of this step.</small></span>
+      </label>
+      <div className="telegram-credential-state">
+        <span>Bot Token: <strong>{config.bot_configured ? 'Configured' : 'Not configured'}</strong></span>
+        <span>Chat ID: <strong>{config.chat_id ? 'Configured' : 'Not configured'}</strong></span>
+      </div>
+      <div className="settings-actions">
+        <button type="button" className="button primary" onClick={save} disabled={saving || testing}>
+          {saving ? 'Saving…' : 'Save Telegram Settings'}
+        </button>
+        <button type="button" className="button secondary" onClick={sendTest} disabled={testing || saving || !config.enabled || !config.bot_configured || !config.chat_id.trim()}>
+          {testing ? 'Sending…' : 'Send Test Message'}
+        </button>
+        <button type="button" className="button secondary" onClick={load} disabled={saving || testing}>Refresh Status</button>
+      </div>
+    </section>
+    <p className="settings-ui-only-note">Security: the Bot Token is encrypted at rest using the configured KITE_TOKEN_ENCRYPTION_KEY. Keep that key private and back it up securely. If the key changes, the saved Telegram token must be entered again.</p>
+  </div>;
+}
+
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
   const [settings, setSettings] = useState({});
@@ -1077,7 +1210,8 @@ function SettingsPanel() {
       {tab === 'cache-viewer' && <CacheViewer />}
       {tab === 'instruments' && <InstrumentsViewer />}
       {tab === 'live-data-cache' && <LiveDataCacheViewer />}
-      <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>
+      {tab === 'telegram' && <TelegramSettings />}
+      {tab !== 'telegram' && <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>}
     </section>}
   </section>;
 }
