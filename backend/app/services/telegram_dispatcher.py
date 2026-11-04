@@ -142,7 +142,7 @@ def _send_message(token: str, chat_id: str, message: str) -> tuple[bool, int | N
             return False, response.status_code, None, description, body
         return False, response.status_code, -1, description, body
     except requests.RequestException as exc:
-        return False, None, None, str(exc)[:1000], {}
+        return False, None, None, f"Telegram request failed ({type(exc).__name__})", {}
 
 
 def dispatch_pending_once() -> bool:
