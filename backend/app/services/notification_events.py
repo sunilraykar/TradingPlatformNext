@@ -187,6 +187,19 @@ def enqueue_notification(
 
 
 
+def classify_autotrender_transition(previous_direction: str | None, current_direction: str) -> str | None:
+    """Classify first eligible signal versus a BUY/SELL direction transition."""
+    previous = str(previous_direction or "").strip().upper()
+    current = str(current_direction or "").strip().upper()
+    if current not in {"BUY", "SELL"}:
+        raise ValueError("current_direction must be BUY or SELL")
+    if not previous:
+        return "AUTOTRENDER_SIGNAL_CREATED"
+    if previous != current:
+        return "AUTOTRENDER_SIGNAL_CHANGED"
+    return None
+
+
 def record_autotrender_signal(
     *,
     index: str,
@@ -221,12 +234,10 @@ def record_autotrender_signal(
         if previous.get("signal_timestamp") == signal_timestamp:
             return {"queued": False, "reason": "duplicate_signal"}
         previous_direction = str(previous.get("direction") or "").upper()
-        event_type = None
-        if notifications_enabled(connection):
-            if not previous_direction:
-                event_type = "AUTOTRENDER_SIGNAL_CREATED"
-            elif previous_direction != normalized_direction:
-                event_type = "AUTOTRENDER_SIGNAL_CHANGED"
+        event_type = (
+            classify_autotrender_transition(previous_direction, normalized_direction)
+            if notifications_enabled(connection) else None
+        )
 
         result = {"queued": False, "reason": "same_direction" if previous_direction == normalized_direction else "notifications_disabled"}
         if event_type:

@@ -26,6 +26,10 @@ from app.services.notification_events import enqueue_notification, notifications
 from app.services.trade_terminal_stream import publish
 
 logger = logging.getLogger(__name__)
+
+
+class _NotificationDisabled(Exception):
+    """Internal sentinel used to skip optional Telegram outbox writes."""
 _lock = threading.RLock()
 _lifecycle_lock = threading.RLock()
 _cache: dict[str, dict[str, Any]] = {}
@@ -202,9 +206,11 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                 else "PAPER_TRADE_CLOSED" if paper_mode and event_payload.get("notification_final_exit")
                 else None
             )
-            if notification_kind and notifications_enabled(conn):
+            if notification_kind:
                 try:
                     with conn.begin_nested():
+                        if not notifications_enabled(conn):
+                            raise _NotificationDisabled()
                         if notification_kind == "PAPER_TRADE_ENTERED":
                             fields = (
                                 "trade_id", "underlying", "instrument_symbol", "strategy",
@@ -252,6 +258,8 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                             occurred_at=trade.get("closed_at") or trade.get("created_at") or trade.get("updated_at"),
                             connection=conn,
                         )
+                except _NotificationDisabled:
+                    pass
                 except Exception:
                     logger.exception(
                         "Could not enqueue Telegram notification for PAPER trade %s",

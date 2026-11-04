@@ -20,7 +20,6 @@ from app.providers.autotrender.auth import AutoTrenderAuth
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import trade_terminal
-from app.services.notification_events import record_autotrender_signal
 from app.services.autotrender_signal_evaluator import Evaluation, evaluate_signal
 from app.services.option_contract_selector import select_atm_contract
 
@@ -563,21 +562,6 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             state = "rejected"
             reason = evaluation.reason
             trade_id = None
-            if evaluation.eligible:
-                try:
-                    record_autotrender_signal(
-                        index=index,
-                        direction=evaluation.direction or "",
-                        signal_timestamp=signal_id,
-                        signal_row=row,
-                        metrics={
-                            "strength_difference": evaluation.strength_difference,
-                            "vwap_difference_percent": evaluation.vwap_difference_percent,
-                        },
-                    )
-                except Exception:
-                    # Signal delivery is best-effort and must never block paper entry.
-                    logger.exception("Could not queue AutoTrender Telegram signal index=%s", index)
             if evaluation.eligible:
                 try:
                     trade = _create_paper_trade(index, evaluation.direction or "", row, signal_timestamp,

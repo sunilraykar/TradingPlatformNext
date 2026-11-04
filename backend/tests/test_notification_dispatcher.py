@@ -33,7 +33,10 @@ def test_retry_schedule_and_telegram_retry_after():
     assert retry_delay_seconds(1, 17) == 17
 
 
-def test_autotrend_signal_direction_change_classification():
-    from app.services.notification_events import _dump
+def test_autotrend_signal_transition_classification():
+    from app.services.notification_events import classify_autotrender_transition
 
-    assert _dump({"direction": "BUY"}) == '{"direction":"BUY"}'
+    assert classify_autotrender_transition(None, "BUY") == "AUTOTRENDER_SIGNAL_CREATED"
+    assert classify_autotrender_transition("BUY", "SELL") == "AUTOTRENDER_SIGNAL_CHANGED"
+    assert classify_autotrender_transition("SELL", "BUY") == "AUTOTRENDER_SIGNAL_CHANGED"
+    assert classify_autotrender_transition("BUY", "BUY") is None
