@@ -122,6 +122,7 @@ def enqueue_notification(
         event_time = occurred_at.astimezone(UTC).replace(tzinfo=None) if occurred_at.tzinfo else occurred_at
 
     candidate_id = str(uuid.uuid4())
+
     def _insert_event_and_queue(connection):
         connection.execute(text("""
             INSERT INTO notification_events
