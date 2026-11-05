@@ -94,7 +94,9 @@ class AutoTrenderAuth:
                 def page_ready(browser):
                     if "/dashboard" in browser.current_url:
                         return "dashboard"
-                    if browser.find_elements(By.NAME, "username"):
+                    # The current AutoTrender login form uses an email field,
+                    # not the legacy "username" field.
+                    if browser.find_elements(By.NAME, "email"):
                         return "login"
                     return False
 
@@ -108,16 +110,16 @@ class AutoTrenderAuth:
                 )
                 if state == "login":
                     stage = "login_form_detection"
-                    username_field = wait.until(
-                        EC.presence_of_element_located((By.NAME, "username"))
+                    email_field = wait.until(
+                        EC.presence_of_element_located((By.NAME, "email"))
                     )
                     password_field = wait.until(
                         EC.presence_of_element_located((By.NAME, "password"))
                     )
-                    logger.info("AutoTrender auth diagnostic: username and password fields detected")
+                    logger.info("AutoTrender auth diagnostic: email and password fields detected")
                     stage = "credential_submission"
-                    username_field.clear()
-                    username_field.send_keys(username)
+                    email_field.clear()
+                    email_field.send_keys(username)
                     password_field.clear()
                     password_field.send_keys(password)
                     try:
