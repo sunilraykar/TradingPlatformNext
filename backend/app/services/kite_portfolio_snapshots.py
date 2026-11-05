@@ -134,7 +134,7 @@ def get_portfolio_history(account_id: str, period: str = "1Y") -> dict[str, Any]
     normalized = period.upper()
     if normalized not in periods:
         raise ValueError("period must be one of 1W, 1M, 3M, 6M, 1Y, ALL")
-    cutoff = date.today() - timedelta(days=periods[normalized]) if periods[normalized] else None
+    cutoff = datetime.now(IST).date() - timedelta(days=periods[normalized]) if periods[normalized] else None
     query = """
       SELECT snapshot_date, captured_at, holdings_count, invested_value, current_value,
              total_pnl, day_pnl, holdings_json
@@ -178,11 +178,15 @@ async def run_daily_portfolio_snapshot_scheduler() -> None:
         due_at = now.replace(hour=SNAPSHOT_HOUR, minute=SNAPSHOT_MINUTE, second=0, microsecond=0)
         if now.weekday() < 5 and now >= due_at:
             try:
+                profile = await asyncio.to_thread(get_kite_provider().profile)
+                account_id = str(profile.get("user_id") or "").strip()
+                if not account_id:
+                    raise RuntimeError("Kite profile did not include an account ID")
                 with get_engine().connect() as connection:
                     exists = connection.execute(text("""
                         SELECT 1 FROM kite_portfolio_snapshots
-                        WHERE snapshot_date = :snapshot_date LIMIT 1
-                    """), {"snapshot_date": now.date()}).first()
+                        WHERE account_id = :account_id AND snapshot_date = :snapshot_date LIMIT 1
+                    """), {"account_id": account_id, "snapshot_date": now.date()}).first()
                 if not exists:
                     await asyncio.to_thread(capture_daily_portfolio_snapshot)
             except Exception:
