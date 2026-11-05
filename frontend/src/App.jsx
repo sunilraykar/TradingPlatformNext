@@ -1613,6 +1613,18 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
   </>;
 }
 export default function App() {
+  const [theme, setTheme] = useState(() => {
+    try {
+      return window.localStorage.getItem('trading-platform-theme') === 'light' ? 'light' : 'dark';
+    } catch {
+      return 'dark';
+    }
+  });
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try { window.localStorage.setItem('trading-platform-theme', theme); } catch { /* Storage may be unavailable. */ }
+  }, [theme]);
+
   const [applicationTab, setApplicationTab] = useState('autotrender');
   const [autotrenderView, setAutotrenderView] = useState('live');
   const [kiteTab, setKiteTab] = useState('Dashboard');
@@ -1999,6 +2011,10 @@ export default function App() {
         <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
       </nav>
         <div className="topbar-right">
+          <div className="theme-switch" role="group" aria-label="Appearance">
+            <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')} title="Use light theme">☀ Light</button>
+            <button type="button" className={theme === 'dark' ? 'active' : ''} aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} title="Use dark theme">☾ Dark</button>
+          </div>
           {applicationTab === 'kite' && <button type="button" className={`status-pill kite-reconnect-button ${websocketStatus?.connected ? 'online' : 'offline'}`} onClick={reconnectKite} disabled={kiteReconnecting || websocketStatus?.connected}><i />{kiteReconnecting ? 'Waiting for Kite login…' : websocketStatus?.connected ? 'Kite Connected' : 'Reconnect Kite'}</button>}
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
           <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={websocketStatus?.reason || ('Kite WebSocket: ' + (websocketStatus?.state || 'checking'))}><i />WS {websocketStatus?.connected ? 'Connected' : websocketStatus?.state === 'login_required' ? 'Disconnected' : (websocketStatus?.state || 'Checking')}</span>
