@@ -1188,3 +1188,17 @@ select,input,textarea{
 .theme-switch button:hover{color:var(--text-strong);background:var(--surface-raised)}
 .theme-switch button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 @media(max-width:760px){.theme-switch{order:2}.topbar-right{flex-wrap:wrap}}
+
+/* Theme-specific application chrome and common interactive surfaces. */
+.topbar{background:var(--nav-bg);transition:background-color .18s ease,border-color .18s ease}
+:root[data-theme="dark"] .topbar{background:#222831}
+:root[data-theme="light"] .topbar{background:#524646}
+:root[data-theme="light"] .application-tabs{background:#6a5955;border-color:#806e68}
+:root[data-theme="light"] .application-tabs button{color:#eadfd2}
+:root[data-theme="light"] .application-tabs button:hover{background:#806e68;color:#fff8ef}
+:root[data-theme="light"] .application-tabs button.active{background:#EC5B38;border-color:#EC5B38;color:#fff}
+:root[data-theme="light"] .kite-tabs button,:root[data-theme="light"] .settings-tabs button{color:#74695e}
+:root[data-theme="light"] .kite-tabs button.active,:root[data-theme="light"] .settings-tabs button.active{background:#EC5B38;border-color:#EC5B38;color:#fff}
+:root[data-theme="light"] .trade-filter-button.active{background:#EC5B38;border-color:#EC5B38;color:#fff}
+:root[data-theme="light"] .metric .positive,:root[data-theme="light"] .positive{color:#16803c}
+:root[data-theme="light"] .metric .negative,:root[data-theme="light"] .negative{color:#c9362b}
