@@ -1871,7 +1871,7 @@ export default function App() {
 
   useEffect(() => {
     loadKiteTab();
-    if (applicationTab !== 'kite' || kiteTab !== 'Option Chain') return undefined;
+    if (applicationTab !== 'kite' || !['Option Chain', 'Holdings'].includes(kiteTab)) return undefined;
     const timer = window.setInterval(() => loadKiteTab(), 3000);
     return () => window.clearInterval(timer);
   }, [loadKiteTab, applicationTab, kiteTab]);
