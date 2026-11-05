@@ -217,7 +217,7 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                                 "direction", "quantity", "entry_price", "target", "stop_loss",
                                 "source", "created_at",
                             )
-                            label = "Paper trade entered"
+                            label = "PAPER TRADE ENTRY"
                             dedupe = "paper-entry:" + str(trade["trade_id"])
                         else:
                             fields = (
@@ -227,7 +227,7 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                                 "gross_realized_pnl", "net_realized_pnl", "realized_pnl",
                                 "closed_at", "source",
                             )
-                            label = "Paper trade closed"
+                            label = "PAPER TRADE EXIT"
                             dedupe = "paper-exit:" + str(trade["trade_id"])
                         details = {
                             key: trade.get(key) for key in fields
@@ -236,17 +236,28 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                         symbol = trade.get("instrument_symbol") or trade.get("underlying") or "Unknown"
                         side = str(trade.get("direction") or "").upper()
                         quantity = trade.get("quantity")
-                        price = trade.get("entry_price") if notification_kind == "PAPER_TRADE_ENTERED" else trade.get("exit_price", trade.get("average_exit_price"))
-                        telegram_text = f"{label}: {symbol}"
+                        is_entry = notification_kind == "PAPER_TRADE_ENTERED"
+                        price = trade.get("entry_price") if is_entry else trade.get("average_exit_price", trade.get("exit_price"))
+                        telegram_text = f"{'🟢' if is_entry else '🔴'} {label}\\n"
+                        telegram_text += f"Symbol: {symbol}\\n"
                         if side:
-                            telegram_text += f" | {side}"
+                            telegram_text += f"Direction: {side}\\n"
                         if quantity is not None:
-                            telegram_text += f" | Qty {quantity}"
+                            telegram_text += f"Quantity: {quantity}\\n"
                         if price is not None:
-                            telegram_text += f" | Price {price}"
-                        pnl = trade.get("net_realized_pnl", trade.get("realized_pnl", trade.get("gross_realized_pnl")))
-                        if notification_kind == "PAPER_TRADE_CLOSED" and pnl is not None:
-                            telegram_text += f" | Realized P&L {pnl}"
+                            telegram_text += f"{'Entry' if is_entry else 'Exit'} Price: ₹{float(price):,.2f}\\n"
+                        if is_entry:
+                            if trade.get("target") is not None:
+                                telegram_text += f"Target: ₹{float(trade['target']):,.2f}\\n"
+                            if trade.get("stop_loss") is not None:
+                                telegram_text += f"Stop Loss: ₹{float(trade['stop_loss']):,.2f}\\n"
+                        else:
+                            pnl = trade.get("net_realized_pnl", trade.get("realized_pnl", trade.get("gross_realized_pnl")))
+                            if pnl is not None:
+                                telegram_text += f"Realized P&L: ₹{float(pnl):+,.2f}\\n"
+                            if trade.get("exit_reason") or trade.get("exit_method"):
+                                telegram_text += f"Exit Reason: {trade.get('exit_reason') or trade.get('exit_method')}\\n"
+                        telegram_text += f"Time: {trade.get('closed_at') if not is_entry else trade.get('created_at')}"
                         enqueue_notification(
                             event_type=notification_kind,
                             category="PAPER_TRADE",
