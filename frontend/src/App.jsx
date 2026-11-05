@@ -2078,7 +2078,6 @@ export default function App() {
       </section>
 
       <footer className="footer">
-        <span>{hasMarketData ? 'Data received from AutoTrender API' : 'Waiting for AutoTrender market data'}</span>
         <span>Cache {cache?.cached ? `${number(cache.cache_age_seconds, 1)}s old` : 'not populated'} · API proxy: local backend</span>
       </footer>
       </>}
