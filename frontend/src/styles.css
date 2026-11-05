@@ -1202,3 +1202,65 @@ select,input,textarea{
 :root[data-theme="light"] .trade-filter-button.active{background:#EC5B38;border-color:#EC5B38;color:#fff}
 :root[data-theme="light"] .metric .positive,:root[data-theme="light"] .positive{color:#16803c}
 :root[data-theme="light"] .metric .negative,:root[data-theme="light"] .negative{color:#c9362b}
+
+
+/* Light theme contrast fixes for the Kite account dashboard. */
+:root[data-theme="light"] .kite-account-stat,
+:root[data-theme="light"] .kite-account-balance{
+  background:#fff8ef;
+  border-color:#d8cdbd;
+  color:#524646;
+}
+:root[data-theme="light"] .kite-account-stat span,
+:root[data-theme="light"] .kite-account-balance span,
+:root[data-theme="light"] .kite-dashboard-activity span{
+  color:#74695e;
+}
+:root[data-theme="light"] .kite-account-stat strong{
+  color:#342d2b;
+}
+:root[data-theme="light"] .kite-account-balance strong{
+  color:#16803c;
+}
+:root[data-theme="light"] .kite-segment-card{
+  background:#fff8ef;
+  border-color:#d8cdbd;
+  color:#524646;
+}
+:root[data-theme="light"] .kite-segment-card h3,
+:root[data-theme="light"] .kite-segment-card strong{
+  color:#342d2b;
+}
+:root[data-theme="light"] .kite-segment-values>div span,
+:root[data-theme="light"] .kite-margin-row span,
+:root[data-theme="light"] .kite-margin-columns h4{
+  color:#74695e;
+}
+:root[data-theme="light"] .kite-segment-values>div{
+  border-left-color:#d8cdbd;
+}
+:root[data-theme="light"] .kite-margin-details{
+  border-color:#d8cdbd;
+}
+:root[data-theme="light"] .kite-margin-details summary{
+  color:#c94326;
+}
+:root[data-theme="light"] .kite-margin-columns{
+  background:#fff8ef;
+  border-color:#d8cdbd;
+  box-shadow:0 12px 28px rgba(55,42,34,.16);
+}
+:root[data-theme="light"] .kite-margin-row{
+  border-bottom-color:#e6dccf;
+}
+:root[data-theme="light"] .kite-enabled{
+  color:#176b35;
+  background:#dcefdc;
+}
+:root[data-theme="light"] .kite-disabled{
+  color:#74695e;
+  background:#eee5d7;
+}
+:root[data-theme="light"] .kite-dashboard-section-heading h3{
+  color:#342d2b;
+}
