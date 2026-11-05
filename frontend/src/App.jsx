@@ -1640,6 +1640,9 @@ export default function App() {
   const [holdingsProfitFilter, setHoldingsProfitFilter] = useState('ALL');
   const [holdingsSearch, setHoldingsSearch] = useState('');
   const [holdingsSort, setHoldingsSort] = useState('SYMBOL');
+  const [holdingsHistoryPeriod, setHoldingsHistoryPeriod] = useState('1Y');
+  const [holdingsHistory, setHoldingsHistory] = useState({ history: [], snapshot_count: 0, message: 'Loading portfolio history…' });
+  const [holdingsHistoryLoading, setHoldingsHistoryLoading] = useState(false);
   const [websocketStatus, setWebsocketStatus] = useState(null);
   const kiteAuthInvalidRef = useRef(false);
   const reconnectPollingRef = useRef(null);
@@ -1776,6 +1779,15 @@ export default function App() {
       } else if (kiteTab === 'Holdings') {
         result = await api('/kite/holdings');
         setKiteData({ title: 'Holdings', subtitle: (result.holdings || []).length + ' holdings', rows: result.holdings || [] });
+        setHoldingsHistoryLoading(true);
+        try {
+          const history = await api('/kite/holdings/history?period=' + encodeURIComponent(holdingsHistoryPeriod));
+          setHoldingsHistory(history);
+        } catch (historyError) {
+          setHoldingsHistory({ history: [], snapshot_count: 0, message: historyError.message || 'Portfolio history is temporarily unavailable.' });
+        } finally {
+          setHoldingsHistoryLoading(false);
+        }
       } else {
         const [orders, positions, holdings, funds] = await Promise.all([
           api('/kite/orders'), api('/kite/positions'), api('/kite/holdings'), api('/kite/funds'),
@@ -2239,6 +2251,54 @@ export default function App() {
                 <div className="holdings-summary-item"><span>Overall return</span><strong className={totalPnl > 0 ? 'positive' : totalPnl < 0 ? 'negative' : 'neutral'}>{formatPercent(investment ? totalPnl / investment * 100 : 0)}</strong></div>
                 <div className="holdings-summary-item"><span>Profitable holdings</span><strong>{counts.PROFITABLE} <small>/ {holdings.length}</small></strong></div>
               </div>
+              <section className="holdings-history-panel" aria-label="Historical portfolio performance">
+                <div className="holdings-history-header">
+                  <div><h3>Portfolio performance</h3><span>{holdingsHistory.snapshot_count || 0} daily snapshots · End-of-day values</span></div>
+                  <div className="holdings-history-periods" role="group" aria-label="Portfolio history period">
+                    {['1W','1M','3M','6M','1Y','ALL'].map((period) => <button key={period} type="button" className={holdingsHistoryPeriod === period ? 'active' : ''} disabled={holdingsHistoryLoading} onClick={async () => {
+                      setHoldingsHistoryPeriod(period);
+                      setHoldingsHistoryLoading(true);
+                      try {
+                        const history = await api('/kite/holdings/history?period=' + encodeURIComponent(period));
+                        setHoldingsHistory(history);
+                      } catch (historyError) {
+                        setHoldingsHistory({ history: [], snapshot_count: 0, message: historyError.message || 'Portfolio history is temporarily unavailable.' });
+                      } finally {
+                        setHoldingsHistoryLoading(false);
+                      }
+                    }}>{period}</button>)}
+                  </div>
+                </div>
+                {holdingsHistoryLoading ? <div className="holdings-history-empty">Loading saved portfolio snapshots…</div> : (holdingsHistory.history || []).length >= 2 ? (() => {
+                  const points = holdingsHistory.history;
+                  const values = points.map((point) => Number(point.current_value || 0));
+                  const min = Math.min(...values);
+                  const max = Math.max(...values);
+                  const spread = max - min || Math.max(1, Math.abs(max) * 0.01);
+                  const coords = values.map((value, index) => {
+                    const x = points.length === 1 ? 50 : index / (points.length - 1) * 1000;
+                    const y = 150 - ((value - min) / spread) * 125 - 10;
+                    return { x, y, value, date: points[index].date };
+                  });
+                  const latest = points[points.length - 1];
+                  const first = points[0];
+                  const change = Number(latest.current_value || 0) - Number(first.current_value || 0);
+                  const changePct = first.current_value ? change / Math.abs(Number(first.current_value)) * 100 : 0;
+                  return <div className="holdings-history-chart-wrap">
+                    <div className="holdings-history-kpis">
+                      <div><span>Latest portfolio value</span><strong>₹{formatMoney(latest.current_value)}</strong></div>
+                      <div><span>Change in selected period</span><strong className={change > 0 ? 'positive' : change < 0 ? 'negative' : ''}>{change > 0 ? '+' : change < 0 ? '−' : ''}₹{formatMoney(Math.abs(change))} <small>({formatPercent(changePct)})</small></strong></div>
+                      <div><span>Latest total P&amp;L</span><strong className={latest.total_pnl > 0 ? 'positive' : latest.total_pnl < 0 ? 'negative' : ''}>₹{formatMoney(latest.total_pnl)}</strong></div>
+                    </div>
+                    <svg className="holdings-history-chart" viewBox="0 0 1000 180" role="img" aria-label="Daily end-of-day portfolio current value history">
+                      <line x1="0" y1="150" x2="1000" y2="150" />
+                      <polyline points={coords.map((point) => point.x + ',' + point.y).join(' ')} />
+                      {coords.map((point) => <circle key={point.date} cx={point.x} cy={point.y} r="3"><title>{point.date}: ₹{formatMoney(point.value)}</title></circle>)}
+                    </svg>
+                    <div className="holdings-history-axis"><span>{first.date}</span><span>{latest.date}</span></div>
+                  </div>;
+                })() : <div className="holdings-history-empty">{holdingsHistory.message || 'Historical performance will appear after more daily snapshots are collected.'}</div>}
+              </section>
               <div className="holdings-tools">
                 <input type="search" value={holdingsSearch} onChange={(event) => setHoldingsSearch(event.target.value)} placeholder="Search instrument…" aria-label="Search holdings by instrument" />
                 <div className="holdings-sort-actions" aria-label="Sort holdings">
