@@ -75,11 +75,21 @@ class AutoTrenderAuth:
             options.add_argument("--no-sandbox")
             options.add_argument("--disable-dev-shm-usage")
             driver = None
+            stage = "chrome_startup"
             try:
                 logger.info("AutoTrender auth diagnostic: starting headless Chrome login")
                 driver = webdriver.Chrome(options=options)
+                logger.info("AutoTrender auth diagnostic: Chrome started successfully")
+                stage = "login_page_navigation"
                 driver.get(LOGIN_URL)
+                logger.info(
+                    "AutoTrender auth diagnostic: login URL navigation completed; "
+                    "final_url=%s page_title=%r",
+                    driver.current_url,
+                    driver.title,
+                )
                 wait = WebDriverWait(driver, 30)
+                stage = "login_page_readiness"
 
                 def page_ready(browser):
                     if "/dashboard" in browser.current_url:
@@ -90,17 +100,22 @@ class AutoTrenderAuth:
 
                 state = wait.until(page_ready)
                 logger.info(
-                    "AutoTrender auth diagnostic: login page ready; page_state=%s final_url=%s",
+                    "AutoTrender auth diagnostic: login page ready; page_state=%s "
+                    "final_url=%s page_title=%r",
                     state,
                     driver.current_url,
+                    driver.title,
                 )
                 if state == "login":
+                    stage = "login_form_detection"
                     username_field = wait.until(
                         EC.presence_of_element_located((By.NAME, "username"))
                     )
                     password_field = wait.until(
                         EC.presence_of_element_located((By.NAME, "password"))
                     )
+                    logger.info("AutoTrender auth diagnostic: username and password fields detected")
+                    stage = "credential_submission"
                     username_field.clear()
                     username_field.send_keys(username)
                     password_field.clear()
@@ -111,15 +126,18 @@ class AutoTrenderAuth:
                             driver.execute_script("arguments[0].click();", terms)
                     except Exception as exc:  # noqa: BLE001
                         logger.debug("Optional terms checkbox interaction failed: %s", exc)
+                    stage = "login_submit"
                     wait.until(
                         EC.element_to_be_clickable((By.CSS_SELECTOR, "button[type='submit']"))
                     ).click()
                     wait.until(lambda browser: "/login" not in browser.current_url)
                     logger.info(
-                        "AutoTrender auth diagnostic: submit completed; final_url=%s",
+                        "AutoTrender auth diagnostic: submit completed; final_url=%s page_title=%r",
                         driver.current_url,
+                        driver.title,
                     )
 
+                stage = "cookie_extraction"
                 cookies = driver.execute_cdp_cmd("Network.getAllCookies", {}).get("cookies", [])
                 cookie = next((item for item in cookies if item.get("name") == "authcookie"), None)
                 if not cookie:
@@ -144,7 +162,12 @@ class AutoTrenderAuth:
                     path=cookie.get("path", "/"),
                 )
                 self._save_cookie(cookie["value"])
+                logger.info(
+                    "AutoTrender auth diagnostic: authcookie saved to session store; path=%s",
+                    SESSION_FILE,
+                )
                 self.authenticated = True
+                stage = "session_validation"
                 if not self._validate_session():
                     if self._last_validation_all_rejected:
                         raise RuntimeError(
@@ -158,9 +181,19 @@ class AutoTrenderAuth:
                 return {"authenticated": True, "message": "AutoTrender login successful."}
             except Exception as exc:
                 self.authenticated = False
+                logger.exception(
+                    "AutoTrender auth diagnostic: login failed at stage=%s "
+                    "exception_type=%s current_url=%s page_title=%r",
+                    stage,
+                    type(exc).__name__,
+                    getattr(driver, "current_url", "<browser-not-started>") if driver is not None else "<browser-not-started>",
+                    getattr(driver, "title", "<unavailable>") if driver is not None else "<unavailable>",
+                )
                 if isinstance(exc, RuntimeError):
                     raise
-                raise RuntimeError(f"AutoTrender login failed: {type(exc).__name__}: {exc}") from exc
+                raise RuntimeError(
+                    f"AutoTrender login failed at stage '{stage}': {type(exc).__name__}: {exc}"
+                ) from exc
             finally:
                 if driver is not None:
                     try:
