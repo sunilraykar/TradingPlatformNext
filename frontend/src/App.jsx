@@ -1883,10 +1883,12 @@ export default function App() {
 
   useEffect(() => {
     loadKiteTab();
-    if (applicationTab !== 'kite' || !['Option Chain', 'Holdings'].includes(kiteTab)) return undefined;
+    // Option Chain needs a live refresh; Holdings is loaded on entry or when
+    // the user changes its history range, never on the one-second quote timer.
+    if (applicationTab !== 'kite' || kiteTab !== 'Option Chain') return undefined;
     const timer = window.setInterval(() => loadKiteTab(), 1000);
     return () => window.clearInterval(timer);
-  }, [loadKiteTab, applicationTab, kiteTab]);
+  }, [applicationTab, kiteTab]);
 
   const openAutoTrenderUnderlying = (value) => {
     const normalized = String(value || '').trim().toUpperCase();
