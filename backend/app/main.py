@@ -102,7 +102,8 @@ async def _restore_kite_session() -> None:
 async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
-    ensure_notification_schema()\n    ensure_portfolio_snapshot_schema()
+    ensure_notification_schema()
+    ensure_portfolio_snapshot_schema()
     if not hasattr(application.state, "autotrender_auth"):
         application.state.autotrender_auth = AutoTrenderAuth()
     if not hasattr(application.state, "autotrender_cache"):
@@ -123,14 +124,16 @@ async def lifespan(application: FastAPI):
     autotrender_snapshot_task = asyncio.create_task(
         autotrender_cache_snapshot.run_daily_snapshot_scheduler(application.state.autotrender_auth)
     )
-    telegram_dispatch_task = asyncio.create_task(telegram_dispatcher.run_scheduler())\n    portfolio_snapshot_task = asyncio.create_task(run_daily_portfolio_snapshot_scheduler())
+    telegram_dispatch_task = asyncio.create_task(telegram_dispatcher.run_scheduler())
+    portfolio_snapshot_task = asyncio.create_task(run_daily_portfolio_snapshot_scheduler())
     try:
         yield
     finally:
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
         tasks = (
             reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task,
-            autotrender_worker_task, autotrender_snapshot_task, telegram_dispatch_task,\n            portfolio_snapshot_task,
+            autotrender_worker_task, autotrender_snapshot_task, telegram_dispatch_task,
+            portfolio_snapshot_task,
         )
         for task in tasks:
             task.cancel()
