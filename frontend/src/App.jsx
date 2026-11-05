@@ -1824,7 +1824,7 @@ export default function App() {
       setKiteLoading(false);
       kiteRefreshInFlight.current = false;
     }
-  }, [applicationTab, kiteTab, refreshWebsocketStatus]);
+  }, [applicationTab, kiteTab, refreshWebsocketStatus, holdingsHistoryPeriod]);
 
   const reconnectKite = useCallback(async () => {
     if (kiteReconnecting) return;
