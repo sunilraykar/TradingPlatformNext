@@ -23,7 +23,11 @@ from app.providers.kite.registry import (
     clear_active_kite_session,
     configure_active_kite_session,
 )
-from app.services.kite_portfolio_snapshots import (\n    ensure_portfolio_snapshot_schema,\n    run_daily_portfolio_snapshot_scheduler,\n)\nfrom app.services import (
+from app.services.kite_portfolio_snapshots import (
+    ensure_portfolio_snapshot_schema,
+    run_daily_portfolio_snapshot_scheduler,
+)
+from app.services import (
     auto_exit_profitable_trades,
     autotrender_cache_snapshot,
     autotrender_paper_trade_worker,
