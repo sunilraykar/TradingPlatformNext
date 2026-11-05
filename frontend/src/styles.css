@@ -1264,3 +1264,27 @@ select,input,textarea{
 :root[data-theme="light"] .kite-dashboard-section-heading h3{
   color:#342d2b;
 }
+
+
+/* AutoTrender live chart: keep the selected option beside the entry signal
+   and place the manual trade action at the graph's lower-right edge. */
+.price-vwap-bottom-actions{width:100%;box-sizing:border-box}
+.price-vwap-bottom-actions .series-summary{overflow:hidden}
+.price-vwap-trade-actions .enter-autotrend-trade-button{min-height:38px;padding:9px 16px;white-space:nowrap}
+.price-vwap-trade-actions .selected-contract-action-feedback{max-width:230px;line-height:1.35;text-align:right}
+.chart-contract-entry .chart-selected-contract{max-width:260px}
+@media(max-width:1250px){
+  .price-vwap-top-metrics{flex-wrap:wrap!important}
+  .price-vwap-top-metrics>div:first-child{flex-basis:180px!important}
+  .chart-contract-entry{margin-left:0!important}
+  .price-vwap-bottom-actions{align-items:stretch!important;flex-direction:column}
+  .price-vwap-trade-actions{justify-content:flex-end}
+}
+@media(max-width:650px){
+  .price-vwap-bottom-actions .series-summary{justify-content:flex-start!important}
+  .price-vwap-trade-actions{align-items:stretch!important;flex-direction:column}
+  .price-vwap-trade-actions .enter-autotrend-trade-button{width:100%}
+  .price-vwap-trade-actions .selected-contract-action-feedback{max-width:none;text-align:left}
+  .chart-contract-entry{width:100%;box-sizing:border-box}
+  .chart-contract-entry .chart-selected-contract{flex:1;max-width:none}
+}
