@@ -62,6 +62,18 @@ def _dump(value: Any) -> str:
     return json.dumps(value, separators=(",", ":"), default=_json_default)
 
 
+def _format_notification_time(value: Any) -> str:
+    if not value:
+        return "N/A"
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(ZoneInfo("Asia/Kolkata")).strftime("%d %b %Y, %I:%M:%S %p IST")
+    except (TypeError, ValueError):
+        return str(value)
+
+
 def _is_active(trade: dict[str, Any]) -> bool:
     return str(trade.get("status", "OPEN")).upper() not in _TERMINAL
 
@@ -238,26 +250,26 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                         quantity = trade.get("quantity")
                         is_entry = notification_kind == "PAPER_TRADE_ENTERED"
                         price = trade.get("entry_price") if is_entry else trade.get("average_exit_price", trade.get("exit_price"))
-                        telegram_text = f"{'🟢' if is_entry else '🔴'} {label}\\n"
-                        telegram_text += f"Symbol: {symbol}\\n"
+                        telegram_text = f"{'🟢' if is_entry else '🔴'} {label}\n"
+                        telegram_text += f"Symbol: {symbol}\n"
                         if side:
-                            telegram_text += f"Direction: {side}\\n"
+                            telegram_text += f"Direction: {side}\n"
                         if quantity is not None:
-                            telegram_text += f"Quantity: {quantity}\\n"
+                            telegram_text += f"Quantity: {quantity}\n"
                         if price is not None:
-                            telegram_text += f"{'Entry' if is_entry else 'Exit'} Price: ₹{float(price):,.2f}\\n"
+                            telegram_text += f"{'Entry' if is_entry else 'Exit'} Price: ₹{float(price):,.2f}\n"
                         if is_entry:
                             if trade.get("target") is not None:
-                                telegram_text += f"Target: ₹{float(trade['target']):,.2f}\\n"
+                                telegram_text += f"Target: ₹{float(trade['target']):,.2f}\n"
                             if trade.get("stop_loss") is not None:
-                                telegram_text += f"Stop Loss: ₹{float(trade['stop_loss']):,.2f}\\n"
+                                telegram_text += f"Stop Loss: ₹{float(trade['stop_loss']):,.2f}\n"
                         else:
                             pnl = trade.get("net_realized_pnl", trade.get("realized_pnl", trade.get("gross_realized_pnl")))
                             if pnl is not None:
-                                telegram_text += f"Realized P&L: ₹{float(pnl):+,.2f}\\n"
+                                telegram_text += f"Realized P&L: ₹{float(pnl):+,.2f}\n"
                             if trade.get("exit_reason") or trade.get("exit_method"):
-                                telegram_text += f"Exit Reason: {trade.get('exit_reason') or trade.get('exit_method')}\\n"
-                        telegram_text += f"Time: {trade.get('closed_at') if not is_entry else trade.get('created_at')}"
+                                telegram_text += f"Exit Reason: {trade.get('exit_reason') or trade.get('exit_method')}\n"
+                        telegram_text += f"Time: {_format_notification_time(trade.get('created_at') if is_entry else trade.get('closed_at'))}"
                         enqueue_notification(
                             event_type=notification_kind,
                             category="PAPER_TRADE",
