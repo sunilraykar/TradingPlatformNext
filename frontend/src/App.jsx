@@ -649,13 +649,6 @@ function CacheViewer() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // Open the newest available snapshot automatically; date navigation then
-  // loads each selected day's snapshot without a separate table selection.
-  useEffect(() => {
-    if (!selected && !detailLoading && result.snapshots?.length) {
-      openSnapshot(result.snapshots[0]);
-    }
-  }, [result.snapshots, selected, detailLoading]);
   const entries = [...((snapshot?.entries || []).map((entry) => ({ ...entry, data: maskSensitive(entry.data), group: 'Backend memory cache' }))), ...marketEntries];
   const rowsFor = (data) => {
     if (Array.isArray(data)) return data;
