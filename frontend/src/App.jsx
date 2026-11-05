@@ -456,7 +456,6 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
         </tbody>
       </table>
     </div>
-    <div className="autotrend-active-trades-footer">India time · {streamState === 'connected' ? 'Live WebSocket · 2 sec recovery sync' : 'WebSocket reconnecting · 2 sec recovery sync'}</div>
   </aside>;
 }
 
