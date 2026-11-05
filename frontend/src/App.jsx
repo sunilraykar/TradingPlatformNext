@@ -2267,7 +2267,7 @@ export default function App() {
           })()}
           {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} positionsMode={kiteTab === 'Positions'} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
           {kiteTab === 'Holdings' && (!Array.isArray(kiteData?.rows) || kiteData.rows.length === 0) && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading holdings…</div> : <KiteDataTable rows={[]} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No holdings returned by Kite.'} />)}
-          <div className="panel-footer">{kiteTab === 'Option Chain' ? 'Option-chain quotes refresh every 3 seconds. Quote freshness is based on the time the backend received the Kite tick; stale or missing values are identified in the panel subtitle.' : kiteTab === "Holdings" ? "Place BUY/SELL orders directly from your holdings." : "Read-only data view. No order placement or modification is performed by these tabs."}</div>
+          <div className="panel-footer">{kiteTab === 'Option Chain' ? 'Option-chain quotes refresh every 3 seconds. Quote freshness is based on the time the backend received the Kite tick; stale or missing values are identified in the panel subtitle.' : kiteTab === "Holdings" ? "Place BUY/SELL orders directly from your holdings." : ""}</div>
         </section>
       </>}
     </main>
