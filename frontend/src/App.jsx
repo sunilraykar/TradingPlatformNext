@@ -146,7 +146,7 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
-function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, showHeading = false, compact = false, headingEyebrow = 'INTRADAY PRICE ACTION' }) {
+function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, selectedContract = null, tradeAction = null, tradeFeedback = null, showHeading = false, compact = false, headingEyebrow = 'INTRADAY PRICE ACTION' }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
@@ -212,7 +212,14 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
         <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px', color: sideColor }}>{side}</strong>
       </div>
       </div>
-      {enterValue !== null && <div className="chart-enter-card" style={{ flex: '0 0 150px', marginLeft: 'auto' }}><span>Enter</span><strong className={'latest-enter ' + String(enterValue || 'wait').toLowerCase()}>{enterValue || '—'}</strong></div>}
+      {(selectedContract || enterValue !== null) && <div className="chart-contract-entry" style={{ display: 'flex', alignItems: 'stretch', gap: '10px', flex: '0 1 auto', minWidth: 0, marginLeft: 'auto', padding: '7px 10px', border: '1px solid #22c55e', borderRadius: '9px', background: 'var(--panel-bg, #111b2b)' }}>
+        {selectedContract && <div className="chart-selected-contract" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0, paddingRight: '12px' }}>
+          <span style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>Selected Contract</span>
+          <strong title={selectedContract.tradingsymbol} style={{ fontSize: '13px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedContract.tradingsymbol}</strong>
+          <span style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px', whiteSpace: 'nowrap' }}>ATM: {number(selectedContract.strike, 0)} · Expiry: {selectedContract.expiry || '—'}</span>
+        </div>}
+        {enterValue !== null && <div className="chart-enter-card" style={{ flex: '0 0 92px', marginLeft: 0 }}><span>Enter</span><strong className={'latest-enter ' + String(enterValue || 'wait').toLowerCase()}>{enterValue || '—'}</strong></div>}
+      </div>}
     </div>
     <div className="chart-wrap price-vwap-wrap" onMouseLeave={() => setHoveredRow(null)}>
       <div className="chart-axis"><span>{number(max)}</span><span>{number((max + min) / 2)}</span><span>{number(min)}</span></div>
@@ -252,7 +259,8 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
       <div className="chart-times price-vwap-times">{ticks.map((minutes) => <span key={minutes}>{`${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`}</span>)}</div>
     </div>
     <div className="legend price-vwap-legend"><span><i className="legend-price" /> Price</span><span><i className="legend-vwap" /> VWAP</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #38bdf8" }} /> Entry start</span><span><i style={{ display: "inline-block", width: 18, borderTop: "2px dotted #fbbf24" }} /> Entry cutoff</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#22c55e" }} /> BUY</span><span><i style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: "#f87171" }} /> SELL</span></div>
-    <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '12px', padding: '12px 14px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }} aria-label="BUY or SELL evaluation sequence">
+    <div className="price-vwap-bottom-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '12px', padding: '8px 10px', border: '1px solid var(--border-color, #263449)', borderRadius: '8px', background: 'var(--panel-bg, #111b2b)' }}>
+    <div className="series-summary price-vwap-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minWidth: 0, flexWrap: 'wrap', gap: '8px', marginTop: 0, padding: '4px', border: 'none', borderRadius: 0, background: 'transparent' }} aria-label="BUY or SELL evaluation sequence">
       {[
         ['VWAP Signal', displayed.vwapSignal || '—'],
         ['Option Signal', displayed.optionSignal || '—'],
@@ -269,6 +277,11 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
           <strong style={{ fontSize: '12px', color: label.includes('Signal') || label === 'Enter' ? (value === 'BUY' ? '#22c55e' : value === 'SELL' ? '#f87171' : 'var(--text, #e5edf8)') : 'var(--text, #e5edf8)' }}>{value}</strong>
         </span>
       </React.Fragment>)}
+    </div>
+    {tradeAction && <div className="price-vwap-trade-actions" style={{ display: 'flex', flex: '0 0 auto', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
+      {tradeFeedback && <div className="selected-contract-action-feedback" aria-live="polite">{tradeFeedback}</div>}
+      <button type="button" className="button primary enter-autotrend-trade-button" onClick={tradeAction.onClick} disabled={tradeAction.disabled || tradeAction.loading}>{tradeAction.loading ? 'Entering…' : 'Enter Trade'}</button>
+    </div>}
     </div>
   </>;
 }
@@ -2034,38 +2047,12 @@ export default function App() {
 
 
       {showAllIndices ? <AllIndicesDashboard mins={mins} settings={autotrendSettings} kiteIndexQuotes={kiteIndexQuotes} /> : <>
-      {selectedContract?.status === 'SELECTED' && <section className="selected-contract-panel panel" aria-live="polite">
-        <div className="selected-contract-heading">
-          <div><div className="eyebrow">ATM CONTRACT SELECTION</div><h2>Selected option strike</h2></div>
-        </div>
-        <div className="selected-contract-main">
-          <div className="selected-contract-symbol"><strong>{selectedContract.tradingsymbol}</strong><span>{selectedContract.index} · {selectedContract.option_type} · {selectedContract.exchange}</span></div>
-          <div className="selected-contract-stat"><span>Spot</span><strong>{number(selectedContract.spot_price)}</strong></div>
-          <div className="selected-contract-stat"><span>ATM strike</span><strong>{number(selectedContract.strike, 0)}</strong></div>
-          <div className="selected-contract-stat"><span>Expiry</span><strong>{selectedContract.expiry}</strong></div>
-          <div className="selected-contract-stat"><span>Lot size</span><strong>{number(selectedContract.lot_size, 0)}</strong></div>
-        </div>
-        <div className="selected-contract-footnote">{selectedContract.expiry_rule}{selectedContract.used_next_expiry ? ' · Switched to next expiry' : ''} · Signal: {selectedContract.signal}. Paper-trade selection only; no order has been placed.</div>
-        {selectedContract.calendar_note && <div className="selected-contract-calendar-note">{selectedContract.calendar_note}</div>}
-        <div className="selected-contract-actions">
-          <div aria-live="polite" className="selected-contract-action-feedback">
-            {manualTradeError && <span className="manual-trade-error">{manualTradeError}</span>}
-            {manualTradeMessage && <span className="manual-trade-success">{manualTradeMessage}</span>}
-          </div>
-          <button type="button" className="button primary enter-autotrend-trade-button"
-            onClick={enterManualAutoTrenderTrade}
-            disabled={manualTradeLoading || !['BUY', 'SELL'].includes(contractSignal) || selectedContract.signal !== contractSignal}>
-            {manualTradeLoading ? 'Entering…' : 'Enter Trade'}
-          </button>
-        </div>
-      </section>}
-
       <section className="price-vwap-section">
         <div className="price-vwap-workspace">
           <article className="panel price-vwap-panel">
             <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 7fr) minmax(260px, 3fr)' }}>
               <div className="price-vwap-graph-column">
-                <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} showHeading />
+                <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} selectedContract={selectedContract?.status === 'SELECTED' ? selectedContract : null} tradeAction={selectedContract?.status === 'SELECTED' ? { onClick: enterManualAutoTrenderTrade, loading: manualTradeLoading, disabled: manualTradeLoading || !['BUY', 'SELL'].includes(contractSignal) || selectedContract.signal !== contractSignal } : null} tradeFeedback={manualTradeError ? <span className="manual-trade-error">{manualTradeError}</span> : manualTradeMessage ? <span className="manual-trade-success">{manualTradeMessage}</span> : null} showHeading />
               </div>
             </div>
           </article>
