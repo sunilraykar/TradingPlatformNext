@@ -1312,3 +1312,27 @@ select,input,textarea{
 }
 .holdings-summary-item>strong.positive{color:var(--green,#22c55e)}
 .holdings-summary-item>strong.negative{color:var(--red,#f87171)}
+
+/* Historical Kite portfolio analytics: isolated, lazy-rendered Holdings panel. */
+.holdings-history-panel{margin:4px 0 16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:rgba(13,23,37,.62)}
+.holdings-history-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.holdings-history-header h3{margin:0 0 4px;font-size:14px;color:var(--text)}
+.holdings-history-header span{font-size:10px;color:var(--muted)}
+.holdings-history-periods{display:flex;gap:5px;flex-wrap:wrap}
+.holdings-history-periods button{padding:6px 9px;border:1px solid var(--line);border-radius:6px;background:#111c2b;color:var(--muted);font-size:10px;cursor:pointer}
+.holdings-history-periods button.active{border-color:rgba(56,217,220,.45);background:rgba(56,217,220,.12);color:var(--cyan)}
+.holdings-history-periods button:disabled{opacity:.55;cursor:wait}
+.holdings-history-kpis{display:flex;gap:28px;flex-wrap:wrap;margin:6px 0 8px}
+.holdings-history-kpis>div{display:flex;flex-direction:column;gap:4px}
+.holdings-history-kpis span{font-size:10px;color:var(--muted)}
+.holdings-history-kpis strong{font:600 15px 'DM Mono',monospace;color:var(--text)}
+.holdings-history-kpis strong.positive{color:var(--green,#22c55e)}
+.holdings-history-kpis strong.negative{color:var(--red,#f87171)}
+.holdings-history-kpis small{font-size:10px}
+.holdings-history-chart{display:block;width:100%;height:150px;overflow:visible;margin-top:8px}
+.holdings-history-chart line{stroke:var(--line);stroke-width:1;stroke-dasharray:4 5}
+.holdings-history-chart polyline{fill:none;stroke:var(--cyan);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.holdings-history-chart circle{fill:var(--cyan);stroke:#0d1725;stroke-width:2;vector-effect:non-scaling-stroke}
+.holdings-history-axis{display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
+.holdings-history-empty{padding:26px 10px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:760px){.holdings-history-header{align-items:flex-start;flex-direction:column}.holdings-history-periods{width:100%;overflow-x:auto;flex-wrap:nowrap}.holdings-history-periods button{flex:0 0 auto}.holdings-history-kpis{gap:14px}.holdings-history-kpis strong{font-size:13px}.holdings-history-chart{height:120px}}
