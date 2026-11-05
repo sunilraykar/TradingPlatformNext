@@ -548,7 +548,7 @@
 @media(max-width:620px){.kite-dashboard-content{padding:0 12px 14px}.kite-account-summary{grid-template-columns:1fr 1fr;gap:8px}.kite-account-balance{grid-column:1/-1}.kite-account-stat{padding:12px}.kite-account-stat strong{font-size:17px}.kite-dashboard-activity{flex-wrap:wrap}.kite-dashboard-activity>div{flex:1 1 130px;min-width:0}.kite-segment-grid{grid-template-columns:1fr}.kite-margin-columns{grid-template-columns:1fr}}
 
 /* Portfolio-level totals above the holdings filters and table. */
-.holdings-portfolio-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px;padding:4px 0 16px;margin:0 0 14px;border-bottom:1px solid var(--line)}
+.holdings-portfolio-summary{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:18px;padding:4px 0 16px;margin:0 0 14px;border-bottom:1px solid var(--line)}
 .holdings-summary-item{display:flex;flex-direction:column;gap:8px;min-width:0}
 .holdings-summary-item>span{color:var(--muted);font-size:12px;white-space:nowrap}
 .holdings-summary-item>strong{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font:600 clamp(15px,1.45vw,22px) 'DM Mono',monospace;white-space:nowrap}
@@ -1301,3 +1301,14 @@ select,input,textarea{
 .calculated-table{font-size:20px}
 .calculated-table th{font-size:18px}
 .calculated-table td{font-size:20px}
+
+
+/* Keep the expanded portfolio overview responsive without changing global UI. */
+@media(min-width:761px) and (max-width:1150px){
+  .holdings-portfolio-summary{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+}
+@media(max-width:760px){
+  .holdings-portfolio-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+.holdings-summary-item>strong.positive{color:var(--green,#22c55e)}
+.holdings-summary-item>strong.negative{color:var(--red,#f87171)}
