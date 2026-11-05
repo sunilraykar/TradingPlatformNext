@@ -259,12 +259,12 @@ def record_autotrender_signal(
                 "pcr": pcr,
                 **(metrics or {}),
                 "telegram_text": (
-                    f"🔔 AUTOTRENDER SIGNAL {event_type.replace('AUTOTRENDER_', '').replace('_', ' ')}\\n"
-                    f"Index: {normalized_index}\\n"
-                    f"Direction: {normalized_direction}\\n"
+                    f"🔔 AUTOTRENDER SIGNAL {event_type.replace('AUTOTRENDER_', '').replace('_', ' ')}\n"
+                    f"Index: {normalized_index}\n"
+                    f"Direction: {normalized_direction}\n"
                     f"Spot Price: {spot if spot is not None else 'N/A'}"
-                    + (f"\\nVWAP: {vwap}" if vwap is not None else "")
-                    + (f"\\nPCR: {pcr}" if pcr is not None else "")
+                    + (f"\nVWAP: {vwap}" if vwap is not None else "")
+                    + (f"\nPCR: {pcr}" if pcr is not None else "")
                 ),
             }
             result = enqueue_notification(
