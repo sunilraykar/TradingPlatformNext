@@ -241,9 +241,15 @@ def record_autotrender_signal(
 
         result = {"queued": False, "reason": "same_direction" if previous_direction == normalized_direction else "notifications_disabled"}
         if event_type:
-            spot = next((signal_row.get(key) for key in ("price", "close", "ltp") if signal_row.get(key) is not None), None)
-            vwap = next((signal_row.get(key) for key in ("vWap", "vwap") if signal_row.get(key) is not None), None)
-            pcr = signal_row.get("pcr", signal_row.get("PCR"))
+            def _display_value(value):
+                # AutoTrender sometimes wraps numbers as {"value": "...", "colorCode": n}.
+                if isinstance(value, dict):
+                    return value.get("value")
+                return value
+
+            spot = next((_display_value(signal_row.get(key)) for key in ("price", "close", "ltp") if signal_row.get(key) is not None), None)
+            vwap = next((_display_value(signal_row.get(key)) for key in ("vWap", "vwap") if signal_row.get(key) is not None), None)
+            pcr = _display_value(signal_row.get("pcr", signal_row.get("PCR")))
             payload = {
                 "index": normalized_index,
                 "direction": normalized_direction,
@@ -253,8 +259,12 @@ def record_autotrender_signal(
                 "pcr": pcr,
                 **(metrics or {}),
                 "telegram_text": (
-                    f"AutoTrender {event_type.replace('AUTOTRENDER_', '').replace('_', ' ').title()}: "
-                    f"{normalized_index} {normalized_direction} | Spot {spot if spot is not None else 'N/A'}"
+                    f"🔔 AUTOTRENDER SIGNAL {event_type.replace('AUTOTRENDER_', '').replace('_', ' ')}\\n"
+                    f"Index: {normalized_index}\\n"
+                    f"Direction: {normalized_direction}\\n"
+                    f"Spot Price: {spot if spot is not None else 'N/A'}"
+                    + (f"\\nVWAP: {vwap}" if vwap is not None else "")
+                    + (f"\\nPCR: {pcr}" if pcr is not None else "")
                 ),
             }
             result = enqueue_notification(
