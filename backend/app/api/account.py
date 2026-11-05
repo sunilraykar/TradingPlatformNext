@@ -143,6 +143,21 @@ def get_orders() -> dict[str, Any]:
     return {"orders": _read("orders")}
 
 
+@router.get("/kite/holdings/history", tags=["trading account"])
+def get_holdings_history(period: str = Query(default="1Y", pattern="^(1W|1M|3M|6M|1Y|ALL)$")) -> dict[str, Any]:
+    """Read saved end-of-day snapshots; this endpoint never calls Kite market APIs."""
+    provider = _provider()
+    try:
+        profile = provider.profile()
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    account_id = str(profile.get("user_id") or "").strip()
+    if not account_id:
+        raise HTTPException(status_code=503, detail="Kite profile did not include an account ID")
+    from app.services.kite_portfolio_snapshots import get_portfolio_history
+    return get_portfolio_history(account_id, period)
+
+
 @router.get("/kite/holdings", tags=["trading account"])
 def get_holdings() -> dict[str, Any]:
     return {"holdings": _read("holdings")}
