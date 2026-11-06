@@ -138,6 +138,7 @@ export default function LtpOptionChainDashboard() {
   const [result, setResult] = useState(null);
   const [instruments, setInstruments] = useState([]);
   const [spotToken, setSpotToken] = useState(null);
+  const [futureToken, setFutureToken] = useState(null);
   const [quotes, setQuotes] = useState({});
   const [candles, setCandles] = useState([]);
   const [feedConnected, setFeedConnected] = useState(false);
@@ -148,8 +149,9 @@ export default function LtpOptionChainDashboard() {
   const rs = Array.isArray(data.RS_Status) ? (data.RS_Status[0] || {}) : {};
   const model = data.symbolMarketDirection && data.symbolMarketDirection.reversalModel ? data.symbolMarketDirection.reversalModel : {};
   const spotQuote = spotToken ? quotes[String(spotToken)] : null;
+  const futureQuote = futureToken ? quotes[String(futureToken)] : null;
   const spot = n(spotQuote && spotQuote.last_price) ?? n(data.Price_S);
-  const underlying = priceMode === 'SPOT' ? spot : n(data.Price_fno);
+  const underlying = priceMode === 'SPOT' ? spot : (n(futureQuote && futureQuote.last_price) ?? n(data.Price_fno));
   const pain = useMemo(() => maxPain(rows), [rows]);
   const instrumentMap = useMemo(() => new Map(instruments.map((item) => [String(Number(item.strike)) + ':' + item.side, item])), [instruments]);
 
@@ -197,8 +199,10 @@ export default function LtpOptionChainDashboard() {
       const mapped = payload.kite_instruments || [];
       setInstruments(mapped);
       setSpotToken(payload.kite_spot_instrument_token || null);
+      setFutureToken(payload.kite_future_instrument_token || null);
       const tokens = mapped.map((item) => item.instrument_token);
       if (payload.kite_spot_instrument_token) tokens.push(payload.kite_spot_instrument_token);
+      if (payload.kite_future_instrument_token) tokens.push(payload.kite_future_instrument_token);
       if (tokens.length) {
         await request('/kite/market-data/subscribe', {
           method: 'POST',
@@ -220,6 +224,7 @@ export default function LtpOptionChainDashboard() {
   const refreshQuotes = useCallback(async () => {
     const tokens = instruments.map((item) => item.instrument_token);
     if (spotToken) tokens.push(spotToken);
+    if (futureToken) tokens.push(futureToken);
     if (!tokens.length) return;
     const query = new URLSearchParams();
     Array.from(new Set(tokens)).forEach((token) => query.append('instrument_tokens', String(token)));
@@ -228,7 +233,7 @@ export default function LtpOptionChainDashboard() {
       setQuotes(response.quotes || {});
       setFeedConnected(Boolean(response.connected));
     } catch { setFeedConnected(false); }
-  }, [instruments, spotToken]);
+  }, [instruments, spotToken, futureToken]);
 
   const login = async () => {
     setLoggingIn(true);
