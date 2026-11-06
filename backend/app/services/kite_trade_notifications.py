@@ -75,7 +75,24 @@ def _ensure_fill_position_schema() -> None:
 
 def calculate_fill_transition(old_qty: int, old_avg: float, delta: int, price: float) -> tuple[str, float, int, int, float]:
     """Return classification, realized P&L, closed quantity, new net quantity and average."""
-    classification, realized, closed_qty, new_qty, new_avg = calculate_fill_transition(old_qty, old_avg, delta, price)
+    new_qty = old_qty + delta
+    realized = 0.0
+    closed_qty = 0
+    if old_qty and (old_qty > 0) != (delta > 0):
+        closed_qty = min(abs(old_qty), abs(delta))
+        realized = (price - old_avg) * closed_qty * (1 if old_qty > 0 else -1)
+    if new_qty == 0:
+        new_avg = 0.0
+        classification = "FINAL EXIT"
+    elif old_qty == 0 or (old_qty > 0) == (delta > 0):
+        new_avg = ((abs(old_qty) * old_avg) + (abs(delta) * price)) / abs(new_qty)
+        classification = "ENTRY" if old_qty == 0 else "ADD"
+    elif (old_qty > 0) == (new_qty > 0):
+        new_avg = old_avg
+        classification = "PARTIAL EXIT"
+    else:
+        new_avg = price
+        classification = "REVERSAL"
     return classification, realized, closed_qty, new_qty, new_avg
 
 
