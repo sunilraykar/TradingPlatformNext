@@ -51,7 +51,10 @@ def _trade_pnl(trade: dict[str, Any]) -> tuple[float | None, str]:
     mode = str(trade.get("execution_mode") or "").upper()
     if mode == "LIVE":
         value = trade.get("broker_pnl")
-        return (float(value), "Broker-reported P&L") if value is not None else (None, "Broker-reported P&L")
+        try:
+            return (float(value), "Broker-reported P&L") if value is not None else (None, "Broker-reported P&L")
+        except (TypeError, ValueError, OverflowError):
+            return None, "Broker-reported P&L"
     entry = trade.get("average_entry_price", trade.get("entry_price"))
     ltp = trade.get("last_price")
     quantity = trade.get("quantity")
@@ -88,7 +91,10 @@ def _process_pnl_alerts(now: datetime) -> int:
         previous_side = state.get("alerted_side")
         if side is None:
             if previous_side:
-                set_rule_state(state_key, {"alerted_side": None, "rearmed_at": now.isoformat()})
+                set_rule_state(state_key, {
+                    "alerted_side": None, "rearmed_at": now.isoformat(),
+                    "alert_count": int(state.get("alert_count") or 0),
+                })
             continue
         if side == previous_side:
             continue
@@ -102,16 +108,20 @@ def _process_pnl_alerts(now: datetime) -> int:
             f"Alert threshold: ₹{threshold:,.2f}\n"
             f"Time: {now.strftime('%d %b %Y, %I:%M:%S %p IST')}"
         )
+        alert_count = int(state.get("alert_count") or 0) + 1
         _queue(
             event_type="TRADE_PNL_THRESHOLD",
             category="TRADE",
             source="TRADE_NOTIFICATION_SCHEDULER",
             text_body=body,
-            dedupe=f"trade-pnl:{trade['trade_id']}:{side}:{now.date().isoformat()}:{int(now.timestamp())}",
+            dedupe=f"trade-pnl:{trade['trade_id']}:{side}:{now.date().isoformat()}:{alert_count}",
             entity_type="TRADE",
             entity_id=str(trade["trade_id"]),
         )
-        set_rule_state(state_key, {"alerted_side": side, "alerted_at": now.isoformat(), "threshold": threshold})
+        set_rule_state(state_key, {
+            "alerted_side": side, "alerted_at": now.isoformat(),
+            "threshold": threshold, "alert_count": alert_count,
+        })
         sent += 1
     return sent
 
