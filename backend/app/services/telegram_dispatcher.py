@@ -20,11 +20,30 @@ _RETRY_DELAYS = (5, 30, 120, 600)
 _REQUEST_TIMEOUT_SECONDS = 15
 
 
+def _setting(key: str, default: Any) -> Any:
+    with get_engine().connect() as connection:
+        row = connection.execute(text(
+            "SELECT setting_value FROM app_settings WHERE setting_key = :key"
+        ), {"key": "ui." + key}).first()
+    if not row:
+        return default
+    value = row[0]
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            return value
+    return value
+
+
 def retry_delay_seconds(attempt_number: int, retry_after: int | None = None) -> int:
     if retry_after is not None:
         return max(1, int(retry_after))
-    index = max(0, min(attempt_number - 1, len(_RETRY_DELAYS) - 1))
-    return _RETRY_DELAYS[index]
+    defaults = (5, 30, 120, 600)
+    delays = tuple(max(1, min(3600, int(_setting(f"telegramRetryDelay{i}Seconds", default))))
+                   for i, default in enumerate(defaults, start=1))
+    index = max(0, min(attempt_number - 1, len(delays) - 1))
+    return delays[index]
 
 
 def format_notification_message(event_type: str, category: str, payload: dict[str, Any]) -> str:
@@ -120,12 +139,12 @@ def _claim_next_job() -> dict[str, Any] | None:
         }
 
 
-def _send_message(token: str, chat_id: str, message: str) -> tuple[bool, int | None, int | None, str | None, dict[str, Any]]:
+def _send_message(token: str, chat_id: str, message: str, timeout_seconds: int | None = None) -> tuple[bool, int | None, int | None, str | None, dict[str, Any]]:
     try:
         response = requests.post(
             f"https://api.telegram.org/bot{token}/sendMessage",
             json={"chat_id": chat_id, "text": message, "disable_web_page_preview": True},
-            timeout=_REQUEST_TIMEOUT_SECONDS,
+            timeout=timeout_seconds or _REQUEST_TIMEOUT_SECONDS,
         )
         try:
             body = response.json()
@@ -155,12 +174,14 @@ def dispatch_pending_once() -> bool:
 
     token, chat_id = credentials
     message = format_notification_message(job["event_type"], job["category"], job["payload"])
-    success, http_status, result_value, error, response_body = _send_message(token, chat_id, message)
+    timeout_seconds = max(5, min(60, int(_setting("telegramRequestTimeoutSeconds", _REQUEST_TIMEOUT_SECONDS))))
+    success, http_status, result_value, error, response_body = _send_message(token, chat_id, message, timeout_seconds)
     attempt_number = job["attempts"] + 1
     retry_after = result_value if http_status == 429 and result_value and result_value > 0 else None
     permanent_failure = result_value == -1
     retryable = not success and not permanent_failure
-    exhausted = retryable and attempt_number >= 5
+    max_attempts = max(1, min(10, int(_setting("telegramMaxDeliveryAttempts", 5))))
+    exhausted = retryable and attempt_number >= max_attempts
     if success:
         outcome, new_status, next_attempt = "SENT", "SENT", None
         message_id = result_value
@@ -222,4 +243,6 @@ async def run_scheduler() -> None:
         except Exception:
             logger.exception("Telegram notification dispatcher cycle failed")
             worked = False
-        await asyncio.sleep(0.5 if worked else 5)
+        active_ms = max(100, min(5000, int(_setting("telegramDispatcherActivePollMilliseconds", 500))))
+        idle_seconds = max(1, min(60, int(_setting("telegramDispatcherIdlePollSeconds", 5))))
+        await asyncio.sleep(active_ms / 1000 if worked else idle_seconds)
