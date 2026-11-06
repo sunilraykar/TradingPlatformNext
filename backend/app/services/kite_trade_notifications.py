@@ -65,6 +65,12 @@ def _ensure_fill_position_schema() -> None:
         """))
 
 
+def calculate_fill_transition(old_qty: int, old_avg: float, delta: int, price: float) -> tuple[str, float, int, int, float]:
+    """Return classification, realized P&L, closed quantity, new net quantity and average."""
+    classification, realized, closed_qty, new_qty, new_avg = calculate_fill_transition(old_qty, old_avg, delta, price)
+    return classification, realized, closed_qty, new_qty, new_avg
+
+
 def _apply_fill(connection, account_id: str, fill: dict[str, Any], timestamp: Any) -> tuple[str, float | None, int, float]:
     exchange = str(fill.get("exchange") or "").upper()
     symbol = str(fill.get("tradingsymbol") or "")
