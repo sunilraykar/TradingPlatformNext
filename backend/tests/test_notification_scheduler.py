@@ -1,5 +1,5 @@
-from app.services.notification_scheduler import _trade_pnl
 from app.services.kite_trade_notifications import calculate_fill_transition
+from app.services.notification_scheduler import _trade_pnl
 
 
 def test_paper_trade_pnl_uses_direction_and_quantity():
