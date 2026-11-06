@@ -4,6 +4,8 @@ from typing import Any
 
 from kiteconnect import KiteConnect
 
+from app.core.outbound_proxy import get_proxy_map
+
 logger = logging.getLogger(__name__)
 
 
@@ -36,12 +38,12 @@ def _provider_error(operation: str, exc: Exception) -> KiteProviderError:
 
 
 class KiteProvider:
-    """Thin Kite Connect adapter. No order-placement methods are exposed in milestone 1."""
+    """Thin Kite Connect adapter. REST calls use the configured outbound proxy."""
 
     def __init__(self, api_key: str, access_token: str = "") -> None:
         if not api_key:
             raise ValueError("Kite API key is required")
-        self._client = KiteConnect(api_key=api_key)
+        self._client = KiteConnect(api_key=api_key, proxies=get_proxy_map())
         if access_token:
             self._client.set_access_token(access_token)
 
@@ -51,7 +53,7 @@ class KiteProvider:
 
     @staticmethod
     def exchange_request_token(api_key: str, api_secret: str, request_token: str) -> KiteSession:
-        client = KiteConnect(api_key=api_key)
+        client = KiteConnect(api_key=api_key, proxies=get_proxy_map())
         try:
             data = client.generate_session(request_token, api_secret=api_secret)
         except Exception as exc:
