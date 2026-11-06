@@ -4,25 +4,49 @@ from unittest.mock import MagicMock
 from app.providers.apiplatform.client import APIPLATFORMClient
 
 
-def test_fetch_option_chain_uses_expected_endpoint_and_parameter_names():
+def test_fetch_option_chain_uses_browser_expiry_format_and_parameter_names():
     auth = MagicMock()
     response = MagicMock()
     response.json.return_value = {"OptionChain": []}
     auth.session.request.return_value = response
     client = APIPLATFORMClient(auth)
 
-    result = client.fetch_option_chain("NIFTY", "2026-11-12", 65)
+    result = client.fetch_option_chain("NIFTY", "2026-11-09", 65)
 
     assert result == {"OptionChain": []}
     args, kwargs = auth.session.request.call_args
     assert args == ("GET", "https://apiplatform.ltpcalculator.com/optionChain/fetch-data")
     assert kwargs["params"] == {
         "symbol": "NIFTY",
-        "expiry": "2026-11-12",
+        "expiry": "09-11-2026",
         "lotSize": 65,
     }
     auth.ensure_authenticated.assert_called_once()
     response.raise_for_status.assert_called_once()
+
+
+def test_fetch_option_chain_preserves_browser_expiry_format():
+    auth = MagicMock()
+    response = MagicMock()
+    response.json.return_value = {"OptionChain": []}
+    auth.session.request.return_value = response
+    client = APIPLATFORMClient(auth)
+
+    client.fetch_option_chain("NIFTY", "09-11-2026", 65)
+
+    assert auth.session.request.call_args.kwargs["params"]["expiry"] == "09-11-2026"
+
+
+def test_fetch_option_chain_rejects_unsupported_expiry_format():
+    import pytest
+
+    auth = MagicMock()
+    client = APIPLATFORMClient(auth)
+
+    with pytest.raises(ValueError, match="Expiry must use"):
+        client.fetch_option_chain("NIFTY", "09/11/2026", 65)
+
+    auth.session.request.assert_not_called()
 
 
 def test_client_uses_configured_base_url():
