@@ -30,7 +30,7 @@ def store_latest_snapshot(
         "lot_size": lot_size,
         "cached_at": datetime.now(UTC).isoformat(),
         "fetch_time": payload.get("FetchTime")
-        or payload.get("symbolMarketDirection", {}).get("actualFetchTime"),
+        or (payload.get("symbolMarketDirection") or {}).get("actualFetchTime"),
         "option_chain_count": len(payload.get("OptionChain", []))
         if isinstance(payload.get("OptionChain"), list)
         else 0,
