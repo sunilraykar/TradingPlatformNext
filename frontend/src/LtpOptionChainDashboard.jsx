@@ -210,9 +210,6 @@ export default function LtpOptionChainDashboard() {
           body: JSON.stringify({ instrument_tokens: Array.from(new Set(tokens)), mode: 'full' }),
         }).catch(() => null);
       }
-      const candleQuery = new URLSearchParams({ symbol, expiry, price_mode: priceMode });
-      const chart = await request('/apiplatform/option-chain/candles?' + candleQuery.toString()).catch(() => ({ candles: [] }));
-      setCandles(chart.candles || []);
     } catch (e) {
       setError(e.message || 'Unable to fetch option-chain data.');
     } finally {
@@ -263,7 +260,7 @@ export default function LtpOptionChainDashboard() {
   }, []);
 
   useEffect(() => { loadMetadata(symbol); }, [symbol, loadMetadata]);
-  useEffect(() => { if (auth.authenticated && expiry) loadChain(); }, [auth.authenticated, expiry, symbol, lotSize]);
+  useEffect(() => { if (auth.authenticated && expiry) loadChain(); }, [auth.authenticated, expiry, symbol, lotSize, priceMode]);
   useEffect(() => {
     if (!instruments.length && !spotToken) return undefined;
     refreshQuotes();
@@ -275,6 +272,16 @@ export default function LtpOptionChainDashboard() {
     const timer = window.setInterval(() => loadChain(false), 15000);
     return () => window.clearInterval(timer);
   }, [auth.authenticated, loadChain, expiry]);
+
+  useEffect(() => {
+    if (!auth.authenticated || !expiry) return undefined;
+    let active = true;
+    const query = new URLSearchParams({ symbol, expiry, price_mode: priceMode });
+    request('/apiplatform/option-chain/candles?' + query.toString())
+      .then((chart) => { if (active) setCandles(chart.candles || []); })
+      .catch(() => { if (active) setCandles([]); });
+    return () => { active = false; };
+  }, [auth.authenticated, symbol, expiry, priceMode]);
 
   const chartLevels = [
     { label: 'Resistance', value: model.moderateResistance, tone: 'resistance' },
