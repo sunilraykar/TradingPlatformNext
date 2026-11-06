@@ -44,13 +44,13 @@ def test_persisted_session_restores_authorization_header(monkeypatch, tmp_path):
     auth.shutdown()
 
 
-def test_login_posts_empty_json_with_basic_auth_and_browser_cookies(monkeypatch):
+def test_login_posts_empty_json_with_basic_auth_and_browser_cookies(monkeypatch, tmp_path):
     import app.providers.apiplatform.auth as auth_module
 
     auth = APIPLATFORMAuth()
     cookies = [{"name": "cf_clearance", "value": "test-clearance", "domain": ".ltpcalculator.com"}]
     monkeypatch.setattr(auth, "_browser_cookies", lambda: (cookies, "test-agent"))
-    monkeypatch.setattr(auth_module, "SESSION_FILE", auth_module.Path("/tmp/apiplatform-test-session.json"))
+    monkeypatch.setattr(auth_module, "SESSION_FILE", tmp_path / "session.json")
     monkeypatch.setenv("APIPLATFORM_BASIC_AUTH", "Basic test-value")
 
     response = MagicMock()
