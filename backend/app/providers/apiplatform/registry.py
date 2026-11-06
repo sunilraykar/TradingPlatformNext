@@ -1,3 +1,4 @@
+from app.core.config import get_settings
 from app.providers.apiplatform.auth import APIPLATFORMAuth
 from app.providers.apiplatform.client import APIPLATFORMClient
 
@@ -10,8 +11,9 @@ def configure_apiplatform(auth: APIPLATFORMAuth | None = None) -> APIPLATFORMCli
     global _auth, _client
     if _client is not None:
         _client.auth.shutdown()
+    settings = get_settings()
     _auth = auth or APIPLATFORMAuth()
-    _client = APIPLATFORMClient(_auth)
+    _client = APIPLATFORMClient(_auth, base_url=settings.apiplatform_base_url)
     return _client
 
 
