@@ -430,7 +430,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
   const cacheUnavailable = !trades.length && !loading && terminal?.cached_trades === 0 && terminal?.persistence_degraded;
   const dateHeading = selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
   const renderPanel = (status, title) => {
-    const items = trades.filter((trade) => String(trade.status || 'OPEN').toUpperCase() === status);
+    const items = trades.filter((trade) => status === 'ALL' ? ['OPEN', 'CLOSED'].includes(String(trade.status || 'OPEN').toUpperCase()) : String(trade.status || 'OPEN').toUpperCase() === status);
     return <aside className="panel autotrend-active-trades" key={status} aria-label={dateHeading + ' ' + title.toLowerCase() + ' trades'}>
       <div className="autotrend-active-trades-heading">
         <div><div className="eyebrow">{dateHeading.toUpperCase()} · {title.toUpperCase()}</div><h3>{title} Trades</h3></div>
@@ -464,7 +464,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
     {renderPanel('OPEN', 'Active')}
     {renderPanel('CLOSED', 'Closed')}
   </section>;
-  return renderPanel('OPEN', selectedDate ? 'Active' : "Today's");
+  return renderPanel('ALL', selectedDate ? 'Trades' : "Today's");
 
 }
 
