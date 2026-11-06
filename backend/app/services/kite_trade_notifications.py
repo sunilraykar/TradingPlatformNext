@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -79,6 +80,8 @@ def _apply_fill(connection, account_id: str, fill: dict[str, Any], timestamp: An
     side = str(fill.get("transaction_type") or "").upper()
     qty = int(fill.get("quantity") or 0)
     price = float(fill.get("average_price", fill.get("price")) or 0)
+    if qty <= 0 or not math.isfinite(price) or price <= 0:
+        raise ValueError("Kite fill quantity and price must be positive finite values")
     delta = qty if side == "BUY" else -qty
     row = connection.execute(text("""
         SELECT net_quantity, average_price FROM kite_notification_positions
