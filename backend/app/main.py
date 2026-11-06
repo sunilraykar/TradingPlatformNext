@@ -140,7 +140,6 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
-        shutdown_apiplatform()
         tasks = (
             reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task,
             autotrender_worker_task, autotrender_snapshot_task, telegram_dispatch_task,
@@ -151,6 +150,7 @@ async def lifespan(application: FastAPI):
         for task in tasks:
             with suppress(asyncio.CancelledError):
                 await task
+        shutdown_apiplatform()
 
 
 settings = get_settings()
