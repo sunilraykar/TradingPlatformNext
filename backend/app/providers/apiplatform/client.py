@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from urllib.parse import urljoin
 
@@ -14,6 +15,19 @@ from app.providers.apiplatform.auth import (
 
 class APIPLATFORMClientError(RuntimeError):
     """Raised when an APIPLATFORM API request fails."""
+
+
+def _format_expiry(expiry: str) -> str:
+    """Format expiry as DD-MM-YYYY, matching the browser API request."""
+    value = str(expiry).strip()
+    for input_format in ("%d-%m-%Y", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(value, input_format).strftime("%d-%m-%Y")
+        except ValueError:
+            continue
+    raise ValueError(
+        "Expiry must use DD-MM-YYYY or YYYY-MM-DD (for example, 09-11-2026)."
+    )
 
 
 class APIPLATFORMClient:
@@ -95,7 +109,7 @@ class APIPLATFORMClient:
     ) -> dict[str, Any]:
         response = self.get(
             "/optionChain/fetch-data",
-            params={"symbol": symbol, "expiry": expiry, "lotSize": lot_size},
+            params={"symbol": symbol, "expiry": _format_expiry(expiry), "lotSize": lot_size},
         )
         try:
             payload = response.json()
