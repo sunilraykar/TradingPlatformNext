@@ -47,6 +47,9 @@ def refresh_symbol_master(
         ).scalar_one()
         if lock_result != 1:
             return {"saved": False, "reason": "refresh_already_running"}
+        # GET_LOCK is session-scoped; commit the implicit SQLAlchemy transaction
+        # without releasing the advisory lock held by this connection.
+        connection.commit()
 
         try:
             latest = connection.execute(
@@ -57,6 +60,7 @@ def refresh_symbol_master(
                 ),
                 {"snapshot_type": SNAPSHOT_TYPE, "snapshot_key": SNAPSHOT_KEY},
             ).mappings().first()
+            connection.commit()
 
             if latest is not None:
                 last_fetched = latest["captured_at"]
