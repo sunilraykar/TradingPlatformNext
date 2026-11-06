@@ -20,7 +20,7 @@ def test_telegram_config_preflight_allows_vite_origin():
 
 
 def test_telegram_api_routes_are_registered():
-    paths = {route.path for route in app.routes}
+    paths = set(app.openapi().get('paths', {}))
     assert "/api/v1/telegram/config" in paths
     assert "/api/v1/telegram/test-message" in paths
 
