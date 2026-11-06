@@ -215,10 +215,6 @@ def process_trade_book(provider=None) -> dict[str, int]:
     if not isinstance(fills, list):
         raise TypeError("Kite trade book response was not a list")
     _ensure_fill_position_schema()
-    positions_response = provider.positions()
-    net_positions = positions_response.get("net", []) if isinstance(positions_response, dict) else None
-    if not isinstance(net_positions, list):
-        raise TypeError("Kite net positions response was not a list")
     now = datetime.now(IST)
     if not _daily_baseline_initialized(account_id, now):
         positions_response = provider.positions()
