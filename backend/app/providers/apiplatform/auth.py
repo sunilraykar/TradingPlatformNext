@@ -4,6 +4,7 @@ import base64
 import json
 import logging
 import os
+import re
 import tempfile
 import time
 from pathlib import Path
@@ -265,9 +266,7 @@ class APIPLATFORMAuth:
                 }
             )
             if user_agent:
-                import re
-
-                chrome_version = re.search(r"(?:Chrome|Chromium)/(\\d+)", user_agent)
+                chrome_version = re.search(r"(?:Chrome|Chromium)/(\d+)", user_agent)
                 if chrome_version:
                     version = chrome_version.group(1)
                     self.session.headers["sec-ch-ua"] = (
