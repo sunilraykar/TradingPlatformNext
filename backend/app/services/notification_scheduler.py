@@ -33,15 +33,21 @@ def _decode(value: Any) -> Any:
     return value
 
 
-def _pnl_threshold() -> float:
+def _setting(key: str, default: Any) -> Any:
     with get_engine().connect() as connection:
         row = connection.execute(text(
-            "SELECT setting_value FROM app_settings WHERE setting_key = 'ui.telegramPnlAlertThreshold'"
-        )).first()
-    if not row:
-        return DEFAULT_PNL_THRESHOLD
+            "SELECT setting_value FROM app_settings WHERE setting_key = :key"
+        ), {"key": "ui." + key}).first()
+    return _decode(row[0]) if row else default
+
+
+def _enabled(key: str, default: bool = True) -> bool:
+    return bool(_setting(key, default))
+
+
+def _pnl_threshold() -> float:
     try:
-        value = float(_decode(row[0]))
+        value = float(_setting("telegramPnlAlertThreshold", DEFAULT_PNL_THRESHOLD))
         return value if value > 0 else DEFAULT_PNL_THRESHOLD
     except (TypeError, ValueError, OverflowError):
         return DEFAULT_PNL_THRESHOLD
@@ -77,7 +83,7 @@ def _queue(*, event_type: str, category: str, source: str, text_body: str,
 
 
 def _process_pnl_alerts(now: datetime) -> int:
-    if not notifications_enabled():
+    if not notifications_enabled() or not _enabled("telegramPnlAlertsEnabled"):
         return 0
     threshold = _pnl_threshold()
     sent = 0
@@ -90,7 +96,7 @@ def _process_pnl_alerts(now: datetime) -> int:
         state = get_rule_state(state_key) or {}
         previous_side = state.get("alerted_side")
         if side is None:
-            if previous_side:
+            if previous_side and _enabled("telegramPnlAlertRearmEnabled"):
                 set_rule_state(state_key, {
                     "alerted_side": None, "rearmed_at": now.isoformat(),
                     "alert_count": int(state.get("alert_count") or 0),
@@ -182,8 +188,11 @@ async def run_scheduler() -> None:
             now = datetime.now(IST)
             if notifications_enabled() and now.weekday() < 5:
                 _process_pnl_alerts(now)
-                in_market = (now.hour, now.minute) >= (9, 15) and (now.hour, now.minute) < (15, 30)
-                if in_market and now.minute % 15 == 0:
+                start = datetime.strptime(str(_setting("telegramActiveSummaryStartTime", "09:15")), "%H:%M").time()
+                end = datetime.strptime(str(_setting("telegramActiveSummaryEndTime", "15:30")), "%H:%M").time()
+                interval = int(_setting("telegramActiveSummaryIntervalMinutes", 15))
+                in_market = start <= now.time() < end
+                if _enabled("telegramActiveSummaryEnabled") and in_market and now.minute % interval == 0:
                     bucket = now.strftime("%Y-%m-%d-%H-%M")
                     state_key = "telegram:active-summary:last-bucket"
                     state = get_rule_state(state_key) or {}
@@ -196,7 +205,8 @@ async def run_scheduler() -> None:
                                 dedupe=f"active-trade-summary:{bucket}",
                             )
                         set_rule_state(state_key, {"bucket": bucket, "checked_at": now.isoformat()})
-                if (now.hour, now.minute) >= (15, 45):
+                daily_time = datetime.strptime(str(_setting("telegramDailySummaryTime", "15:45")), "%H:%M").time()
+                if _enabled("telegramDailySummaryEnabled") and now.time() >= daily_time:
                     state_key = "telegram:daily-summary:last-date"
                     state = get_rule_state(state_key) or {}
                     today = now.date().isoformat()
@@ -210,4 +220,4 @@ async def run_scheduler() -> None:
                         set_rule_state(state_key, {"date": today, "sent_at": now.isoformat()})
         except Exception:
             logger.exception("Telegram scheduled notification cycle failed")
-        await asyncio.sleep(30)
+        await asyncio.sleep(max(5, min(300, int(_setting("telegramPnlAlertCheckSeconds", 15)))))
