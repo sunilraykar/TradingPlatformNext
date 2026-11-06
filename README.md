@@ -68,7 +68,7 @@ python -m app.core.proxy_check
 
 The command calls `https://api64.ipify.org` through the configured proxy and prints the observed public IP. It must match the static IP shown in the StaticIP.in dashboard and the address registered with Zerodha.
 
-Kite REST calls (including login-session exchange and account/order REST methods), APIPLATFORM REST sessions, and AutoTrender REST sessions use the configured proxy. The Kite market-data WebSocket remains direct because Zerodha does not require the registered static IP for WebSocket market data and the authenticated proxy WebSocket path has not been validated. Localhost traffic is excluded from the process proxy. The proxy is disabled by default.
+Kite REST calls (including login-session exchange and account/order REST methods), APIPLATFORM REST sessions, and AutoTrender REST sessions use the configured proxy. The Kite market-data WebSocket remains direct because Zerodha does not require the registered static IP for WebSocket market data and the authenticated proxy WebSocket path has not been validated. The Selenium browser steps used to collect APIPLATFORM and AutoTrender website cookies also remain direct; their subsequent Python REST calls use the proxy. If either provider binds its browser cookies to the source IP, we will need to route that browser bootstrap through the proxy as a separate step. Localhost traffic is excluded from the process proxy. The proxy is disabled by default.
 
 Do not paste proxy credentials into chat, source files, GitHub, or frontend environment variables. If the egress check does not return the exact dashboard IP, leave the proxy disabled for broker activity and resolve the proxy configuration first.
 
