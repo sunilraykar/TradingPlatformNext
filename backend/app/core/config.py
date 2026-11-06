@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     kite_session_reset_time: str = "23:00"
     kite_session_reset_timezone: str = "Asia/Kolkata"
 
+    apiplatform_base_url: str = "https://apiplatform.ltpcalculator.com"
     apiplatform_basic_auth: str = ""
     apiplatform_headless: bool = True
 
