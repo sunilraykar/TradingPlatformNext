@@ -1371,3 +1371,10 @@ select,input,textarea{
 .all-indices-card .price-vwap-summary>span[aria-hidden="true"]{font-size:36px!important}
 .all-indices-card .price-vwap-summary>span:not([aria-hidden="true"])>span{font-size:20px!important}
 .all-indices-card .price-vwap-summary>span:not([aria-hidden="true"])>strong{font-size:24px!important}
+
+
+/* Match Historical Data intraday table typography to the Live Data Intraday Table. */
+.historical-intraday-table-panel .kite-data-table{min-width:1600px;font-size:10px}
+.historical-intraday-table-panel .kite-data-table th{font-size:9px;padding:11px 10px}
+.historical-intraday-table-panel .kite-data-table td{font-size:10px;padding:10px}
+@media(max-width:650px){.historical-intraday-table-panel .kite-data-table{min-width:1500px}}
