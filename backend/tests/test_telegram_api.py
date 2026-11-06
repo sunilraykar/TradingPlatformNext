@@ -26,8 +26,6 @@ def test_telegram_api_routes_are_registered():
 
 
 def test_notification_status_route_is_registered():
-    from app.main import app
-
     paths = {route.path for route in app.routes}
     assert "/api/v1/notifications/status" in paths
 
