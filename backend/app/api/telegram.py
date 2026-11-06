@@ -92,6 +92,14 @@ TELEGRAM_NOTIFICATION_DEFAULTS = {
     "telegramSystemAlertsEnabled": True,
     "telegramSystemAlertSeverity": "ERROR",
     "telegramSystemAlertCooldownMinutes": 15,
+    "telegramDispatcherIdlePollSeconds": 5,
+    "telegramDispatcherActivePollMilliseconds": 500,
+    "telegramRequestTimeoutSeconds": 15,
+    "telegramMaxDeliveryAttempts": 5,
+    "telegramRetryDelay1Seconds": 5,
+    "telegramRetryDelay2Seconds": 30,
+    "telegramRetryDelay3Seconds": 120,
+    "telegramRetryDelay4Seconds": 600,
 }
 
 
@@ -155,6 +163,14 @@ def save_telegram_config(payload: TelegramConfigRequest):
                 ("telegramActiveSummaryIntervalMinutes", 5, 180),
                 ("telegramLiveFillPollSeconds", 5, 300),
                 ("telegramSystemAlertCooldownMinutes", 1, 1440),
+                ("telegramDispatcherIdlePollSeconds", 1, 60),
+                ("telegramDispatcherActivePollMilliseconds", 100, 5000),
+                ("telegramRequestTimeoutSeconds", 5, 60),
+                ("telegramMaxDeliveryAttempts", 1, 10),
+                ("telegramRetryDelay1Seconds", 1, 3600),
+                ("telegramRetryDelay2Seconds", 1, 3600),
+                ("telegramRetryDelay3Seconds", 1, 3600),
+                ("telegramRetryDelay4Seconds", 1, 3600),
             ):
                 try:
                     value = int(merged[key])
