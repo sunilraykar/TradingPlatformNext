@@ -1390,13 +1390,26 @@ select,input,textarea{
 @media(max-width:760px){.dashboard-day-trades{grid-template-columns:1fr}}
 
 
-/* Explicit profit/loss colors for the AutoTrender dashboard Active and Closed totals. */
+
+/* Emphasize AutoTrender dashboard Active/Closed total P&L badges. */
 .dashboard-day-trades .autotrend-trade-total-pnl{
   display:inline-block;
+  padding:8px 12px;
+  border-radius:8px;
   font-family:'DM Mono',monospace;
-  font-size:13px;
-  font-weight:700;
+  font-size:26px;
+  line-height:1.25;
+  font-weight:800;
   white-space:nowrap;
+  border:1px solid transparent;
 }
-.dashboard-day-trades .autotrend-trade-total-pnl.positive{color:var(--green,#34d399)!important}
-.dashboard-day-trades .autotrend-trade-total-pnl.negative{color:var(--red,#f87171)!important}
+.dashboard-day-trades .autotrend-trade-total-pnl.positive{
+  color:var(--green,#34d399)!important;
+  background:rgba(52,211,153,.16);
+  border-color:rgba(52,211,153,.42);
+}
+.dashboard-day-trades .autotrend-trade-total-pnl.negative{
+  color:var(--red,#f87171)!important;
+  background:rgba(248,113,113,.16);
+  border-color:rgba(248,113,113,.42);
+}
