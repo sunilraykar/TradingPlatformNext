@@ -167,6 +167,9 @@ def save_telegram_config(payload: TelegramConfigRequest):
             for key in ("telegramActiveSummaryStartTime", "telegramActiveSummaryEndTime", "telegramDailySummaryTime"):
                 if not isinstance(merged[key], str) or not re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", merged[key]):
                     raise HTTPException(status_code=422, detail=f"{key} must use HH:MM 24-hour time")
+            from datetime import time
+            if time.fromisoformat(merged["telegramActiveSummaryEndTime"]) <= time.fromisoformat(merged["telegramActiveSummaryStartTime"]):
+                raise HTTPException(status_code=422, detail="Active summary end time must be later than its start time")
             if merged["telegramSystemAlertSeverity"] not in {"ERROR", "CRITICAL"}:
                 raise HTTPException(status_code=422, detail="System alert severity must be ERROR or CRITICAL")
             for key, value in merged.items():
