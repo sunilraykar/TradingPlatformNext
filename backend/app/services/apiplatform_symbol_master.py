@@ -28,7 +28,7 @@ def _normalize_symbols(payload: Any) -> list[dict[str, str]]:
     normalized: dict[str, str] = {}
     for index, item in enumerate(payload):
         if not isinstance(item, dict):
-            raise RuntimeError(f"APIPLATFORM symbol entry at index {index} is not an object.")
+            raise TypeError(f"APIPLATFORM symbol entry at index {index} is not an object.")
 
         symbol = item.get("symbol")
         category = item.get("category")
