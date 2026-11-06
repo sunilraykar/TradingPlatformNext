@@ -85,7 +85,7 @@ def evaluate_signal(
         return Evaluation(False, None, "SIGNALS_DISAGREE", strength_difference, vwap_difference)
 
     # The configured strength rule is strictly greater than the threshold.
-    if strength_difference <= strength_threshold:
+    if strength_difference <= strength_threshold or math.isclose(strength_difference, strength_threshold, rel_tol=1e-12, abs_tol=1e-12):
         return Evaluation(False, None, "STRENGTH_DIFFERENCE_NOT_ABOVE_THRESHOLD", strength_difference, vwap_difference)
     if vwap_difference > abs(vwap_price_difference_buffer):
         return Evaluation(False, None, "VWAP_GAP_ABOVE_THRESHOLD", strength_difference, vwap_difference)
