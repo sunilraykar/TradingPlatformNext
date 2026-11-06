@@ -13,7 +13,6 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
-from app.providers.apiplatform.client import APIPLATFORMClientError
 from app.providers.apiplatform.registry import get_apiplatform_client
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
@@ -160,7 +159,6 @@ def fetch_apiplatform_option_chain(
                     FROM instruments
                     WHERE source = 'KITE' AND is_active = TRUE
                       AND exchange = :exchange AND tradingsymbol = :symbol
-                    ORDER BY instrument_version DESC
                     LIMIT 1
                 """), {"exchange": index_spec[0], "symbol": index_spec[1]}).mappings().first()
                 if spot_row:
@@ -172,7 +170,6 @@ def fetch_apiplatform_option_chain(
                 WHERE source = 'KITE' AND is_active = TRUE
                   AND exchange = :exchange AND instrument_type = 'FUT'
                   AND expiry = :expiry AND tradingsymbol LIKE :prefix
-                ORDER BY instrument_version DESC
                 LIMIT 1
             """), {"exchange": exchange, "expiry": expiry_date, "prefix": f"{key}%"}).mappings().first()
             if future_row:
@@ -253,7 +250,7 @@ def option_chain_intraday_candles(
                     FROM instruments
                     WHERE source = 'KITE' AND is_active = TRUE
                       AND exchange = :exchange AND tradingsymbol = :symbol
-                    ORDER BY instrument_version DESC LIMIT 1
+                    LIMIT 1
                 """), {"exchange": index_spec[0], "symbol": index_spec[1]}).mappings().first()
             else:
                 if not expiry:
@@ -264,7 +261,7 @@ def option_chain_intraday_candles(
                     WHERE source = 'KITE' AND is_active = TRUE
                       AND exchange = :exchange AND instrument_type = 'FUT'
                       AND expiry = :expiry AND tradingsymbol LIKE :prefix
-                    ORDER BY instrument_version DESC LIMIT 1
+                    LIMIT 1
                 """), {"exchange": "BFO" if key in {"SENSEX", "BANKEX"} else "NFO",
                       "expiry": _expiry(expiry), "prefix": f"{key}%"}).mappings().first()
         if not row:
