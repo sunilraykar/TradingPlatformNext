@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.providers.apiplatform.client import APIPLATFORMClient
 
 
@@ -38,8 +40,6 @@ def test_fetch_option_chain_preserves_browser_expiry_format():
 
 
 def test_fetch_option_chain_rejects_unsupported_expiry_format():
-    import pytest
-
     auth = MagicMock()
     client = APIPLATFORMClient(auth)
 
