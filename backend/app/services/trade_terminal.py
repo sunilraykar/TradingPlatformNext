@@ -729,6 +729,29 @@ def update_trade(
             if key not in _LEGACY_TRADE_FIELDS
         }
         updated.update(changes)
+        # Paper-trade exits are simulated at the recorded exit price. Persist gross
+        # realized P&L so the durable outbox can include it in the close message.
+        if (
+            str(current.get("execution_mode") or "").upper() == "PAPER"
+            and str(updated.get("status") or "").upper() in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
+            and str(current.get("status") or "OPEN").upper() not in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
+            and updated.get("gross_realized_pnl") is None
+        ):
+            entry = updated.get("average_entry_price", updated.get("entry_price"))
+            exit_value = updated.get("average_exit_price", updated.get("exit_price"))
+            quantity = updated.get("quantity")
+            if entry is not None and exit_value is not None and quantity is not None:
+                try:
+                    entry_value = Decimal(str(entry))
+                    exit_price_value = Decimal(str(exit_value))
+                    trade_quantity = Decimal(str(quantity))
+                    if entry_value.is_finite() and exit_price_value.is_finite() and trade_quantity.is_finite() and trade_quantity > 0:
+                        difference = exit_price_value - entry_value
+                        if str(updated.get("direction") or "BUY").upper() == "SELL":
+                            difference = -difference
+                        updated["gross_realized_pnl"] = float(difference * trade_quantity)
+                except (ArithmeticError, TypeError, ValueError):
+                    logger.exception("Could not calculate gross realized P&L for paper trade %s", trade_id)
         # Freeze the end timestamp on the first transition to a terminal state.
         # Open-trade duration remains derived from created_at and the current time.
         terminal_statuses = {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
