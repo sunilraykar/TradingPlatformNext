@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TradeTerminal from './TradeTerminal.jsx';
+import LtpOptionChainDashboard from './LtpOptionChainDashboard.jsx';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'];
@@ -2087,6 +2088,7 @@ export default function App() {
         <div className="brand-copy"><strong>TradingPlatformNext</strong><span>MARKET INTELLIGENCE</span></div>
       <nav className="application-tabs" aria-label="Application section">
         <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
+        <button type="button" className={applicationTab === 'option-chain' ? 'active' : ''} onClick={() => setApplicationTab('option-chain')}>Option Chain</button>
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
         <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>
         <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
@@ -2102,7 +2104,7 @@ export default function App() {
         </div>
       </header>
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'option-chain' ? <LtpOptionChainDashboard /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
           <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => setShowAllIndices(true)}>DASHBOARD</button>
