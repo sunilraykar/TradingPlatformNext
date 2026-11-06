@@ -16,7 +16,11 @@ def _mock_empty_strategy_settings(monkeypatch):
         def __exit__(self, *args):
             return False
 
-    monkeypatch.setattr(trade_terminal, "get_engine", lambda: Connection())
+    class Engine:
+        def connect(self):
+            return Connection()
+
+    monkeypatch.setattr(trade_terminal, "get_engine", lambda: Engine())
 
 
 def setup_function():
