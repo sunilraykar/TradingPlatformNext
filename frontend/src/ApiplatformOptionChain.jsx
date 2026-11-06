@@ -123,7 +123,7 @@ export default function ApiplatformOptionChain() {
   ];
   const fetchedAt = snapshot?.fetch_time || direction.actualFetchTime || payload.FetchTime;
 
-  return <main className="apiplatform-page">
+  return <div className="apiplatform-page">
     <section className="apiplatform-heading">
       <div><div className="eyebrow">MARKET INTELLIGENCE / APIPLATFORM</div><h1>APIPLATFORM Option Chain</h1>
         <p>Complete provider response with the latest in-memory cache snapshot.</p></div>
@@ -203,5 +203,5 @@ export default function ApiplatformOptionChain() {
       {section === 'shifting' && <section className="panel apiplatform-data-panel"><div className="panel-header"><h2>Resistance and support shifting ({shiftingRows.length})</h2></div><DataTable rows={shiftingRows} /></section>}
       {section === 'raw' && <section className="panel apiplatform-raw-panel"><div className="panel-header"><h2>Complete raw JSON</h2><button type="button" className="button secondary" onClick={() => navigator.clipboard?.writeText(JSON.stringify(payload, null, 2))}>Copy JSON</button></div><pre>{JSON.stringify(payload, null, 2)}</pre></section>}
     </>}
-  </main>;
+  </div>;
 }
