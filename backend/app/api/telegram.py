@@ -19,6 +19,7 @@ class TelegramConfigRequest(BaseModel):
     enabled: bool = False
     chat_id: str = Field(default="", max_length=128)
     bot_token: str | None = Field(default=None, max_length=512)
+    notifications: dict[str, Any] = Field(default_factory=dict)
 
 
 def _encryption():
@@ -73,14 +74,39 @@ def _write_setting(connection, key: str, value: Any, *, secret: bool = False):
     )
 
 
+TELEGRAM_NOTIFICATION_DEFAULTS = {
+    "telegramPaperTradeEntryEnabled": True,
+    "telegramPaperTradeExitEnabled": True,
+    "telegramLiveFillEnabled": True,
+    "telegramPnlAlertsEnabled": True,
+    "telegramPnlAlertThreshold": 1000,
+    "telegramPnlAlertCheckSeconds": 15,
+    "telegramPnlAlertRearmEnabled": True,
+    "telegramActiveSummaryEnabled": True,
+    "telegramActiveSummaryIntervalMinutes": 15,
+    "telegramActiveSummaryStartTime": "09:15",
+    "telegramActiveSummaryEndTime": "15:30",
+    "telegramDailySummaryEnabled": True,
+    "telegramDailySummaryTime": "15:45",
+    "telegramLiveFillPollSeconds": 15,
+    "telegramSystemAlertsEnabled": True,
+    "telegramSystemAlertSeverity": "ERROR",
+    "telegramSystemAlertCooldownMinutes": 15,
+}
+
+
 def _load_config(connection):
     encrypted = _read_setting(connection, "integration.telegram.bot_token")
     chat_id = _read_setting(connection, "integration.telegram.chat_id") or ""
     enabled = _read_setting(connection, "integration.telegram.enabled")
+    notification_settings = dict(TELEGRAM_NOTIFICATION_DEFAULTS)
+    for key in TELEGRAM_NOTIFICATION_DEFAULTS:
+        stored = _read_setting(connection, "ui." + key)
+        if stored is not None:
+            notification_settings[key] = stored
     return {
-        "enabled": bool(enabled),
-        "chat_id": str(chat_id),
-        "bot_configured": bool(encrypted),
+        "enabled": bool(enabled), "chat_id": str(chat_id),
+        "bot_configured": bool(encrypted), "notifications": notification_settings,
     }
 
 
@@ -109,6 +135,42 @@ def save_telegram_config(payload: TelegramConfigRequest):
                 raise HTTPException(status_code=422, detail="Enter a Telegram Chat ID before enabling Telegram.")
             _write_setting(connection, "integration.telegram.chat_id", payload.chat_id.strip())
             _write_setting(connection, "integration.telegram.enabled", bool(payload.enabled))
+            unknown = set(payload.notifications) - set(TELEGRAM_NOTIFICATION_DEFAULTS)
+            if unknown:
+                raise HTTPException(status_code=422, detail="Unknown Telegram notification settings: " + ", ".join(sorted(unknown)))
+            merged = dict(TELEGRAM_NOTIFICATION_DEFAULTS)
+            for key in TELEGRAM_NOTIFICATION_DEFAULTS:
+                stored = _read_setting(connection, "ui." + key)
+                if stored is not None:
+                    merged[key] = stored
+            merged.update(payload.notifications)
+            for key in ("telegramPnlAlertThreshold",):
+                try:
+                    if float(merged[key]) <= 0 or float(merged[key]) > 100000000:
+                        raise ValueError
+                except (TypeError, ValueError, OverflowError):
+                    raise HTTPException(status_code=422, detail=f"{key} must be a positive number")
+            for key, minimum, maximum in (
+                ("telegramPnlAlertCheckSeconds", 5, 300),
+                ("telegramActiveSummaryIntervalMinutes", 5, 180),
+                ("telegramLiveFillPollSeconds", 5, 300),
+                ("telegramSystemAlertCooldownMinutes", 1, 1440),
+            ):
+                try:
+                    value = int(merged[key])
+                    if value < minimum or value > maximum:
+                        raise ValueError
+                    merged[key] = value
+                except (TypeError, ValueError, OverflowError):
+                    raise HTTPException(status_code=422, detail=f"{key} must be between {minimum} and {maximum}")
+            import re
+            for key in ("telegramActiveSummaryStartTime", "telegramActiveSummaryEndTime", "telegramDailySummaryTime"):
+                if not isinstance(merged[key], str) or not re.fullmatch(r"(?:[01][0-9]|2[0-3]):[0-5][0-9]", merged[key]):
+                    raise HTTPException(status_code=422, detail=f"{key} must use HH:MM 24-hour time")
+            if merged["telegramSystemAlertSeverity"] not in {"ERROR", "CRITICAL"}:
+                raise HTTPException(status_code=422, detail="System alert severity must be ERROR or CRITICAL")
+            for key, value in merged.items():
+                _write_setting(connection, "ui." + key, value)
         return {"saved": True, "config": get_telegram_config()}
     except HTTPException:
         raise
