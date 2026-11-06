@@ -555,7 +555,10 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
         if entry <= 0 or quantity <= 0 or direction not in {"BUY", "SELL"}:
             return
         config = trade.get("target_stop_loss_settings") or {}
-        strategy = str(trade.get("trailing_strategy") or config.get("targetStopLossStrategy") or "L-FT-FSL")
+        configured_strategy = trade.get("trailing_strategy") or config.get("targetStopLossStrategy")
+        if not configured_strategy:
+            return
+        strategy = str(configured_strategy)
         if strategy not in {"L-FT-FSL", "M-FT-TSL", "M-TTTS", "H-PT-TSL"}:
             logger.error("Trade %s has unsupported target/stop strategy %s; risk manager skipped", trade.get("trade_id"), strategy)
             return
