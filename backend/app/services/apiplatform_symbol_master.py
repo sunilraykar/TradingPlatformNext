@@ -37,7 +37,11 @@ def refresh_symbol_master(
     """
     db_engine = engine or get_engine()
     api_client = client or get_apiplatform_client()
-    captured = (fetched_at or datetime.now(IST)).astimezone(IST)
+    captured = fetched_at or datetime.now(IST)
+    if captured.tzinfo is None:
+        captured = captured.replace(tzinfo=IST)
+    else:
+        captured = captured.astimezone(IST)
     captured_db = captured.replace(tzinfo=None)
 
     with db_engine.connect() as connection:
