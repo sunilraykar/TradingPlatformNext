@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
 from app.services.notification_events import enqueue_notification, notifications_enabled
@@ -86,7 +87,7 @@ class TelegramSystemAlertHandler(logging.Handler):
                     VALUES (:key,CAST(:state AS JSON))
                     ON DUPLICATE KEY UPDATE state_json=VALUES(state_json)
                 """), {"key": state_key, "state": json.dumps({"last_sent_at": now.isoformat()})})
-        except Exception:
+        except (SQLAlchemyError, TypeError, ValueError, OverflowError, KeyError):
             # Never recurse through logging from a logging handler.
             self.handleError(record)
 
