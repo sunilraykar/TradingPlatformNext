@@ -47,10 +47,10 @@ def test_persisted_session_restores_authorization_header(monkeypatch, tmp_path):
 def test_login_posts_empty_json_with_basic_auth_and_browser_cookies(monkeypatch, tmp_path):
     import app.providers.apiplatform.auth as auth_module
 
+    monkeypatch.setattr(auth_module, "SESSION_FILE", tmp_path / "session.json")
     auth = APIPLATFORMAuth()
     cookies = [{"name": "cf_clearance", "value": "test-clearance", "domain": ".ltpcalculator.com"}]
     monkeypatch.setattr(auth, "_browser_cookies", lambda: (cookies, "test-agent"))
-    monkeypatch.setattr(auth_module, "SESSION_FILE", tmp_path / "session.json")
     from types import SimpleNamespace
 
     monkeypatch.setattr(
