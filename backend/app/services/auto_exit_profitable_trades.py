@@ -134,6 +134,9 @@ def run_auto_exit_cycle(now: datetime | None = None) -> dict[str, Any]:
         # Broker positions are intentionally excluded: this worker does not place Kite orders.
         if str(trade.get("execution_mode") or "").upper() != "PAPER":
             continue
+        if not _quote_is_fresh(trade, now):
+            skipped.append({"trade_id": trade_id, "reason": "stale_or_missing_quote"})
+            continue
         exchange = _option_exchange(trade)
         if exchange is None:
             skipped.append({"trade_id": trade_id, "reason": "unsupported_instrument"})
