@@ -138,7 +138,7 @@ def enqueue_notification(
     if occurred_at is None:
         event_time = datetime.now(UTC).replace(tzinfo=None)
     elif isinstance(occurred_at, str):
-        parsed = datetime.fromisoformat(occurred_at.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(occurred_at)
         event_time = parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo else parsed
     else:
         event_time = occurred_at.astimezone(UTC).replace(tzinfo=None) if occurred_at.tzinfo else occurred_at
