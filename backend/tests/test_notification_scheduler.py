@@ -1,4 +1,5 @@
 from app.services.notification_scheduler import _trade_pnl
+from app.services.kite_trade_notifications import calculate_fill_transition
 
 
 def test_paper_trade_pnl_uses_direction_and_quantity():
@@ -42,8 +43,6 @@ def test_live_pnl_is_never_derived_from_last_price():
     })
     assert pnl is None
 
-
-from app.services.kite_trade_notifications import calculate_fill_transition
 
 
 def test_live_fill_position_accounting_entry_partial_and_final_exit():
