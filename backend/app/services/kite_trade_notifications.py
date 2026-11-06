@@ -142,6 +142,57 @@ def _apply_fill(connection, account_id: str, fill: dict[str, Any], timestamp: An
     return classification, realized if closed_qty else None, new_qty, new_avg
 
 
+def _initialize_daily_position_baseline(account_id: str, positions: list[dict[str, Any]], fills: list[dict[str, Any]], now: datetime) -> bool:
+    """Seed current broker positions once per account/day and suppress historical fill replay."""
+    baseline_key = f"telegram:kite-fill-baseline:{account_id}:{now.date().isoformat()}"
+    with get_engine().begin() as connection:
+        state = connection.execute(text(
+            "SELECT state_json FROM notification_rule_state WHERE state_key=:key FOR UPDATE"
+        ), {"key": baseline_key}).first()
+        if state:
+            return False
+        connection.execute(text("""
+            UPDATE kite_notification_positions
+            SET net_quantity=0, average_price=0, realized_pnl=0
+            WHERE account_id=:account_id
+        """), {"account_id": account_id})
+        for position in positions:
+            if not isinstance(position, dict):
+                continue
+            symbol = str(position.get("tradingsymbol") or "").strip()
+            exchange = str(position.get("exchange") or "").upper()
+            product = str(position.get("product") or "").upper()
+            quantity = int(position.get("quantity") or position.get("net_quantity") or 0)
+            average = float(position.get("average_price") or 0)
+            if not symbol or not exchange or not product or quantity == 0:
+                continue
+            key = f"{exchange}:{symbol}:{product}"
+            connection.execute(text("""
+                INSERT INTO kite_notification_positions
+                  (account_id,position_key,exchange,tradingsymbol,product,net_quantity,average_price,realized_pnl)
+                VALUES (:account_id,:position_key,:exchange,:symbol,:product,:quantity,:average,0)
+                ON DUPLICATE KEY UPDATE net_quantity=VALUES(net_quantity),
+                  average_price=VALUES(average_price), realized_pnl=0
+            """), {"account_id":account_id,"position_key":key,"exchange":exchange,
+                   "symbol":symbol,"product":product,"quantity":quantity,"average":average})
+        for fill in fills:
+            fill_id = str(fill.get("trade_id") or fill.get("id") or "").strip()
+            if fill_id:
+                connection.execute(text("""
+                    INSERT IGNORE INTO kite_notification_processed_fills (account_id,broker_trade_id)
+                    VALUES (:account_id,:trade_id)
+                """), {"account_id":account_id,"trade_id":fill_id})
+        connection.execute(text("""
+            INSERT INTO notification_rule_state (state_key,state_json)
+            VALUES (:key,CAST(:state AS JSON))
+        """), {"key":baseline_key,"state":json.dumps({
+            "initialized_at": now.isoformat(),
+            "open_positions_seeded": sum(1 for p in positions if isinstance(p, dict) and int(p.get("quantity") or p.get("net_quantity") or 0) != 0),
+            "historical_fills_skipped": len(fills),
+        })})
+    return True
+
+
 def process_trade_book(provider=None) -> dict[str, int]:
     """Classify confirmed fills against durable account positions and queue idempotent messages."""
     if not notifications_enabled() or not bool(_setting("telegramLiveFillEnabled", True)):
@@ -155,6 +206,12 @@ def process_trade_book(provider=None) -> dict[str, int]:
     if not isinstance(fills, list):
         raise TypeError("Kite trade book response was not a list")
     _ensure_fill_position_schema()
+    positions_response = provider.positions()
+    net_positions = positions_response.get("net", []) if isinstance(positions_response, dict) else None
+    if not isinstance(net_positions, list):
+        raise TypeError("Kite net positions response was not a list")
+    now = datetime.now(IST)
+    _initialize_daily_position_baseline(account_id, net_positions, fills, now)
     queued = 0
     fills = sorted(
         [item for item in fills if isinstance(item, dict)],
