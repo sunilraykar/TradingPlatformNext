@@ -256,6 +256,31 @@ class APIPLATFORMAuth:
 
             self.token = token
             self.expires_at = expiry
+            self.session.headers.update(
+                {
+                    "sec-fetch-dest": "empty",
+                    "sec-fetch-mode": "cors",
+                    "sec-fetch-site": "same-site",
+                    "priority": "u=1, i",
+                }
+            )
+            if user_agent:
+                import re
+
+                chrome_version = re.search(r"(?:Chrome|Chromium)/(\\d+)", user_agent)
+                if chrome_version:
+                    version = chrome_version.group(1)
+                    self.session.headers["sec-ch-ua"] = (
+                        f'"Not:A-Brand";v="8", "Chromium";v="{version}", '
+                        f'"Google Chrome";v="{version}"'
+                    )
+                if "Windows NT" in user_agent:
+                    self.session.headers["sec-ch-ua-platform"] = '"Windows"'
+                elif "Macintosh" in user_agent:
+                    self.session.headers["sec-ch-ua-platform"] = '"macOS"'
+                elif "Linux" in user_agent:
+                    self.session.headers["sec-ch-ua-platform"] = '"Linux"'
+                self.session.headers["sec-ch-ua-mobile"] = "?0"
             self.session.headers["Authorization"] = f"Bearer {token}"
             self._save_session()
             logger.info("APIPLATFORM login succeeded; JWT session persisted")
