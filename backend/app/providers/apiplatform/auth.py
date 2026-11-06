@@ -183,9 +183,13 @@ class APIPLATFORMAuth:
 
     def login(self, force: bool = False) -> dict[str, object]:
         with self._lock:
-            if not force and self.token and self.expires_at:
-                if self.expires_at > time.time() + TOKEN_SAFETY_MARGIN_SECONDS:
-                    return {"authenticated": True, "message": "Existing APIPLATFORM session is active."}
+            if (
+                not force
+                and self.token
+                and self.expires_at
+                and self.expires_at > time.time() + TOKEN_SAFETY_MARGIN_SECONDS
+            ):
+                return {"authenticated": True, "message": "Existing APIPLATFORM session is active."}
             if not force and self._load_persisted_session():
                 return {"authenticated": True, "message": "Saved APIPLATFORM session restored."}
 
