@@ -81,6 +81,16 @@ class KiteProvider:
             raise _provider_error("instrument master download", exc) from exc
         return records
 
+    def historical_data(
+        self, instrument_token: int, from_date, to_date, interval: str = "5minute",
+        continuous: bool = False, oi: bool = False,
+    ) -> list[dict[str, Any]]:
+        """Fetch Kite historical candles through the authenticated REST provider."""
+        return self._account_call(
+            "historical_data", instrument_token, from_date, to_date, interval,
+            continuous=continuous, oi=oi,
+        )
+
     def quote(self, instrument_token: int) -> dict[str, Any]:
         return self.quotes([instrument_token]).get(str(instrument_token), {})
 
