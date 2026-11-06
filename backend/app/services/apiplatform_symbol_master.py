@@ -58,16 +58,16 @@ def refresh_symbol_master(
         try:
             latest = connection.execute(
                 text(
-                    "SELECT snapshot_id, captured_at FROM market_snapshots "
+                    "SELECT symbol_master_id, fetched_at FROM All_symbols_MI "
                     "WHERE snapshot_type = :snapshot_type AND snapshot_key = :snapshot_key "
-                    "ORDER BY captured_at DESC LIMIT 1"
+                    "ORDER BY fetched_at DESC LIMIT 1"
                 ),
                 {"snapshot_type": SNAPSHOT_TYPE, "snapshot_key": SNAPSHOT_KEY},
             ).mappings().first()
             connection.commit()
 
             if latest is not None:
-                last_fetched = latest["captured_at"]
+                last_fetched = latest["fetched_at"]
                 if last_fetched.tzinfo is None:
                     last_fetched = last_fetched.replace(tzinfo=IST)
                 else:
@@ -92,24 +92,20 @@ def refresh_symbol_master(
             with connection.begin():
                 result = connection.execute(
                     text(
-                        "INSERT INTO market_snapshots "
-                        "(snapshot_type, snapshot_key, trading_date, captured_at, payload, payload_hash) "
-                        "VALUES (:snapshot_type, :snapshot_key, :trading_date, :captured_at, "
-                        "CAST(:payload AS JSON), :payload_hash)"
+                        "INSERT INTO All_symbols_MI "
+                        "(fetched_at, response_payload, payload_hash) "
+                        "VALUES (:fetched_at, CAST(:response_payload AS JSON), :payload_hash)"
                     ),
                     {
-                        "snapshot_type": SNAPSHOT_TYPE,
-                        "snapshot_key": SNAPSHOT_KEY,
-                        "trading_date": captured.date(),
-                        "captured_at": captured_db,
-                        "payload": serialized,
+                        "fetched_at": captured_db,
+                        "response_payload": serialized,
                         "payload_hash": payload_hash,
                     },
                 )
 
             outcome = {
                 "saved": True,
-                "snapshot_id": result.lastrowid,
+                "symbol_master_id": result.lastrowid,
                 "record_type": SNAPSHOT_TYPE,
                 "snapshot_key": SNAPSHOT_KEY,
                 "fetched_at": captured.isoformat(),
