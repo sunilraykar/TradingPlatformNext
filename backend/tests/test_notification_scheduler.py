@@ -41,3 +41,24 @@ def test_live_pnl_is_never_derived_from_last_price():
         "last_price": 150, "quantity": 10,
     })
     assert pnl is None
+
+
+from app.services.kite_trade_notifications import calculate_fill_transition
+
+
+def test_live_fill_position_accounting_entry_partial_and_final_exit():
+    entry = calculate_fill_transition(0, 0, 10, 100)
+    assert entry == ("ENTRY", 0.0, 0, 10, 100.0)
+    partial = calculate_fill_transition(10, 100, -4, 110)
+    assert partial == ("PARTIAL EXIT", 40.0, 4, 6, 100.0)
+    final = calculate_fill_transition(6, 100, -6, 90)
+    assert final == ("FINAL EXIT", -60.0, 6, 0, 0.0)
+
+
+def test_live_fill_position_accounting_handles_short_positions_and_reversals():
+    short_entry = calculate_fill_transition(0, 0, -5, 200)
+    assert short_entry == ("ENTRY", 0.0, 0, -5, 200.0)
+    short_exit = calculate_fill_transition(-5, 200, 2, 180)
+    assert short_exit == ("PARTIAL EXIT", 40.0, 2, -3, 200.0)
+    reversal = calculate_fill_transition(3, 100, -5, 110)
+    assert reversal == ("REVERSAL", 30.0, 3, -2, 110.0)
