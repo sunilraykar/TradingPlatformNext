@@ -7,27 +7,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.account import router as account_router
-from app.api.autotrender_auth import router as autotrender_auth_router
 from app.api.apiplatform_auth import router as apiplatform_auth_router
+from app.api.autotrender_auth import router as autotrender_auth_router
 from app.api.autotrender_market_data import router as autotrender_market_data_router
 from app.api.kite_instruments import router as kite_instruments_router
+from app.api.notifications import router as notifications_router
 from app.api.routes import router
 from app.api.subscription_test import router as subscription_test_router
-from app.api.trades import router as trades_router
 from app.api.telegram import router as telegram_router
-from app.api.notifications import router as notifications_router
+from app.api.trades import router as trades_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.providers.autotrender.auth import AutoTrenderAuth
 from app.providers.apiplatform.registry import configure_apiplatform, shutdown_apiplatform
+from app.providers.autotrender.auth import AutoTrenderAuth
 from app.providers.kite.client import KiteProvider, KiteProviderError
 from app.providers.kite.registry import (
     clear_active_kite_session,
     configure_active_kite_session,
-)
-from app.services.kite_portfolio_snapshots import (
-    ensure_portfolio_snapshot_schema,
-    run_daily_portfolio_snapshot_scheduler,
 )
 from app.services import (
     auto_exit_profitable_trades,
@@ -35,12 +31,15 @@ from app.services import (
     autotrender_paper_trade_worker,
     live_market_data,
     paper_option_market_close,
-    trade_terminal,
     telegram_dispatcher,
+    trade_terminal,
 )
-from app.services.notification_events import ensure_notification_schema
 from app.services.autotrender_cache import AutoTrenderCache
 from app.services.kite_instrument_master import run_daily_instrument_refresh_scheduler
+from app.services.kite_portfolio_snapshots import (
+    ensure_portfolio_snapshot_schema,
+    run_daily_portfolio_snapshot_scheduler,
+)
 from app.services.kite_session_reset import run_daily_reset_scheduler
 from app.services.kite_sessions import (
     KiteSessionStoreError,
@@ -48,6 +47,7 @@ from app.services.kite_sessions import (
     reset_sessions,
 )
 from app.services.live_quotes import live_quotes
+from app.services.notification_events import ensure_notification_schema
 
 logger = logging.getLogger(__name__)
 
