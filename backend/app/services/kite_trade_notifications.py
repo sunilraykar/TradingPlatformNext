@@ -7,11 +7,12 @@ from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from app.providers.kite.client import KiteProviderError
-from app.providers.kite.registry import get_kite_provider
 from sqlalchemy import text
 
 from app.db.session import get_engine
+from app.providers.kite.client import KiteProviderError
+from app.providers.kite.registry import get_kite_provider
+
 from app.services.notification_events import enqueue_notification, notifications_enabled
 
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def _format_time(value: Any) -> str:
     if not value:
         return "N/A"
     try:
-        parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        parsed = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=IST)
         return parsed.astimezone(IST).strftime("%d %b %Y, %I:%M:%S %p IST")
@@ -119,7 +120,7 @@ def process_trade_book(provider=None) -> dict[str, int]:
         raise RuntimeError("Kite profile did not provide an account identity")
     fills = provider.trades()
     if not isinstance(fills, list):
-        raise RuntimeError("Kite trade book response was not a list")
+        raise TypeError("Kite trade book response was not a list")
     _ensure_fill_position_schema()
     queued = 0
     fills = sorted(
@@ -139,7 +140,7 @@ def process_trade_book(provider=None) -> dict[str, int]:
         occurred_at = timestamp
         if timestamp:
             try:
-                parsed = timestamp if isinstance(timestamp, datetime) else datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+                parsed = timestamp if isinstance(timestamp, datetime) else datetime.fromisoformat(str(timestamp))
                 occurred_at = parsed.replace(tzinfo=IST) if parsed.tzinfo is None else parsed
             except (TypeError, ValueError):
                 occurred_at = None
