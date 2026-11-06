@@ -1064,6 +1064,9 @@
 
 /* Telegram settings */
 .telegram-settings{display:grid;gap:14px}
+.telegram-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.telegram-settings-grid>.telegram-settings-card{max-width:none;min-width:0}
+.telegram-settings-grid>.telegram-settings-card .settings-control{max-width:none}
 .telegram-settings-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
 .telegram-settings-heading h2{margin:0}
 .telegram-settings-card{display:grid;gap:14px;max-width:920px}
@@ -1078,6 +1081,7 @@
 .telegram-credential-state{display:flex;gap:22px;flex-wrap:wrap;color:var(--muted);font-size:12px}
 .telegram-credential-state strong{color:var(--text)}
 .telegram-settings .settings-actions{display:flex;gap:9px;flex-wrap:wrap}
+@media(max-width:760px){.telegram-settings-grid{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.telegram-settings-heading{display:grid}.telegram-settings-card{padding:12px}.telegram-credential-state{display:grid;gap:8px}}
 
 
