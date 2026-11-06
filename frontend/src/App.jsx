@@ -431,10 +431,17 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
   const dateHeading = selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
   const renderPanel = (status, title) => {
     const items = trades.filter((trade) => status === 'ALL' ? ['OPEN', 'CLOSED'].includes(String(trade.status || 'OPEN').toUpperCase()) : String(trade.status || 'OPEN').toUpperCase() === status);
+    const totalPnl = items.reduce((total, trade) => {
+      const value = tradePnl(trade);
+      return value === null ? total : total + value;
+    }, 0);
     return <aside className="panel autotrend-active-trades" key={status} aria-label={dateHeading + ' ' + title.toLowerCase() + ' trades'}>
       <div className="autotrend-active-trades-heading">
         <div><div className="eyebrow">{dateHeading.toUpperCase()} · {title.toUpperCase()}</div><h3>{title} Trades</h3></div>
-        <span className="autotrend-active-trades-count">{items.length}</span>
+        <div className="autotrend-trade-panel-totals">
+          <span className="autotrend-active-trades-count">{items.length}</span>
+          <span className={`autotrend-trade-total-pnl ${totalPnl >= 0 ? 'positive' : 'negative'}`}>Total P&amp;L: {formatPnl(totalPnl)}</span>
+        </div>
       </div>
       {error && <div className="autotrend-active-trades-error">{error}</div>}
       {cacheUnavailable && <div className="autotrend-active-trades-error">Trade history could not be loaded from the database. Check backend database connectivity.</div>}
