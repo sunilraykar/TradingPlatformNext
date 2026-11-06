@@ -59,10 +59,8 @@ def refresh_symbol_master(
             latest = connection.execute(
                 text(
                     "SELECT symbol_master_id, fetched_at FROM All_symbols_MI "
-                    "WHERE snapshot_type = :snapshot_type AND snapshot_key = :snapshot_key "
                     "ORDER BY fetched_at DESC LIMIT 1"
                 ),
-                {"snapshot_type": SNAPSHOT_TYPE, "snapshot_key": SNAPSHOT_KEY},
             ).mappings().first()
             connection.commit()
 
