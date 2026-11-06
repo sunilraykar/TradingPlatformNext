@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import math
 from datetime import date, datetime, time
@@ -5,7 +7,7 @@ from typing import Annotated
 from zoneinfo import ZoneInfo
 
 import requests
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
 from sqlalchemy import text
 
 from app.db.session import get_engine
@@ -358,6 +360,68 @@ def historical_intraday_rows(
         result.append({key: (value.isoformat() if hasattr(value, "isoformat") else value) for key, value in item.items()})
     return {"index": normalized_index, "trading_date": trading_date.isoformat(), "interval_minutes": mins, "total": len(result), "rows": result}
 
+
+@router.get("/indices/{index}/intraday/export")
+def export_historical_intraday_rows(
+    index: str,
+    start_date: Annotated[date | None, Query()] = None,
+    end_date: Annotated[date | None, Query()] = None,
+    mins: Annotated[int, Query(ge=1, le=60)] = 5,
+    enter: Annotated[str | None, Query()] = None,
+) -> Response:
+    """Export every persisted intraday row for an index, optionally filtered by date and Enter signal."""
+    normalized_index = index.upper()
+    if normalized_index not in _INDEX_CATEGORIES:
+        raise HTTPException(status_code=404, detail="Unsupported AutoTrender index")
+    if start_date and end_date and start_date > end_date:
+        raise HTTPException(status_code=400, detail="Start date must be on or before end date")
+    normalized_enter = (enter or "").strip().upper()
+    if normalized_enter and normalized_enter not in {"BUY", "SELL", "WAIT"}:
+        raise HTTPException(status_code=400, detail="Enter filter must be BUY, SELL, or WAIT")
+    _ensure_intraday_table()
+    clauses = ["index_name = :index_name", "interval_minutes = :mins"]
+    params = {"index_name": normalized_index, "mins": mins}
+    if start_date:
+        clauses.append("trading_date >= :start_date")
+        params["start_date"] = start_date
+    if end_date:
+        clauses.append("trading_date <= :end_date")
+        params["end_date"] = end_date
+    if normalized_enter:
+        clauses.append("enter_signal = :enter_signal")
+        params["enter_signal"] = normalized_enter
+    headers = ["Trading Date", "Index", "Interval (Minutes)", "Time", "Call", "Put", "Diff", "PCR", "Price", "VWAP", "VWAP Signal", "Option Signal", "Call Strength", "Put Strength", "Call-Put Strength Diff", "Price-VWAP Buffer (%)", "Enter", "Original Row JSON"]
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(headers)
+    with get_engine().connect() as connection:
+        rows = connection.execute(text(f"""
+            SELECT trading_date, index_name, interval_minutes, row_time,
+                   call_value, put_value, diff_value, pcr_value, price_value,
+                   vwap_value, vwap_signal, option_signal, call_strength,
+                   put_strength, strength_diff, vwap_price_buffer_pct,
+                   enter_signal, raw_row
+            FROM autotrender_intraday_rows
+            WHERE {" AND ".join(clauses)}
+            ORDER BY trading_date ASC, row_time ASC
+        """), params).mappings().all()
+    for row in rows:
+        raw = row["raw_row"]
+        if isinstance(raw, (dict, list)):
+            raw = json.dumps(raw, ensure_ascii=False, default=str)
+        writer.writerow([
+            row["trading_date"].isoformat() if row["trading_date"] else "",
+            row["index_name"], row["interval_minutes"], row["row_time"],
+            row["call_value"], row["put_value"], row["diff_value"],
+            row["pcr_value"], row["price_value"], row["vwap_value"],
+            row["vwap_signal"], row["option_signal"], row["call_strength"],
+            row["put_strength"], row["strength_diff"], row["vwap_price_buffer_pct"],
+            row["enter_signal"], raw or "",
+        ])
+    csv_content = "\ufeff" + output.getvalue()
+    date_suffix = (f"_{start_date.isoformat()}" if start_date else "") + (f"_to_{end_date.isoformat()}" if end_date else "")
+    filename = f"{normalized_index.lower()}_intraday_history{date_suffix}.csv"
+    return Response(content=csv_content, media_type="text/csv; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 @router.get("/indices/{index}/oi-graph")
 def index_oi_graph(index: str, request: Request) -> dict:
