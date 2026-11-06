@@ -13,6 +13,7 @@ from typing import Any
 
 import requests
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 
@@ -141,6 +142,9 @@ class APIPLATFORMAuth:
 
     def _browser_cookies(self) -> tuple[list[dict[str, Any]], str]:
         options = Options()
+        # The SPA can keep background requests open; DOM readiness is sufficient
+        # to collect its Cloudflare cookies and browser identity.
+        options.page_load_strategy = "eager"
         if get_settings().apiplatform_headless:
             options.add_argument("--headless=new")
         options.add_argument("--window-size=1920,1080")
@@ -152,15 +156,28 @@ class APIPLATFORMAuth:
             options.add_argument("--no-sandbox")
 
         driver = None
+        stage = "starting ChromeDriver"
         try:
             logger.info("Starting browser session for APIPLATFORM website cookies")
             driver = webdriver.Chrome(options=options)
-            driver.get(SITE_URL)
-            WebDriverWait(driver, 30).until(
-                lambda browser: browser.execute_script("return document.readyState") == "complete"
-            )
-            # Allow the site and its edge security layer to finish setting cookies.
-            time.sleep(5)
+            driver.set_page_load_timeout(40)
+            stage = "opening the option-chain website"
+            try:
+                driver.get(SITE_URL)
+            except TimeoutException:
+                # Continue if the document has become interactive; the site may
+                # keep analytics or streaming requests open after DOM readiness.
+                logger.warning("APIPLATFORM website navigation reached its page-load timeout")
+            stage = "waiting for the option-chain document"
+            try:
+                WebDriverWait(driver, 20).until(
+                    lambda browser: browser.execute_script("return document.readyState")
+                    in ("interactive", "complete")
+                )
+            except TimeoutException:
+                logger.warning("APIPLATFORM document readiness wait timed out; checking cookies")
+            stage = "collecting browser cookies and user-agent"
+            time.sleep(3)
             cookies = driver.execute_cdp_cmd("Network.getAllCookies", {}).get("cookies", [])
             user_agent = driver.execute_script("return navigator.userAgent")
             if not cookies:
@@ -168,12 +185,14 @@ class APIPLATFORMAuth:
                     "The option-chain website did not provide browser cookies. "
                     "Check site availability or complete any browser verification."
                 )
+            logger.info("Collected %s browser cookies for APIPLATFORM", len(cookies))
             return cookies, str(user_agent or "")
         except APIPLATFORMAuthError:
             raise
         except Exception as exc:
             raise APIPLATFORMAuthError(
-                f"Could not establish the APIPLATFORM website browser session ({type(exc).__name__})."
+                "Could not establish the APIPLATFORM website browser session "
+                f"while {stage} ({type(exc).__name__})."
             ) from exc
         finally:
             if driver is not None:
