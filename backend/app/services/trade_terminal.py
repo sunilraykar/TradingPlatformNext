@@ -264,9 +264,12 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                             if trade.get("stop_loss") is not None:
                                 telegram_text += f"Stop Loss: ₹{float(trade['stop_loss']):,.2f}\n"
                         else:
-                            pnl = trade.get("net_realized_pnl", trade.get("realized_pnl", trade.get("gross_realized_pnl")))
+                            pnl = trade.get("net_realized_pnl", trade.get("gross_realized_pnl"))
                             if pnl is not None:
-                                telegram_text += f"Realized P&L: ₹{float(pnl):+,.2f}\n"
+                                pnl_label = "Net Realized P&L" if trade.get("net_realized_pnl") is not None else "Gross Realized P&L"
+                                telegram_text += f"{pnl_label}: ₹{float(pnl):+,.2f}\n"
+                            else:
+                                telegram_text += "P&L: N/A (entry or exit price unavailable)\n"
                             if trade.get("exit_reason") or trade.get("exit_method"):
                                 telegram_text += f"Exit Reason: {trade.get('exit_reason') or trade.get('exit_method')}\n"
                         telegram_text += f"Time: {_format_notification_time(trade.get('created_at') if is_entry else trade.get('closed_at'))}"
