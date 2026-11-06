@@ -418,6 +418,19 @@ def export_historical_intraday_rows(
             return ", ".join(str(item) for item in value)
         return value if value is not None else ""
 
+    def number(value):
+        value = scalar(value, "value")
+        if value in (None, "") or isinstance(value, bool):
+            return None
+        try:
+            result = float(str(value).replace(",", "").replace("%", "").strip())
+            return result if math.isfinite(result) else None
+        except (TypeError, ValueError):
+            return None
+
+    def signal(value):
+        return str(scalar(value, "type") or "").strip().upper()
+
     def pick(row, *keys):
         for key in keys:
             value = row.get(key)
@@ -453,10 +466,23 @@ def export_historical_intraday_rows(
                 put_pcr=thresholds["putPcr"],
                 vwap_price_difference_buffer=thresholds["vwapPriceDifferenceBuffer"],
             )
-            row_enter = str(
-                pick(row, "enter", "Enter", "enter_signal")
-                or (evaluation.direction if evaluation.eligible else "WAIT")
-            ).strip().upper()
+            call_raw = pick(row, "call", "Call")
+            put_raw = pick(row, "put", "Put")
+            call_number = number(call_raw)
+            put_number = number(put_raw)
+            total_strength = call_number + put_number if call_number is not None and put_number is not None else None
+            call_strength = call_number / total_strength * 100 if total_strength and total_strength > 0 else None
+            put_strength = put_number / total_strength * 100 if total_strength and total_strength > 0 else None
+            strength_diff = call_strength - put_strength if call_strength is not None and put_strength is not None else None
+
+            price_number = number(pick(row, "price", "Price"))
+            vwap_number = number(pick(row, "vwap", "Vwap", "vWap", "VWAP"))
+            buffer_value = abs((price_number - vwap_number) / price_number * 100) if price_number and vwap_number is not None and price_number > 0 and vwap_number > 0 else None
+
+            # Match the Historical Data table's buildIntradayRows calculation:
+            # derive strength percentages, signed strength difference, VWAP gap,
+            # and BUY/SELL/WAIT from the current saved thresholds.
+            row_enter = evaluation.direction if evaluation.eligible else "WAIT"
             if normalized_enter and row_enter != normalized_enter:
                 continue
 
@@ -465,18 +491,18 @@ def export_historical_intraday_rows(
                 normalized_index,
                 payload.get("capture_interval_minutes", mins),
                 scalar(pick(row, "time", "Time", "mtime", "Mtime"), "value"),
-                scalar(pick(row, "call", "Call"), "value"),
-                scalar(pick(row, "put", "Put"), "value"),
+                scalar(call_raw, "value"),
+                scalar(put_raw, "value"),
                 scalar(pick(row, "diff", "Diff"), "value"),
                 scalar(pick(row, "pcr", "Pcr", "PCR"), "value"),
                 scalar(pick(row, "price", "Price"), "value"),
                 scalar(pick(row, "vwap", "Vwap", "vWap", "VWAP"), "value"),
-                scalar(pick(row, "vwapSignal", "VwapSignal", "vWapSignal", "VWAPSignal"), "type"),
-                scalar(pick(row, "optionSignal", "OptionSignal"), "type"),
-                scalar(pick(row, "callStrength", "CallStrength"), "value"),
-                scalar(pick(row, "putStrength", "PutStrength"), "value"),
-                scalar(pick(row, "strengthDiff", "StrengthDiff"), "value"),
-                scalar(pick(row, "buffer", "vwapPriceBufferPct", "VwapPriceBufferPct"), "value"),
+                signal(pick(row, "vwapSignal", "VwapSignal", "vWapSignal", "VWAPSignal")),
+                signal(pick(row, "optionSignal", "OptionSignal")),
+                round(call_strength, 4) if call_strength is not None else "",
+                round(put_strength, 4) if put_strength is not None else "",
+                round(strength_diff, 4) if strength_diff is not None else "",
+                round(buffer_value, 4) if buffer_value is not None else "",
                 row_enter,
             ])
             exported += 1
