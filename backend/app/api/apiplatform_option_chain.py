@@ -139,6 +139,7 @@ def fetch_apiplatform_option_chain(
 
     instruments: list[dict[str, Any]] = []
     spot_token: int | None = None
+    future_token: int | None = None
     try:
         exchange = "BFO" if key in {"SENSEX", "BANKEX"} else "NFO"
         with get_engine().connect() as connection:
@@ -165,6 +166,18 @@ def fetch_apiplatform_option_chain(
                 if spot_row:
                     spot_token = int(spot_row["instrument_token"])
 
+            future_row = connection.execute(text("""
+                SELECT instrument_token
+                FROM instruments
+                WHERE source = 'KITE' AND is_active = TRUE
+                  AND exchange = :exchange AND instrument_type = 'FUT'
+                  AND expiry = :expiry AND tradingsymbol LIKE :prefix
+                ORDER BY instrument_version DESC
+                LIMIT 1
+            """), {"exchange": exchange, "expiry": expiry_date, "prefix": f"{key}%"}).mappings().first()
+            if future_row:
+                future_token = int(future_row["instrument_token"])
+
         for row in rows:
             instruments.append({
                 "instrument_token": int(row["instrument_token"]),
@@ -177,6 +190,8 @@ def fetch_apiplatform_option_chain(
         tokens = [item["instrument_token"] for item in instruments]
         if spot_token:
             tokens.append(spot_token)
+        if future_token:
+            tokens.append(future_token)
         if tokens:
             live_market_data.subscribe(tokens, mode="full")
     except SQLAlchemyError:
@@ -186,6 +201,7 @@ def fetch_apiplatform_option_chain(
         "data": payload,
         "kite_instruments": instruments,
         "kite_spot_instrument_token": spot_token,
+        "kite_future_instrument_token": future_token,
         "kite_market_data": live_market_data.status(),
     }
 
