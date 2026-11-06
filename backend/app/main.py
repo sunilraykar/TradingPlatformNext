@@ -34,9 +34,9 @@ from app.services import (
     telegram_dispatcher,
     trade_terminal,
 )
+from app.services.apiplatform_symbol_master import run_startup_symbol_master_refresh
 from app.services.autotrender_cache import AutoTrenderCache
 from app.services.kite_instrument_master import run_daily_instrument_refresh_scheduler
-from app.services.apiplatform_symbol_master import run_startup_symbol_master_refresh
 from app.services.kite_portfolio_snapshots import (
     ensure_portfolio_snapshot_schema,
     run_daily_portfolio_snapshot_scheduler,
@@ -111,9 +111,6 @@ async def lifespan(application: FastAPI):
     apiplatform_client = configure_apiplatform()
     application.state.apiplatform_auth = apiplatform_client.auth
     application.state.apiplatform_client = apiplatform_client
-    apiplatform_symbol_master_task = asyncio.create_task(
-        run_startup_symbol_master_refresh(apiplatform_client)
-    )
     if not hasattr(application.state, "autotrender_auth"):
         application.state.autotrender_auth = AutoTrenderAuth()
     if not hasattr(application.state, "autotrender_cache"):
@@ -136,6 +133,9 @@ async def lifespan(application: FastAPI):
     )
     telegram_dispatch_task = asyncio.create_task(telegram_dispatcher.run_scheduler())
     portfolio_snapshot_task = asyncio.create_task(run_daily_portfolio_snapshot_scheduler())
+    apiplatform_symbol_master_task = asyncio.create_task(
+        run_startup_symbol_master_refresh(apiplatform_client)
+    )
     try:
         yield
     finally:
