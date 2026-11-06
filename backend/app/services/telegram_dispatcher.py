@@ -40,8 +40,11 @@ def retry_delay_seconds(attempt_number: int, retry_after: int | None = None) -> 
     if retry_after is not None:
         return max(1, int(retry_after))
     defaults = (5, 30, 120, 600)
-    delays = tuple(max(1, min(3600, int(_setting(f"telegramRetryDelay{i}Seconds", default))))
-                   for i, default in enumerate(defaults, start=1))
+    try:
+        delays = tuple(max(1, min(3600, int(_setting(f"telegramRetryDelay{i}Seconds", default))))
+                       for i, default in enumerate(defaults, start=1))
+    except (SQLAlchemyError, TypeError, ValueError, OverflowError):
+        delays = defaults
     index = max(0, min(attempt_number - 1, len(delays) - 1))
     return delays[index]
 
@@ -243,6 +246,9 @@ async def run_scheduler() -> None:
         except Exception:
             logger.exception("Telegram notification dispatcher cycle failed")
             worked = False
-        active_ms = max(100, min(5000, int(_setting("telegramDispatcherActivePollMilliseconds", 500))))
-        idle_seconds = max(1, min(60, int(_setting("telegramDispatcherIdlePollSeconds", 5))))
+        try:
+            active_ms = max(100, min(5000, int(_setting("telegramDispatcherActivePollMilliseconds", 500))))
+            idle_seconds = max(1, min(60, int(_setting("telegramDispatcherIdlePollSeconds", 5))))
+        except (SQLAlchemyError, TypeError, ValueError, OverflowError):
+            active_ms, idle_seconds = 500, 5
         await asyncio.sleep(active_ms / 1000 if worked else idle_seconds)
