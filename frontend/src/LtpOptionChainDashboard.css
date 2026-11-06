@@ -40,6 +40,7 @@
 .ltp-option-table .ltp-atm-row td{background:#fff6c8}.ltp-option-table .ltp-atm-row td.ltp-strike-cell{background:#ef8a20!important}
 .ltp-option-table td.ltp-max-cell{background:#fff400!important;color:#151515;font-weight:800}
 .ltp-option-table td.positive{color:#16803a}.ltp-option-table td.negative{color:#d12d37}
+.ltp-option-table td small{display:block;margin-top:2px;font-family:Arial,sans-serif;font-size:8px;opacity:.85}
 .ltp-reversal{display:inline-block;max-width:90px;overflow:hidden;padding:3px 5px;border-radius:3px;background:#e8ebef;color:#566170;font-family:Arial,sans-serif;font-size:8px;text-overflow:ellipsis}
 .ltp-reversal.positive{background:#dff2e4;color:#19703a}.ltp-reversal.negative{background:#f9e1e1;color:#b12b32}
 .ltp-option-table tfoot td{position:sticky;bottom:0;z-index:2;background:#e5e9ed;color:#3b4653;font-size:9px;font-weight:800}
