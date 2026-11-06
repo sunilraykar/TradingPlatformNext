@@ -36,6 +36,7 @@ from app.services import (
 )
 from app.services.autotrender_cache import AutoTrenderCache
 from app.services.kite_instrument_master import run_daily_instrument_refresh_scheduler
+from app.services.apiplatform_symbol_master import run_startup_symbol_master_refresh
 from app.services.kite_portfolio_snapshots import (
     ensure_portfolio_snapshot_schema,
     run_daily_portfolio_snapshot_scheduler,
@@ -110,6 +111,9 @@ async def lifespan(application: FastAPI):
     apiplatform_client = configure_apiplatform()
     application.state.apiplatform_auth = apiplatform_client.auth
     application.state.apiplatform_client = apiplatform_client
+    apiplatform_symbol_master_task = asyncio.create_task(
+        run_startup_symbol_master_refresh(apiplatform_client)
+    )
     if not hasattr(application.state, "autotrender_auth"):
         application.state.autotrender_auth = AutoTrenderAuth()
     if not hasattr(application.state, "autotrender_cache"):
@@ -140,7 +144,7 @@ async def lifespan(application: FastAPI):
         tasks = (
             reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task,
             autotrender_worker_task, autotrender_snapshot_task, telegram_dispatch_task,
-            portfolio_snapshot_task,
+            portfolio_snapshot_task, apiplatform_symbol_master_task,
         )
         for task in tasks:
             task.cancel()
