@@ -18,7 +18,6 @@ from app.api.telegram import router as telegram_router
 from app.api.trades import router as trades_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
-from app.core.outbound_proxy import configure_process_proxy, proxy_status
 from app.providers.apiplatform.registry import configure_apiplatform, shutdown_apiplatform
 from app.providers.autotrender.auth import AutoTrenderAuth
 from app.providers.kite.client import KiteProvider, KiteProviderError
@@ -109,10 +108,6 @@ async def _restore_kite_session() -> None:
 async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
-    proxy_enabled = configure_process_proxy()
-    logger.info("Outbound proxy configuration: %s", proxy_status())
-    if proxy_enabled:
-        logger.info("StaticIP outbound proxy enabled for provider REST traffic")
     ensure_notification_schema()
     system_alerts.install_system_alert_handler()
     ensure_portfolio_snapshot_schema()
