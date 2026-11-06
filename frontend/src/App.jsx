@@ -1298,11 +1298,11 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
       if (exportStartDate) params.set('start_date', exportStartDate);
       if (exportEndDate) params.set('end_date', exportEndDate);
       if (enterFilter !== 'ALL') params.set('enter', enterFilter);
-      const response = await fetch(`${API}/api/v1/autotrender/indices/${encodeURIComponent(selectedIndex)}/intraday/export?${params.toString()}`, { headers: { Accept: "text/csv" } });
+      const response = await fetch(`${API}/api/v1/autotrender/indices/ALL/intraday/export?${params.toString()}`, { headers: { Accept: "text/csv" } });
       if (!response.ok) { const payload = await response.json().catch(() => ({})); throw new Error(typeof payload.detail === "string" ? payload.detail : `Export failed (${response.status})`); }
       const blob = await response.blob();
       const disposition = response.headers.get("Content-Disposition") || "";
-      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `${selectedIndex.toLowerCase()}_intraday_history.csv`;
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `all_indices_intraday_history.csv`;
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a"); link.href = url; link.download = filename;
       document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
