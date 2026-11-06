@@ -110,14 +110,14 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
   const callChg = cq && cq.oi !== null && cq.oi !== undefined ? callOi - (n(row.callOI) - (n(row.callOIchg) || 0)) : n(row.callOIchg);
   const putChg = pq && pq.oi !== null && pq.oi !== undefined ? putOi - (n(row.putOI) - (n(row.putOIchg) || 0)) : n(row.putOIchg);
   const isAtm = spot !== null && strike !== null && Math.abs(spot - strike) < 0.01;
-  const reversal = (value) => <span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span>;
+  const reversal = (value, quote) => <><span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span><small className="ltp-option-price">LTP {fmt(quote && quote.last_price)}</small></>;
   return <tr className={isAtm ? 'ltp-atm-row' : ''}>
     <td className={callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : ''}><strong>{fmt(callChg, 0)}</strong><small>{callOi ? fmt(callChg / callOi * 100, 2) + '%' : ''}</small></td>
     <td className={callOi === maxima.callOi ? 'ltp-max-cell' : ''}>{fmt(callOi, 0)}</td>
     <td className={callVol === maxima.callVol ? 'ltp-max-cell' : ''}>{fmt(callVol, 0)}</td>
-    <td>{reversal(row.calReversal)}</td>
+    <td>{reversal(row.calReversal, cq)}</td>
     <td className="ltp-strike-cell"><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</td>
-    <td>{reversal(row.putReversal)}</td>
+    <td>{reversal(row.putReversal, pq)}</td>
     <td className={putVol === maxima.putVol ? 'ltp-max-cell' : ''}>{fmt(putVol, 0)}</td>
     <td className={putOi === maxima.putOi ? 'ltp-max-cell' : ''}>{fmt(putOi, 0)}</td>
     <td className={putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : ''}><strong>{fmt(putChg, 0)}</strong><small>{putOi ? fmt(putChg / putOi * 100, 2) + '%' : ''}</small></td>
