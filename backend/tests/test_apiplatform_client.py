@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.providers.apiplatform.client import APIPLATFORMClient
+from app.providers.apiplatform.client import APIPLATFORMClient, APIPLATFORMClientError
 
 
 def test_fetch_option_chain_uses_browser_expiry_format_and_parameter_names():
@@ -118,5 +118,5 @@ def test_fetch_all_symbols_rejects_empty_response():
     auth.session.request.return_value = response
     client = APIPLATFORMClient(auth)
 
-    with pytest.raises(Exception, match="empty or unexpected payload"):
+    with pytest.raises(APIPLATFORMClientError, match="empty or unexpected payload"):
         client.fetch_all_symbols()
