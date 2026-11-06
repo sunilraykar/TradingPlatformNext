@@ -1,6 +1,7 @@
 """Central outbound HTTP proxy configuration for broker/provider REST traffic."""
 from __future__ import annotations
 
+import os
 from urllib.parse import quote
 
 from app.core.config import get_settings
@@ -47,11 +48,25 @@ def get_proxy_map() -> dict[str, str]:
     return {"http": proxy_url, "https": proxy_url}
 
 
-def configure_requests_session(session) -> None:
-    """Apply the configured proxy to a shared requests.Session."""
-    proxies = get_proxy_map()
-    if proxies:
-        session.proxies.update(proxies)
+def configure_process_proxy() -> bool:
+    """Configure Requests-based provider sessions before they are created."""
+    proxy_url = get_proxy_url()
+    if not proxy_url:
+        return False
+
+    for name in ("HTTP_PROXY", "http_proxy", "HTTPS_PROXY", "https_proxy"):
+        os.environ[name] = proxy_url
+
+    # Keep local frontend/backend and loopback service calls off the external proxy.
+    existing = os.environ.get("NO_PROXY") or os.environ.get("no_proxy") or ""
+    bypass = [item.strip() for item in existing.split(",") if item.strip()]
+    for host in ("localhost", "127.0.0.1", "::1"):
+        if host not in bypass:
+            bypass.append(host)
+    no_proxy = ",".join(bypass)
+    os.environ["NO_PROXY"] = no_proxy
+    os.environ["no_proxy"] = no_proxy
+    return True
 
 
 def proxy_status() -> dict[str, object]:
