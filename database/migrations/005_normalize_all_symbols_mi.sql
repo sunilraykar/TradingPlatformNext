@@ -25,12 +25,12 @@ FROM All_symbols_MI AS snapshot
 JOIN JSON_TABLE(
     snapshot.response_payload,
     '$[*]' COLUMNS (
-        row_number FOR ORDINALITY,
+        ordinality FOR ORDINALITY,
         symbol VARCHAR(64) PATH '$.symbol',
         category VARCHAR(32) PATH '$.category'
     )
 ) AS jt
-    ON jt.row_number > 1
+    ON jt.ordinality > 1
 WHERE jt.symbol IS NOT NULL
   AND jt.category IS NOT NULL
   AND NOT EXISTS (
