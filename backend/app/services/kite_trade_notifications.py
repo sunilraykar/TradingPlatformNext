@@ -143,6 +143,14 @@ def _apply_fill(connection, account_id: str, fill: dict[str, Any], timestamp: An
     return classification, realized if closed_qty else None, new_qty, new_avg
 
 
+def _daily_baseline_initialized(account_id: str, now: datetime) -> bool:
+    key = f"telegram:kite-fill-baseline:{account_id}:{now.date().isoformat()}"
+    with get_engine().connect() as connection:
+        return connection.execute(text(
+            "SELECT 1 FROM notification_rule_state WHERE state_key=:key"
+        ), {"key": key}).first() is not None
+
+
 def _initialize_daily_position_baseline(account_id: str, positions: list[dict[str, Any]], fills: list[dict[str, Any]], now: datetime) -> bool:
     """Seed current broker positions once per account/day and suppress historical fill replay."""
     baseline_key = f"telegram:kite-fill-baseline:{account_id}:{now.date().isoformat()}"
@@ -212,7 +220,12 @@ def process_trade_book(provider=None) -> dict[str, int]:
     if not isinstance(net_positions, list):
         raise TypeError("Kite net positions response was not a list")
     now = datetime.now(IST)
-    _initialize_daily_position_baseline(account_id, net_positions, fills, now)
+    if not _daily_baseline_initialized(account_id, now):
+        positions_response = provider.positions()
+        net_positions = positions_response.get("net", []) if isinstance(positions_response, dict) else None
+        if not isinstance(net_positions, list):
+            raise TypeError("Kite net positions response was not a list")
+        _initialize_daily_position_baseline(account_id, net_positions, fills, now)
     queued = 0
     fills = sorted(
         [item for item in fills if isinstance(item, dict)],
