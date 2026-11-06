@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     kite_session_reset_time: str = "23:00"
     kite_session_reset_timezone: str = "Asia/Kolkata"
 
+    apiplatform_basic_auth: str = ""
+    apiplatform_headless: bool = True
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
