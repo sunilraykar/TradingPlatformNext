@@ -951,6 +951,7 @@ function TelegramSettings() {
     </div>
     {error && <div className="error-banner"><strong>Telegram issue</strong><span>{error}</span></div>}
     {message && <div className="settings-success">{message}</div>}
+    <div className="telegram-settings-grid">
     <section className="panel telegram-settings-card">
       <h3>Bot Credentials</h3>
       <label className="settings-control"><span>Telegram Bot Token</span><input type="password" autoComplete="new-password" placeholder={config.bot_configured ? 'Saved token — enter only to replace' : 'Enter Telegram Bot Token'} value={botToken} onChange={e => setBotToken(e.target.value)} /><small>Encrypted by the backend; never returned to the browser.</small></label>
@@ -1001,6 +1002,7 @@ function TelegramSettings() {
       <label className="settings-control"><span>Minimum severity</span><select value={config.notifications.telegramSystemAlertSeverity} onChange={e => changeNotification('telegramSystemAlertSeverity', e.target.value)}><option value="ERROR">ERROR and CRITICAL</option><option value="CRITICAL">CRITICAL only</option></select><small>Secrets and stack traces are not included in alert messages.</small></label>
       {field('telegramSystemAlertCooldownMinutes', 'Duplicate alert cooldown (minutes)', 'number', 'Suppress repeated matching log events during this period. Allowed: 1–1440 minutes.', 1, 1440)}
     </section>
+    </div>
     <div className="settings-actions">
       <button type="button" className="button primary" onClick={save} disabled={saving || testing}>{saving ? 'Saving…' : 'Save Telegram Settings'}</button>
       <button type="button" className="button secondary" onClick={sendTest} disabled={testing || saving || !config.enabled || !config.bot_configured || !config.chat_id.trim()}>{testing ? 'Sending…' : 'Send Test Message'}</button>
