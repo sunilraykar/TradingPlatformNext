@@ -16,7 +16,6 @@ def configure_apiplatform(auth: APIPLATFORMAuth | None = None) -> APIPLATFORMCli
 
 
 def get_apiplatform_auth() -> APIPLATFORMAuth:
-    global _auth
     if _auth is None:
         configure_apiplatform()
     assert _auth is not None
@@ -24,7 +23,6 @@ def get_apiplatform_auth() -> APIPLATFORMAuth:
 
 
 def get_apiplatform_client() -> APIPLATFORMClient:
-    global _client
     if _client is None:
         configure_apiplatform()
     assert _client is not None
