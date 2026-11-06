@@ -23,3 +23,21 @@ def test_live_trade_pnl_uses_broker_reported_value():
 def test_missing_or_invalid_pnl_is_not_guessed():
     assert _trade_pnl({"execution_mode": "PAPER", "entry_price": 100})[0] is None
     assert _trade_pnl({"execution_mode": "LIVE", "broker_pnl": "not-a-number"})[0] is None
+
+from app.api.telegram import TELEGRAM_NOTIFICATION_DEFAULTS
+
+
+def test_telegram_notification_defaults_cover_all_worker_controls():
+    assert TELEGRAM_NOTIFICATION_DEFAULTS["telegramPnlAlertThreshold"] == 1000
+    assert TELEGRAM_NOTIFICATION_DEFAULTS["telegramActiveSummaryIntervalMinutes"] == 15
+    assert TELEGRAM_NOTIFICATION_DEFAULTS["telegramDailySummaryTime"] == "15:45"
+    assert TELEGRAM_NOTIFICATION_DEFAULTS["telegramSystemAlertSeverity"] == "ERROR"
+    assert TELEGRAM_NOTIFICATION_DEFAULTS["telegramLiveFillPollSeconds"] == 15
+
+
+def test_live_pnl_is_never_derived_from_last_price():
+    pnl, _ = _trade_pnl({
+        "execution_mode": "LIVE", "entry_price": 100,
+        "last_price": 150, "quantity": 10,
+    })
+    assert pnl is None
