@@ -746,7 +746,7 @@ def update_trade(
                 quote_age = float("inf")
             quote_price = current.get("last_price")
             if quote_price is None or quote_age < 0 or quote_age > 30:
-                raise ValueError("Paper market close requires a valid quote from the last 30 seconds")
+                raise ValueError("Paper market close has no valid quote from the last 30 seconds")
             changes = dict(changes)
             changes["exit_price"] = float(quote_price)
             changes["average_exit_price"] = float(quote_price)
