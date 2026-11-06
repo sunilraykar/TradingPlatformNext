@@ -24,6 +24,18 @@ def test_fetch_option_chain_uses_expected_endpoint_and_parameter_names():
     response.raise_for_status.assert_called_once()
 
 
+def test_client_uses_configured_base_url():
+    auth = MagicMock()
+    response = MagicMock(status_code=200)
+    auth.session.request.return_value = response
+    client = APIPLATFORMClient(auth, base_url="https://example.test/api/")
+
+    client.get("/health")
+
+    args, _kwargs = auth.session.request.call_args
+    assert args == ("GET", "https://example.test/api/health")
+
+
 def test_client_reauthenticates_once_after_unauthorized_response():
     auth = MagicMock()
     first = MagicMock(status_code=401)
