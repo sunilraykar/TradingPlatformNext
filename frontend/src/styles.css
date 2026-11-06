@@ -1361,3 +1361,13 @@ select,input,textarea{
   .trade-terminal-table-panel .trade-terminal-table th{font-size:15px!important}
   .trade-terminal-table-panel .trade-terminal-table td{font-size:18px!important}
 }
+
+
+/* Dashboard only: double text in the green-highlighted price/VWAP, Y-axis and signal-summary areas. */
+.all-indices-card .all-indices-card-heading>div{font-size:20px!important}
+.all-indices-card .all-indices-card-heading>div span{font-size:16px!important}
+.all-indices-card .all-indices-card-heading>div strong{font-size:20px!important}
+.all-indices-card .chart-axis{font-size:16px!important}
+.all-indices-card .price-vwap-summary>span[aria-hidden="true"]{font-size:36px!important}
+.all-indices-card .price-vwap-summary>span:not([aria-hidden="true"])>span{font-size:20px!important}
+.all-indices-card .price-vwap-summary>span:not([aria-hidden="true"])>strong{font-size:24px!important}
