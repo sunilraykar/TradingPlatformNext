@@ -51,7 +51,12 @@ def test_login_posts_empty_json_with_basic_auth_and_browser_cookies(monkeypatch,
     cookies = [{"name": "cf_clearance", "value": "test-clearance", "domain": ".ltpcalculator.com"}]
     monkeypatch.setattr(auth, "_browser_cookies", lambda: (cookies, "test-agent"))
     monkeypatch.setattr(auth_module, "SESSION_FILE", tmp_path / "session.json")
-    monkeypatch.setenv("APIPLATFORM_BASIC_AUTH", "Basic test-value")
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        auth_module, "get_settings",
+        lambda: SimpleNamespace(apiplatform_basic_auth="Basic test-value", apiplatform_headless=True),
+    )
 
     response = MagicMock()
     response.json.return_value = {"data": {"token": _jwt(int(time.time()) + 3600)}}
