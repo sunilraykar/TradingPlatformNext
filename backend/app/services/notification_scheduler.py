@@ -192,7 +192,8 @@ async def run_scheduler() -> None:
                 end = datetime.strptime(str(_setting("telegramActiveSummaryEndTime", "15:30")), "%H:%M").time()
                 interval = int(_setting("telegramActiveSummaryIntervalMinutes", 15))
                 in_market = start <= now.time() < end
-                if _enabled("telegramActiveSummaryEnabled") and in_market and now.minute % interval == 0:
+                elapsed_from_start = (now.hour * 60 + now.minute) - (start.hour * 60 + start.minute)
+                if _enabled("telegramActiveSummaryEnabled") and in_market and elapsed_from_start % interval == 0:
                     bucket = now.strftime("%Y-%m-%d-%H-%M")
                     state_key = "telegram:active-summary:last-bucket"
                     state = get_rule_state(state_key) or {}
