@@ -45,9 +45,9 @@ Clean-room rebuild of TradingPlatform. The legacy repository is a feature refere
 
 The Kite API key/secret, encryption key, and MySQL credentials must remain local in `.env`; never commit secrets. The redirect URL used in the Kite developer console must match the local callback URL. The application does not ask you to paste request tokens or access tokens.
 
-## StaticIP.in outbound proxy
+## StaticIP.in proxy for Kite/Zerodha only
 
-The backend supports an authenticated StaticIP.in HTTP proxy for outbound REST/API traffic. Copy the **Host, Port, Username and Password** from the issued IP's details in the StaticIP.in dashboard; do not assume the hostname from an example. Keep these values only in `backend/.env`.
+The authenticated StaticIP.in proxy is applied explicitly to **Kite Connect REST requests only**, including Kite session exchange, profile/session validation, instrument downloads, quotes, and account REST methods. Configure the proxy using the Host, Port, Username and Password shown for the issued IP in the StaticIP.in dashboard. Keep these values only in `backend/.env`.
 
 Set:
 
@@ -60,17 +60,17 @@ OUTBOUND_PROXY_USERNAME=your-staticip-username
 OUTBOUND_PROXY_PASSWORD=your-staticip-password
 ```
 
-Restart the backend after changing these values. Before using broker order endpoints, verify the actual proxy egress address from the backend directory:
+Restart the backend after changing these values. Verify Kite proxy egress from the backend directory:
 
 ```powershell
 python -m app.core.proxy_check
 ```
 
-The command calls `https://api64.ipify.org` through the configured proxy and prints the observed public IP. It must match the static IP shown in the StaticIP.in dashboard and the address registered with Zerodha.
+The check makes a standalone request through the configured Kite proxy and prints the observed public IP. Compare it with the StaticIP.in address registered with Zerodha.
 
-Kite REST calls (including login-session exchange and account/order REST methods), APIPLATFORM REST sessions, and AutoTrender REST sessions use the configured proxy. The Kite market-data WebSocket remains direct because Zerodha does not require the registered static IP for WebSocket market data and the authenticated proxy WebSocket path has not been validated. The Selenium browser steps used to collect APIPLATFORM and AutoTrender website cookies also remain direct; their subsequent Python REST calls use the proxy. If either provider binds its browser cookies to the source IP, we will need to route that browser bootstrap through the proxy as a separate step. Localhost traffic is excluded from the process proxy. The proxy is disabled by default.
+**All other traffic remains direct:** Kite market-data WebSocket, AutoTrender REST and browser authentication, APIPLATFORM REST and browser authentication, and Firebase. The application does not set process-wide `HTTP_PROXY` or `HTTPS_PROXY` environment variables. The proxy configuration is passed only to KiteConnect REST clients.
 
-Do not paste proxy credentials into chat, source files, GitHub, or frontend environment variables. If the egress check does not return the exact dashboard IP, leave the proxy disabled for broker activity and resolve the proxy configuration first.
+Do not paste proxy credentials into chat, source files, GitHub, or frontend environment variables. If the egress check does not return the expected dashboard IP, leave the proxy disabled for broker activity and resolve the proxy configuration before enabling it.
 
 ## Daily session reset
 
