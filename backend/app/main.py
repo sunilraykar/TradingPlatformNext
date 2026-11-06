@@ -34,6 +34,7 @@ from app.services import (
     telegram_dispatcher,
     notification_scheduler,
     kite_trade_notifications,
+    system_alerts,
     trade_terminal,
 )
 from app.services.apiplatform_symbol_master import run_startup_symbol_master_refresh
@@ -108,6 +109,7 @@ async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
     ensure_notification_schema()
+    system_alerts.install_system_alert_handler()
     ensure_portfolio_snapshot_schema()
     # Restore a valid persisted APIPLATFORM JWT without starting another login.
     apiplatform_client = configure_apiplatform()
