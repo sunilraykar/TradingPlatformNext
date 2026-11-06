@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -57,7 +57,7 @@ def capture_daily_portfolio_snapshot() -> dict[str, Any]:
         raise RuntimeError("Kite profile did not include a user_id; snapshot was not saved")
     holdings = provider.holdings()
     if not isinstance(holdings, list):
-        raise RuntimeError("Kite holdings response was not a list")
+        raise TypeError("Kite holdings response was not a list")
 
     rows = []
     invested = current = total_pnl = day_pnl = 0.0
