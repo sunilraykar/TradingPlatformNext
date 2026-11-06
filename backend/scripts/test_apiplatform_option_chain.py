@@ -13,12 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-BACKEND_ROOT = Path(__file__).resolve().parents[1]
-if str(BACKEND_ROOT) not in sys.path:
-    sys.path.insert(0, str(BACKEND_ROOT))
-
-from app.providers.apiplatform.client import APIPLATFORMClientError
 from app.providers.apiplatform.auth import APIPLATFORMAuthError
+from app.providers.apiplatform.client import APIPLATFORMClientError
 from app.providers.apiplatform.registry import (
     get_apiplatform_client,
     shutdown_apiplatform,
@@ -59,7 +55,12 @@ def main() -> int:
 
     try:
         client = get_apiplatform_client()
-        print("APIPLATFORM session:", "authenticated" if client.auth.status()["authenticated"] else "login required")
+        session_state = (
+            "authenticated"
+            if client.auth.status()["authenticated"]
+            else "login required"
+        )
+        print("APIPLATFORM session:", session_state)
         payload = client.fetch_option_chain(
             symbol=args.symbol,
             expiry=args.expiry,
@@ -68,11 +69,12 @@ def main() -> int:
         print("\nLIVE OPTION-CHAIN REQUEST: SUCCESS")
         print("API base URL:", client.base_url.rstrip("/"))
         print("Endpoint: GET /optionChain/fetch-data")
-        print("Request:", json.dumps({
+        request_summary = {
             "symbol": args.symbol,
             "expiry": args.expiry,
             "lotSize": args.lot_size,
-        }))
+        }
+        print("Request:", json.dumps(request_summary))
         print("\nRESPONSE STRUCTURE SAMPLE:")
         print(json.dumps(_sample(payload), indent=2, ensure_ascii=False, default=str))
 
