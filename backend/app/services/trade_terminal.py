@@ -734,6 +734,22 @@ def update_trade(
             for field, expected in expected_quote.items():
                 if current.get(field) != expected:
                     raise ValueError("Trade quote or lifecycle state changed before update")
+        if (
+            str(current.get("execution_mode") or "").upper() == "PAPER"
+            and str(changes.get("status") or "").upper() == "CLOSED"
+            and str(changes.get("exit_method") or "").upper() == "PAPER_MARKET_SIMULATION"
+        ):
+            quote_timestamp = current.get("last_market_data_at") or current.get("last_quote_at") or current.get("quote_received_at")
+            try:
+                quote_age = (datetime.now(UTC).replace(tzinfo=None) - _naive_datetime(str(quote_timestamp))).total_seconds()
+            except (TypeError, ValueError):
+                quote_age = float("inf")
+            quote_price = current.get("last_price")
+            if quote_price is None or quote_age < 0 or quote_age > 30:
+                raise ValueError("Paper market close requires a valid quote from the last 30 seconds")
+            changes = dict(changes)
+            changes["exit_price"] = float(quote_price)
+            changes["average_exit_price"] = float(quote_price)
         if current.get("execution_mode") == "LIVE" and not event_type.startswith("BROKER_"):
             raise ValueError("Live trade lifecycle is controlled by broker reconciliation; manual updates are blocked.")
         updated = dict(current)
