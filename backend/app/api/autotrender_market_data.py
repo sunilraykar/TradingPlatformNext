@@ -369,7 +369,7 @@ def export_historical_intraday_rows(
     mins: Annotated[int, Query(ge=1, le=60)] = 5,
     enter: Annotated[str | None, Query()] = None,
 ) -> Response:
-    """Export historical rows from the same daily snapshot payload used by Historical Data."""
+    """Export the Historical Data table columns as plain scalar values."""
     normalized_index = index.upper()
     if normalized_index not in _INDEX_CATEGORIES:
         raise HTTPException(status_code=404, detail="Unsupported AutoTrender index")
@@ -378,6 +378,7 @@ def export_historical_intraday_rows(
     normalized_enter = (enter or "").strip().upper()
     if normalized_enter and normalized_enter not in {"BUY", "SELL", "WAIT"}:
         raise HTTPException(status_code=400, detail="Enter filter must be BUY, SELL, or WAIT")
+
     clauses = ["snapshot_type = :snapshot_type", "snapshot_key = :snapshot_key"]
     params = {"snapshot_type": "AUTOTRENDER_CACHE", "snapshot_key": "index-price"}
     if start_date:
@@ -391,11 +392,39 @@ def export_historical_intraday_rows(
             "SELECT trading_date, payload FROM market_snapshots WHERE "
             + " AND ".join(clauses) + " ORDER BY trading_date ASC, captured_at ASC"
         ), params).mappings().all()
-    headers = ["Trading Date", "Index", "Interval (Minutes)", "Time", "Call", "Put", "Diff", "PCR", "Price", "VWAP", "VWAP Signal", "Option Signal", "Call Strength", "Put Strength", "Call-Put Strength Diff", "Price-VWAP Buffer (%)", "Enter", "Original Row JSON"]
+
+    headers = [
+        "Trading Date", "Index", "Interval (Minutes)", "Time", "Call", "Put",
+        "Diff", "PCR", "Price", "VWAP", "VWAP Signal", "Option Signal",
+        "Call Strength", "Put Strength", "Call-Put Strength Diff",
+        "Price-VWAP Buffer (%)", "Enter",
+    ]
     output = io.StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(headers)
     exported = 0
+    thresholds = None
+
+    def scalar(value, preferred_key):
+        """Flatten AutoTrender display objects to the value shown in the table."""
+        if isinstance(value, dict):
+            if preferred_key in value:
+                return value[preferred_key]
+            for key in ("value", "type", "signal", "label"):
+                if key in value:
+                    return value[key]
+            return ""
+        if isinstance(value, (list, tuple)):
+            return ", ".join(str(item) for item in value)
+        return value if value is not None else ""
+
+    def pick(row, *keys):
+        for key in keys:
+            value = row.get(key)
+            if value is not None and value != "":
+                return value
+        return None
+
     for snapshot in snapshots:
         payload = snapshot["payload"]
         if isinstance(payload, str):
@@ -415,34 +444,56 @@ def export_historical_intraday_rows(
         for row in source_rows:
             if not isinstance(row, dict):
                 continue
-            def pick(*keys):
-                for key in keys:
-                    value = row.get(key)
-                    if value is not None and value != "":
-                        return value
-                return None
-            row_enter = str(pick("enter", "Enter", "enter_signal") or "").strip().upper()
+            if thresholds is None:
+                thresholds = _read_enter_thresholds()
+            evaluation = evaluate_signal(
+                row,
+                call_put_strength_diff=thresholds["callPutStrengthDiff"],
+                call_pcr=thresholds["callPcr"],
+                put_pcr=thresholds["putPcr"],
+                vwap_price_difference_buffer=thresholds["vwapPriceDifferenceBuffer"],
+            )
+            row_enter = str(
+                pick(row, "enter", "Enter", "enter_signal")
+                or (evaluation.direction if evaluation.eligible else "WAIT")
+            ).strip().upper()
             if normalized_enter and row_enter != normalized_enter:
                 continue
+
             writer.writerow([
                 snapshot["trading_date"].isoformat() if snapshot["trading_date"] else "",
-                normalized_index, payload.get("capture_interval_minutes", mins),
-                pick("time", "Time", "mtime", "Mtime") or "",
-                pick("call", "Call"), pick("put", "Put"), pick("diff", "Diff"),
-                pick("pcr", "Pcr", "PCR"), pick("price", "Price"), pick("vwap", "Vwap", "vWap", "VWAP"),
-                pick("vwapSignal", "VwapSignal", "vWapSignal", "VWAPSignal"),
-                pick("optionSignal", "OptionSignal"), pick("callStrength", "CallStrength"),
-                pick("putStrength", "PutStrength"), pick("strengthDiff", "StrengthDiff"),
-                pick("buffer", "vwapPriceBufferPct", "VwapPriceBufferPct"), row_enter,
-                json.dumps(row, ensure_ascii=False, default=str),
+                normalized_index,
+                payload.get("capture_interval_minutes", mins),
+                scalar(pick(row, "time", "Time", "mtime", "Mtime"), "value"),
+                scalar(pick(row, "call", "Call"), "value"),
+                scalar(pick(row, "put", "Put"), "value"),
+                scalar(pick(row, "diff", "Diff"), "value"),
+                scalar(pick(row, "pcr", "Pcr", "PCR"), "value"),
+                scalar(pick(row, "price", "Price"), "value"),
+                scalar(pick(row, "vwap", "Vwap", "vWap", "VWAP"), "value"),
+                scalar(pick(row, "vwapSignal", "VwapSignal", "vWapSignal", "VWAPSignal"), "type"),
+                scalar(pick(row, "optionSignal", "OptionSignal"), "type"),
+                scalar(pick(row, "callStrength", "CallStrength"), "value"),
+                scalar(pick(row, "putStrength", "PutStrength"), "value"),
+                scalar(pick(row, "strengthDiff", "StrengthDiff"), "value"),
+                scalar(pick(row, "buffer", "vwapPriceBufferPct", "VwapPriceBufferPct"), "value"),
+                row_enter,
             ])
             exported += 1
+
     if exported == 0:
-        raise HTTPException(status_code=404, detail="No historical intraday rows were found for the selected index, date range and Enter filter. Check that daily snapshots contain intraday data.")
+        raise HTTPException(
+            status_code=404,
+            detail="No historical intraday rows were found for the selected index, date range and Enter filter. Check that daily snapshots contain intraday data.",
+        )
     csv_content = "\ufeff" + output.getvalue()
     date_suffix = (f"_{start_date.isoformat()}" if start_date else "") + (f"_to_{end_date.isoformat()}" if end_date else "")
     filename = f"{normalized_index.lower()}_intraday_history{date_suffix}.csv"
-    return Response(content=csv_content, media_type="text/csv; charset=utf-8", headers={"Content-Disposition": "attachment; filename=" + filename})
+    return Response(
+        content=csv_content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": "attachment; filename=" + filename},
+    )
 
 @router.get("/indices/{index}/oi-graph")
 def index_oi_graph(index: str, request: Request) -> dict:
