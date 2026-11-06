@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     mysql_password: str = ""
     mysql_pool_size: int = 5
 
+    # StaticIP.in authenticated outbound HTTP proxy. Disabled until configured locally.
+    outbound_proxy_enabled: bool = False
+    outbound_proxy_scheme: str = "http"
+    outbound_proxy_host: str = ""
+    outbound_proxy_port: int = 443
+    outbound_proxy_username: str = ""
+    outbound_proxy_password: str = ""
+
     kite_api_key: str = ""
     kite_api_secret: str = ""
     kite_access_token: str = ""
