@@ -223,6 +223,19 @@ def _persist(trade: dict[str, Any], event_type: str, event_payload: dict[str, An
                     with conn.begin_nested():
                         if not notifications_enabled(conn):
                             raise _NotificationDisabled()
+                        event_setting = "ui.telegramPaperTradeEntryEnabled" if notification_kind == "PAPER_TRADE_ENTERED" else "ui.telegramPaperTradeExitEnabled"
+                        event_setting_row = conn.execute(text(
+                            "SELECT setting_value FROM app_settings WHERE setting_key = :key"
+                        ), {"key": event_setting}).first()
+                        if event_setting_row:
+                            setting_value = event_setting_row[0]
+                            if isinstance(setting_value, str):
+                                try:
+                                    setting_value = json.loads(setting_value)
+                                except (TypeError, ValueError):
+                                    setting_value = setting_value.strip().lower() in {"1", "true", "yes", "on"}
+                            if not bool(setting_value):
+                                raise _NotificationDisabled()
                         if notification_kind == "PAPER_TRADE_ENTERED":
                             fields = (
                                 "trade_id", "underlying", "instrument_symbol", "strategy",
