@@ -287,7 +287,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
 }
 
 
-function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
+function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists = false }) {
   const underlyingKey = (Array.isArray(underlyings) ? underlyings : [underlyings])
     .map((value) => String(value || '').trim().toUpperCase()).filter(Boolean).join('|');
   const [trades, setTrades] = useState([]);
@@ -429,34 +429,43 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null }) {
 
   const cacheUnavailable = !trades.length && !loading && terminal?.cached_trades === 0 && terminal?.persistence_degraded;
   const dateHeading = selectedDate ? new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Today';
-  return <aside className="panel autotrend-active-trades" aria-label={`${dateHeading} open and closed trades`}>
-    <div className="autotrend-active-trades-heading">
-      <div><div className="eyebrow">{dateHeading.toUpperCase()} · OPEN &amp; CLOSED</div><h3>{selectedDate ? 'Trades' : "Today's Trades"}</h3></div>
-      <span className="autotrend-active-trades-count">{trades.length}</span>
-    </div>
-    {error && <div className="autotrend-active-trades-error">{error}</div>}
-    {cacheUnavailable && <div className="autotrend-active-trades-error">Trade history could not be loaded from the database. Check backend database connectivity.</div>}
-    <div className="autotrend-active-trades-list">
-      <table className="autotrend-trades-table">
-        <thead><tr><th>Symbol</th><th>Entry</th><th>LTP</th><th>Target</th><th>P&amp;L</th></tr></thead>
-        <tbody>
-          {trades.map((trade) => {
-            const pnl = tradePnl(trade);
-            const ltp = trade.last_price ?? trade.exit_price ?? trade.average_exit_price;
-            return <tr key={trade.trade_id}>
-              <td title={trade.instrument_symbol || trade.underlying}>{trade.instrument_symbol || trade.underlying || '—'}</td>
-              <td>{number(trade.average_entry_price ?? trade.entry_price)}</td>
-              <td>{number(ltp)}</td>
-              <td>{number(trade.target)}</td>
-              <td className={pnl === null ? '' : pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}>{formatPnl(pnl)}</td>
-            </tr>;
-          })}
-          {!trades.length && !loading && !error && !cacheUnavailable && <tr><td colSpan="5" className="autotrend-trades-empty">No OPEN or CLOSED trades recorded for this date.</td></tr>}
-          {!trades.length && loading && <tr><td colSpan="5" className="autotrend-trades-empty">Loading trades…</td></tr>}
-        </tbody>
-      </table>
-    </div>
-  </aside>;
+  const renderPanel = (status, title) => {
+    const items = trades.filter((trade) => String(trade.status || 'OPEN').toUpperCase() === status);
+    return <aside className="panel autotrend-active-trades" key={status} aria-label={dateHeading + ' ' + title.toLowerCase() + ' trades'}>
+      <div className="autotrend-active-trades-heading">
+        <div><div className="eyebrow">{dateHeading.toUpperCase()} · {title.toUpperCase()}</div><h3>{title} Trades</h3></div>
+        <span className="autotrend-active-trades-count">{items.length}</span>
+      </div>
+      {error && <div className="autotrend-active-trades-error">{error}</div>}
+      {cacheUnavailable && <div className="autotrend-active-trades-error">Trade history could not be loaded from the database. Check backend database connectivity.</div>}
+      <div className="autotrend-active-trades-list">
+        <table className="autotrend-trades-table">
+          <thead><tr><th>Symbol</th><th>Entry</th><th>LTP</th><th>Target</th><th>P&amp;L</th></tr></thead>
+          <tbody>
+            {items.map((trade) => {
+              const pnl = tradePnl(trade);
+              const ltp = trade.last_price ?? trade.exit_price ?? trade.average_exit_price;
+              return <tr key={trade.trade_id}>
+                <td title={trade.instrument_symbol || trade.underlying}>{trade.instrument_symbol || trade.underlying || '—'}</td>
+                <td>{number(trade.average_entry_price ?? trade.entry_price)}</td>
+                <td>{number(ltp)}</td>
+                <td>{number(trade.target)}</td>
+                <td className={pnl === null ? '' : pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}>{formatPnl(pnl)}</td>
+              </tr>;
+            })}
+            {!items.length && !loading && !error && !cacheUnavailable && <tr><td colSpan="5" className="autotrend-trades-empty">No {title.toLowerCase()} trades for this date.</td></tr>}
+            {!items.length && loading && <tr><td colSpan="5" className="autotrend-trades-empty">Loading trades…</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </aside>;
+  };
+  if (splitLists) return <section className="dashboard-day-trades" aria-label="Today's active and closed trades">
+    {renderPanel('OPEN', 'Active')}
+    {renderPanel('CLOSED', 'Closed')}
+  </section>;
+  return renderPanel('OPEN', selectedDate ? 'Active' : "Today's");
+
 }
 
 function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
@@ -515,6 +524,7 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
         </article>;
       })}
     </div>
+    <AutoTrenderActiveTrades underlyings={DEFAULT_INDICES} splitLists />
   </section>;
 }
 
