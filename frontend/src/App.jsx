@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TradeTerminal from './TradeTerminal.jsx';
+import ApiplatformOptionChain from './ApiplatformOptionChain.jsx';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'];
@@ -2026,6 +2027,7 @@ export default function App() {
       <nav className="application-tabs" aria-label="Application section">
         <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
+        <button type="button" className={applicationTab === 'apiplatform' ? 'active' : ''} onClick={() => setApplicationTab('apiplatform')}>APIPLATFORM</button>
         <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>
         <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
       </nav>
@@ -2094,7 +2096,7 @@ export default function App() {
       <footer className="footer">
       </footer>
       </>}
-      </>) : <>
+      </>) : applicationTab === 'apiplatform' ? <ApiplatformOptionChain /> : <>
                 <nav className="kite-tabs" aria-label="Kite sections">
           {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings'].map((tab) =>
             <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => setKiteTab(tab)}>{tab}</button>
