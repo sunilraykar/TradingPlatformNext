@@ -55,6 +55,9 @@ def main() -> int:
 
     try:
         client = get_apiplatform_client()
+        if not client.auth.session.cookies:
+            print("No browser cookies in this diagnostic session; establishing a fresh login.")
+            client.auth.login(force=True)
         session_state = (
             "authenticated"
             if client.auth.status()["authenticated"]
