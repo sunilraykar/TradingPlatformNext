@@ -57,3 +57,14 @@ def test_enabled_proxy_requires_credentials(monkeypatch):
 
     with pytest.raises(RuntimeError, match="USERNAME and OUTBOUND_PROXY_PASSWORD"):
         outbound_proxy.get_proxy_url()
+
+
+def test_proxy_status_is_kite_only(monkeypatch):
+    monkeypatch.setattr(outbound_proxy, "get_settings", lambda: _settings())
+
+    status = outbound_proxy.proxy_status()
+
+    assert status["kite_rest"] is True
+    assert status["kite_websocket"] is False
+    assert status["other_providers"] is False
+    assert status["firebase"] is False
