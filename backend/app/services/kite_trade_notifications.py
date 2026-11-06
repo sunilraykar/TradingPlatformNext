@@ -49,6 +49,14 @@ def _format_time(value: Any) -> str:
 def _ensure_fill_position_schema() -> None:
     with get_engine().begin() as connection:
         connection.execute(text("""
+            CREATE TABLE IF NOT EXISTS kite_notification_processed_fills (
+                account_id VARCHAR(64) NOT NULL,
+                broker_trade_id VARCHAR(128) NOT NULL,
+                processed_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (account_id, broker_trade_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        """))
+        connection.execute(text("""
             CREATE TABLE IF NOT EXISTS kite_notification_positions (
                 account_id VARCHAR(64) NOT NULL,
                 position_key VARCHAR(255) NOT NULL,
@@ -155,10 +163,11 @@ def process_trade_book(provider=None) -> dict[str, int]:
         try:
             with get_engine().begin() as connection:
                 dedupe = f"kite-live-fill:{account_id}:{fill_id}"
-                existing = connection.execute(text(
-                    "SELECT event_id FROM notification_events WHERE deduplication_key=:key"
-                ), {"key": dedupe}).first()
-                if existing:
+                claimed = connection.execute(text("""
+                    INSERT IGNORE INTO kite_notification_processed_fills (account_id, broker_trade_id)
+                    VALUES (:account_id, :trade_id)
+                """), {"account_id": account_id, "trade_id": fill_id})
+                if claimed.rowcount != 1:
                     continue
                 classification, realized, net_qty, avg_price = _apply_fill(connection, account_id, fill, occurred_at)
                 is_exit = classification in {"PARTIAL EXIT", "FINAL EXIT", "REVERSAL"}
