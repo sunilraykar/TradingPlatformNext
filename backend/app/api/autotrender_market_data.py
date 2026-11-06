@@ -369,59 +369,80 @@ def export_historical_intraday_rows(
     mins: Annotated[int, Query(ge=1, le=60)] = 5,
     enter: Annotated[str | None, Query()] = None,
 ) -> Response:
-    """Export every persisted intraday row for an index, optionally filtered by date and Enter signal."""
+    """Export historical rows from the same daily snapshot payload used by Historical Data."""
     normalized_index = index.upper()
     if normalized_index not in _INDEX_CATEGORIES:
         raise HTTPException(status_code=404, detail="Unsupported AutoTrender index")
     if start_date and end_date and start_date > end_date:
-        raise HTTPException(status_code=400, detail="Start date must be on or before end date")
+        raise HTTPException(status_code=400, detail="Start date must be on or before the end date")
     normalized_enter = (enter or "").strip().upper()
     if normalized_enter and normalized_enter not in {"BUY", "SELL", "WAIT"}:
         raise HTTPException(status_code=400, detail="Enter filter must be BUY, SELL, or WAIT")
-    _ensure_intraday_table()
-    clauses = ["index_name = :index_name", "interval_minutes = :mins"]
-    params = {"index_name": normalized_index, "mins": mins}
+    clauses = ["snapshot_type = :snapshot_type", "snapshot_key = :snapshot_key"]
+    params = {"snapshot_type": "AUTOTRENDER_CACHE", "snapshot_key": "index-price"}
     if start_date:
         clauses.append("trading_date >= :start_date")
         params["start_date"] = start_date
     if end_date:
         clauses.append("trading_date <= :end_date")
         params["end_date"] = end_date
-    if normalized_enter:
-        clauses.append("enter_signal = :enter_signal")
-        params["enter_signal"] = normalized_enter
+    with get_engine().connect() as connection:
+        snapshots = connection.execute(text(
+            "SELECT trading_date, payload FROM market_snapshots WHERE "
+            + " AND ".join(clauses) + " ORDER BY trading_date ASC, captured_at ASC"
+        ), params).mappings().all()
     headers = ["Trading Date", "Index", "Interval (Minutes)", "Time", "Call", "Put", "Diff", "PCR", "Price", "VWAP", "VWAP Signal", "Option Signal", "Call Strength", "Put Strength", "Call-Put Strength Diff", "Price-VWAP Buffer (%)", "Enter", "Original Row JSON"]
     output = io.StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(headers)
-    with get_engine().connect() as connection:
-        rows = connection.execute(text(f"""
-            SELECT trading_date, index_name, interval_minutes, row_time,
-                   call_value, put_value, diff_value, pcr_value, price_value,
-                   vwap_value, vwap_signal, option_signal, call_strength,
-                   put_strength, strength_diff, vwap_price_buffer_pct,
-                   enter_signal, raw_row
-            FROM autotrender_intraday_rows
-            WHERE {" AND ".join(clauses)}
-            ORDER BY trading_date ASC, row_time ASC
-        """), params).mappings().all()
-    for row in rows:
-        raw = row["raw_row"]
-        if isinstance(raw, (dict, list)):
-            raw = json.dumps(raw, ensure_ascii=False, default=str)
-        writer.writerow([
-            row["trading_date"].isoformat() if row["trading_date"] else "",
-            row["index_name"], row["interval_minutes"], row["row_time"],
-            row["call_value"], row["put_value"], row["diff_value"],
-            row["pcr_value"], row["price_value"], row["vwap_value"],
-            row["vwap_signal"], row["option_signal"], row["call_strength"],
-            row["put_strength"], row["strength_diff"], row["vwap_price_buffer_pct"],
-            row["enter_signal"], raw or "",
-        ])
+    exported = 0
+    for snapshot in snapshots:
+        payload = snapshot["payload"]
+        if isinstance(payload, str):
+            try:
+                payload = json.loads(payload)
+            except (TypeError, ValueError):
+                continue
+        if not isinstance(payload, dict):
+            continue
+        indices = payload.get("indices") or {}
+        index_data = indices.get(normalized_index, {}) if isinstance(indices, dict) else {}
+        intraday = index_data.get("intraday") if isinstance(index_data, dict) else None
+        if not isinstance(intraday, dict) or intraday.get("error"):
+            continue
+        candidate = intraday.get("data") or intraday.get("rows") or intraday.get("result")
+        source_rows = candidate if isinstance(candidate, list) else [candidate] if isinstance(candidate, dict) else []
+        for row in source_rows:
+            if not isinstance(row, dict):
+                continue
+            def pick(*keys):
+                for key in keys:
+                    value = row.get(key)
+                    if value is not None and value != "":
+                        return value
+                return None
+            row_enter = str(pick("enter", "Enter", "enter_signal") or "").strip().upper()
+            if normalized_enter and row_enter != normalized_enter:
+                continue
+            writer.writerow([
+                snapshot["trading_date"].isoformat() if snapshot["trading_date"] else "",
+                normalized_index, payload.get("capture_interval_minutes", mins),
+                pick("time", "Time", "mtime", "Mtime") or "",
+                pick("call", "Call"), pick("put", "Put"), pick("diff", "Diff"),
+                pick("pcr", "Pcr", "PCR"), pick("price", "Price"), pick("vwap", "Vwap", "vWap", "VWAP"),
+                pick("vwapSignal", "VwapSignal", "vWapSignal", "VWAPSignal"),
+                pick("optionSignal", "OptionSignal"), pick("callStrength", "CallStrength"),
+                pick("putStrength", "PutStrength"), pick("strengthDiff", "StrengthDiff"),
+                pick("buffer", "vwapPriceBufferPct", "VwapPriceBufferPct"), row_enter,
+                json.dumps(row, ensure_ascii=False, default=str),
+            ])
+            exported += 1
+    if exported == 0:
+        raise HTTPException(status_code=404, detail="No historical intraday rows were found for the selected index, date range and Enter filter. Check that daily snapshots contain intraday data.")
     csv_content = "\ufeff" + output.getvalue()
     date_suffix = (f"_{start_date.isoformat()}" if start_date else "") + (f"_to_{end_date.isoformat()}" if end_date else "")
     filename = f"{normalized_index.lower()}_intraday_history{date_suffix}.csv"
-    return Response(content=csv_content, media_type="text/csv; charset=utf-8", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    return Response(content=csv_content, media_type="text/csv; charset=utf-8", headers={"Content-Disposition": "attachment; filename=" + filename})
 
 @router.get("/indices/{index}/oi-graph")
 def index_oi_graph(index: str, request: Request) -> dict:
