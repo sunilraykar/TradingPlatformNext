@@ -92,3 +92,31 @@ def test_client_reauthenticates_once_after_unauthorized_response():
     auth.invalidate.assert_called_once_with(expected_token="old-token")
     auth.login.assert_called_once()
     assert auth.session.request.call_count == 2
+
+
+def test_fetch_all_symbols_uses_live_type_and_authenticated_client():
+    auth = MagicMock()
+    response = MagicMock()
+    response.json.return_value = {"symbols": [{"symbol": "NIFTY", "lotSize": 65}]}
+    auth.session.request.return_value = response
+    client = APIPLATFORMClient(auth)
+
+    result = client.fetch_all_symbols()
+
+    assert result == {"symbols": [{"symbol": "NIFTY", "lotSize": 65}]}
+    args, kwargs = auth.session.request.call_args
+    assert args == ("GET", "https://apiplatform.ltpcalculator.com/optionChain/all-symbol")
+    assert kwargs["params"] == {"type": "LIVE"}
+    auth.ensure_authenticated.assert_called_once()
+    response.raise_for_status.assert_called_once()
+
+
+def test_fetch_all_symbols_rejects_empty_response():
+    auth = MagicMock()
+    response = MagicMock()
+    response.json.return_value = []
+    auth.session.request.return_value = response
+    client = APIPLATFORMClient(auth)
+
+    with pytest.raises(Exception, match="empty or unexpected payload"):
+        client.fetch_all_symbols()
