@@ -1413,3 +1413,9 @@ select,input,textarea{
   background:rgba(248,113,113,.16);
   border-color:rgba(248,113,113,.42);
 }
+
+
+/* Keep both AutoTrender dashboard trade lists tall enough to display at least five rows. */
+.dashboard-day-trades .autotrend-active-trades{min-height:340px}
+.dashboard-day-trades .autotrend-active-trades-list{min-height:250px;max-height:300px;overflow-y:auto;flex:1 1 auto}
+.dashboard-day-trades .autotrend-trades-table tbody tr{height:42px}
