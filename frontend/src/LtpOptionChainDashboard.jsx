@@ -296,7 +296,7 @@ export default function LtpOptionChainDashboard() {
     ? (n(spotQuote.last_price) - n(spotQuote.ohlc.close)) / n(spotQuote.ohlc.close) * 100 : null;
   const total = (field) => visibleRows.reduce((sum, row) => sum + (n(row[field]) || 0), 0);
 
-  return <main className="ltp-option-chain">
+  return <section className="ltp-option-chain">
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
       <div className="ltp-controls">
@@ -354,5 +354,5 @@ export default function LtpOptionChainDashboard() {
       <div><span>SUPPORT SHIFT</span><strong>{rs.S_ShiftingStrike || '—'}</strong><small>Volume {rs.S_Vol_ShiftingStrike || '—'} · OI {rs.S_OI_ShiftingStrike || '—'}</small></div>
     </section>
     <footer className="ltp-footer">Market data is provided by APIPLATFORM and Kite Connect. Verify all levels independently before placing trades.</footer>
-  </main>;
+  </section>;
 }
