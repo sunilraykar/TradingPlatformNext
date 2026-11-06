@@ -1,6 +1,24 @@
 from app.services import trade_terminal
 
 
+def _mock_empty_strategy_settings(monkeypatch):
+    class Result:
+        def mappings(self):
+            return self
+        def all(self):
+            return []
+
+    class Connection:
+        def execute(self, *args, **kwargs):
+            return Result()
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(trade_terminal, "get_engine", lambda: Connection())
+
+
 def setup_function():
     trade_terminal._cache.clear()
     trade_terminal._dirty.clear()
@@ -74,6 +92,7 @@ def test_quote_updates_matching_open_trade_in_memory_and_publishes(monkeypatch):
 
 
 def test_create_trade_is_paper_only_and_persists(monkeypatch):
+    _mock_empty_strategy_settings(monkeypatch)
     calls = []
     monkeypatch.setattr(trade_terminal, "_persist", lambda trade, event, payload: calls.append((trade.copy(), event, payload)))
     trade = trade_terminal.create_trade({
@@ -135,18 +154,16 @@ def test_backend_calculates_realized_pnl_for_closed_sell(monkeypatch):
     assert "closed_quantity" not in updated
 
 
-def test_backend_rejects_close_without_valid_prices_or_quantity(monkeypatch):
+def test_paper_trade_can_be_closed_when_legacy_prices_are_missing(monkeypatch):
     monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
     trade_terminal._cache["trade-invalid-close"] = {
         "trade_id": "trade-invalid-close", "execution_mode": "PAPER", "status": "OPEN",
-        "direction": "BUY", "quantity": 10, "open_quantity": 10,
-        "version": 1, "updated_at": "2026-01-01T00:00:00+00:00",
+        "direction": "BUY", "quantity": 10, "version": 1,
+        "updated_at": "2026-01-01T00:00:00+00:00",
     }
-    try:
-        trade_terminal.update_trade("trade-invalid-close", {"status": "CLOSED", "realized_pnl": 0})
-        assert False, "Closing without valid entry and exit prices must fail"
-    except ValueError as exc:
-        assert "valid entry price" in str(exc)
+    closed = trade_terminal.update_trade("trade-invalid-close", {"status": "CLOSED"})
+    assert closed["status"] == "CLOSED"
+    assert closed.get("gross_realized_pnl") is None
 
 
 def test_dirty_trade_retries(monkeypatch):
@@ -196,6 +213,7 @@ def test_flattened_live_position_is_durably_closed(monkeypatch):
 
 
 def test_create_trade_is_idempotent_for_same_request_key(monkeypatch):
+    _mock_empty_strategy_settings(monkeypatch)
     calls = []
     monkeypatch.setattr(trade_terminal, "_persist", lambda trade, event, payload: calls.append(event))
     payload = {
