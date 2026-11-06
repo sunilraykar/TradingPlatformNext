@@ -1336,3 +1336,28 @@ select,input,textarea{
 .holdings-history-axis{display:flex;justify-content:space-between;color:var(--muted);font-size:10px}
 .holdings-history-empty{padding:26px 10px;text-align:center;color:var(--muted);font-size:12px}
 @media(max-width:760px){.holdings-history-header{align-items:flex-start;flex-direction:column}.holdings-history-periods{width:100%;overflow-x:auto;flex-wrap:nowrap}.holdings-history-periods button{flex:0 0 auto}.holdings-history-kpis{gap:14px}.holdings-history-kpis strong{font-size:13px}.holdings-history-chart{height:120px}}
+
+
+/* Trade Terminal readability: double typography in the Trade Terminal workspace. */
+.trade-terminal-page .trade-terminal-overview .metric span{font-size:1.5rem!important}
+.trade-terminal-page .trade-terminal-overview .metric strong{font-size:2rem!important}
+.trade-terminal-page .trade-terminal-actions .button{font-size:1.5rem!important;padding:12px 16px}
+.trade-terminal-page .trade-date-navigator-label>span{font-size:1.25rem!important}
+.trade-terminal-page .trade-date-navigator-label>strong{font-size:2rem!important}
+.trade-terminal-page .trade-date-nav-button{font-size:2rem!important}
+.trade-terminal-page .trade-filter-label{font-size:1.4rem!important}
+.trade-terminal-page .trade-filter-button{font-size:1.5rem!important;padding:10px 15px;min-height:44px}
+.trade-terminal-page .trade-terminal-count{font-size:1.4rem!important}
+.trade-terminal-page .trade-terminal-table{font-size:22px!important}
+.trade-terminal-page .trade-terminal-table th{font-size:18px!important}
+.trade-terminal-page .trade-terminal-table td{font-size:22px!important}
+.trade-terminal-page .trade-sort-header{font-size:inherit!important}
+.trade-terminal-page .trade-terminal-filters select,
+.trade-terminal-page .trade-terminal-filters input{font-size:1.5rem!important;min-height:44px}
+@media(max-width:760px){
+  .trade-terminal-page .trade-terminal-overview .metric span{font-size:1.1rem!important}
+  .trade-terminal-page .trade-terminal-overview .metric strong{font-size:1.4rem!important}
+  .trade-terminal-page .trade-terminal-table{font-size:18px!important}
+  .trade-terminal-page .trade-terminal-table th{font-size:15px!important}
+  .trade-terminal-page .trade-terminal-table td{font-size:18px!important}
+}
