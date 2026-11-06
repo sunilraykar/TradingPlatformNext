@@ -33,9 +33,6 @@ def test_notification_status_route_is_registered():
 
 
 def test_notification_status_preflight_allows_vite_origin():
-    from app.main import app
-    from fastapi.testclient import TestClient
-
     response = TestClient(app).options(
         "/api/v1/notifications/status",
         headers={
