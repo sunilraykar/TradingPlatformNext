@@ -878,7 +878,11 @@ function TelegramSettings() {
     telegramActiveSummaryEndTime: '15:30', telegramDailySummaryEnabled: true,
     telegramDailySummaryTime: '15:45', telegramLiveFillPollSeconds: 15,
     telegramSystemAlertsEnabled: true, telegramSystemAlertSeverity: 'ERROR',
-    telegramSystemAlertCooldownMinutes: 15,
+    telegramSystemAlertCooldownMinutes: 15, telegramDispatcherIdlePollSeconds: 5,
+    telegramDispatcherActivePollMilliseconds: 500, telegramRequestTimeoutSeconds: 15,
+    telegramMaxDeliveryAttempts: 5, telegramRetryDelay1Seconds: 5,
+    telegramRetryDelay2Seconds: 30, telegramRetryDelay3Seconds: 120,
+    telegramRetryDelay4Seconds: 600,
   };
   const [config, setConfig] = useState({ enabled: false, chat_id: '', bot_configured: false, notifications: defaults });
   const [botToken, setBotToken] = useState('');
@@ -979,6 +983,17 @@ function TelegramSettings() {
       <h3>Daily Trading Summary</h3>
       {toggle('telegramDailySummaryEnabled', 'Enable daily summary', 'Send trade counts and available realized/unrealized P&L once per weekday.')}
       {field('telegramDailySummaryTime', 'Daily summary time (IST)', 'time', '24-hour time; default 15:45.')}
+    </section>
+    <section className="panel telegram-settings-card">
+      <h3>Delivery & Retry Policy</h3>
+      {field('telegramRequestTimeoutSeconds', 'Telegram request timeout (seconds)', 'number', 'HTTP timeout per delivery attempt. Allowed: 5–60 seconds.', 5, 60)}
+      {field('telegramMaxDeliveryAttempts', 'Maximum delivery attempts', 'number', 'Messages are marked failed after this many attempts. Allowed: 1–10.', 1, 10)}
+      {field('telegramRetryDelay1Seconds', 'Retry delay after attempt 1 (seconds)', 'number', 'First retry backoff.', 1, 3600)}
+      {field('telegramRetryDelay2Seconds', 'Retry delay after attempt 2 (seconds)', 'number', 'Second retry backoff.', 1, 3600)}
+      {field('telegramRetryDelay3Seconds', 'Retry delay after attempt 3 (seconds)', 'number', 'Third retry backoff.', 1, 3600)}
+      {field('telegramRetryDelay4Seconds', 'Retry delay after attempt 4+ (seconds)', 'number', 'Final retry backoff used for later attempts.', 1, 3600)}
+      {field('telegramDispatcherIdlePollSeconds', 'Idle queue poll (seconds)', 'number', 'How often the dispatcher checks an empty queue.', 1, 60)}
+      {field('telegramDispatcherActivePollMilliseconds', 'Active queue poll (milliseconds)', 'number', 'Delay after successfully delivering a queued message.', 100, 5000)}
     </section>
     <section className="panel telegram-settings-card">
       <h3>System Alerts</h3>
