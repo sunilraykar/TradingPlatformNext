@@ -101,6 +101,24 @@ class APIPLATFORMClient:
     def post(self, endpoint: str, **kwargs: Any) -> Any:
         return self.request("POST", endpoint, **kwargs)
 
+    def fetch_all_symbols(self, symbol_type: str = "LIVE") -> Any:
+        """Fetch the APIPLATFORM symbol master using the authenticated session."""
+        normalized_type = str(symbol_type).strip().upper()
+        if normalized_type != "LIVE":
+            raise ValueError("APIPLATFORM symbol master currently supports type=LIVE only.")
+        response = self.get("/optionChain/all-symbol", params={"type": normalized_type})
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise APIPLATFORMClientError(
+                "APIPLATFORM all-symbol endpoint returned a non-JSON response."
+            ) from exc
+        if not isinstance(payload, (dict, list)) or not payload:
+            raise APIPLATFORMClientError(
+                "APIPLATFORM all-symbol endpoint returned an empty or unexpected payload."
+            )
+        return payload
+
     def fetch_option_chain(
         self,
         symbol: str,
