@@ -71,10 +71,12 @@ Run this from the `backend` directory after configuring `.env`:
 ```
 
 Replace the expiry with an expiry accepted by APIPLATFORM and use the lot size for that
-contract. The script uses the shared authentication/client code, fetches one live response,
-and prints a bounded sample of its structure (including top-level fields and sample
-`symbolMarketDirection`, `RS_Status`, and `OptionChain` structures when present).
-It does not print authentication credentials or JWTs.
+contract. The script creates its own backend client process. Because the persisted session file
+stores the JWT but not browser cookies, the diagnostic explicitly establishes a fresh
+browser-backed login before requesting data when its new session has no cookies. It then
+fetches one live response and prints a bounded sample of its structure (including top-level
+fields and sample `symbolMarketDirection`, `RS_Status`, and `OptionChain` structures
+when present). It does not print authentication credentials or JWTs.
 
 To save the complete response for local inspection, add:
 
