@@ -869,7 +869,18 @@ function InstrumentsViewer() {
 
 
 function TelegramSettings() {
-  const [config, setConfig] = useState({ enabled: false, chat_id: '', bot_configured: false });
+  const defaults = {
+    telegramPaperTradeEntryEnabled: true, telegramPaperTradeExitEnabled: true,
+    telegramLiveFillEnabled: true, telegramPnlAlertsEnabled: true,
+    telegramPnlAlertThreshold: 1000, telegramPnlAlertCheckSeconds: 15,
+    telegramPnlAlertRearmEnabled: true, telegramActiveSummaryEnabled: true,
+    telegramActiveSummaryIntervalMinutes: 15, telegramActiveSummaryStartTime: '09:15',
+    telegramActiveSummaryEndTime: '15:30', telegramDailySummaryEnabled: true,
+    telegramDailySummaryTime: '15:45', telegramLiveFillPollSeconds: 15,
+    telegramSystemAlertsEnabled: true, telegramSystemAlertSeverity: 'ERROR',
+    telegramSystemAlertCooldownMinutes: 15,
+  };
+  const [config, setConfig] = useState({ enabled: false, chat_id: '', bot_configured: false, notifications: defaults });
   const [botToken, setBotToken] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -878,127 +889,111 @@ function TelegramSettings() {
   const [message, setMessage] = useState('');
 
   const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
+    setLoading(true); setError('');
     try {
       const result = await api('/telegram/config');
       setConfig({
-        enabled: Boolean(result.enabled),
-        chat_id: result.chat_id || '',
+        enabled: Boolean(result.enabled), chat_id: result.chat_id || '',
         bot_configured: Boolean(result.bot_configured),
+        notifications: { ...defaults, ...(result.notifications || {}) },
       });
-    } catch (e) {
-      setError(e.message || 'Unable to load Telegram configuration.');
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { setError(e.message || 'Unable to load Telegram configuration.'); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
+  const changeNotification = (key, value) => setConfig(current => ({
+    ...current, notifications: { ...current.notifications, [key]: value },
+  }));
   const save = async () => {
-    setSaving(true);
-    setError('');
-    setMessage('');
+    setSaving(true); setError(''); setMessage('');
     try {
-      const payload = { ...config, bot_token: botToken.trim() || null };
       const result = await api('/telegram/config', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: config.enabled, chat_id: config.chat_id, bot_token: botToken.trim() || null, notifications: config.notifications }),
       });
       setConfig({
-        enabled: Boolean(result.config?.enabled),
-        chat_id: result.config?.chat_id || '',
+        enabled: Boolean(result.config?.enabled), chat_id: result.config?.chat_id || '',
         bot_configured: Boolean(result.config?.bot_configured),
+        notifications: { ...defaults, ...(result.config?.notifications || {}) },
       });
-      setBotToken('');
-      setMessage('Telegram settings saved. The Bot Token is stored encrypted on the backend.');
-    } catch (e) {
-      setError(e.message || 'Unable to save Telegram settings.');
-    } finally {
-      setSaving(false);
-    }
+      setBotToken(''); setMessage('Telegram credentials and notification rules saved.');
+    } catch (e) { setError(e.message || 'Unable to save Telegram settings.'); }
+    finally { setSaving(false); }
   };
-
   const sendTest = async () => {
-    setTesting(true);
-    setError('');
-    setMessage('');
+    setTesting(true); setError(''); setMessage('');
     try {
       const result = await api('/telegram/test-message', { method: 'POST' });
       setMessage('Test message sent successfully to Chat ID ' + result.chat_id + '.');
-    } catch (e) {
-      setError(e.message || 'Unable to send Telegram test message.');
-    } finally {
-      setTesting(false);
-    }
+    } catch (e) { setError(e.message || 'Unable to send Telegram test message.'); }
+    finally { setTesting(false); }
   };
-
+  const toggle = (key, title, help) => <label className="settings-toggle" key={key}>
+    <input type="checkbox" checked={Boolean(config.notifications[key])} onChange={e => changeNotification(key, e.target.checked)} />
+    <span><strong>{title}</strong><small>{help}</small></span>
+  </label>;
+  const field = (key, title, type, help, min, max) => <label className="settings-control" key={key}>
+    <span>{title}</span>
+    <input type={type} value={config.notifications[key]} min={min} max={max}
+      onChange={e => changeNotification(key, type === 'number' ? Number(e.target.value) : e.target.value)} />
+    <small>{help}</small>
+  </label>;
   if (loading) return <div className="settings-section">Loading Telegram settings…</div>;
-
   return <div className="telegram-settings">
     <div className="telegram-settings-heading">
-      <div>
-        <h2>Telegram Integration</h2>
-        <p className="settings-intro">Connect a Telegram bot to this application. This step only configures the connection and sends an optional test message. No trading workers or automated notifications are connected.</p>
-      </div>
-      <span className={'telegram-status ' + (config.enabled ? 'is-enabled' : 'is-disabled')}>
-        <span />{config.enabled ? 'Integration enabled' : 'Integration disabled'}
-      </span>
+      <div><h2>Telegram Notifications</h2><p className="settings-intro">Configure trade events, P&L alerts, scheduled summaries, broker fills and system alerts.</p></div>
+      <span className={'telegram-status ' + (config.enabled ? 'is-enabled' : 'is-disabled')}><span />{config.enabled ? 'Integration enabled' : 'Integration disabled'}</span>
     </div>
     {error && <div className="error-banner"><strong>Telegram issue</strong><span>{error}</span></div>}
     {message && <div className="settings-success">{message}</div>}
     <section className="panel telegram-settings-card">
       <h3>Bot Credentials</h3>
-      <label className="settings-control">
-        <span>Telegram Bot Token</span>
-        <input
-          type="password"
-          autoComplete="new-password"
-          placeholder={config.bot_configured ? 'Saved token — enter only to replace' : 'Enter Telegram Bot Token'}
-          value={botToken}
-          onChange={(event) => setBotToken(event.target.value)}
-        />
-        <small>The token is encrypted by the backend before it is stored in MySQL. It is never returned to the browser.</small>
-      </label>
-      <label className="settings-control">
-        <span>Telegram Chat ID</span>
-        <input
-          type="text"
-          inputMode="text"
-          placeholder="Enter your personal or group Chat ID"
-          value={config.chat_id}
-          onChange={(event) => setConfig((current) => ({ ...current, chat_id: event.target.value }))}
-        />
-        <small>Start a conversation with your bot first, or add it to the target group and obtain that chat's ID.</small>
-      </label>
-      <label className="settings-toggle">
-        <input
-          type="checkbox"
-          checked={config.enabled}
-          onChange={(event) => setConfig((current) => ({ ...current, enabled: event.target.checked }))}
-        />
-        <span><strong>Enable Telegram Integration</strong><small>Enables the saved bot connection. Automated trade alerts are not part of this step.</small></span>
-      </label>
-      <div className="telegram-credential-state">
-        <span>Bot Token: <strong>{config.bot_configured ? 'Configured' : 'Not configured'}</strong></span>
-        <span>Chat ID: <strong>{config.chat_id ? 'Configured' : 'Not configured'}</strong></span>
-      </div>
-      <div className="settings-actions">
-        <button type="button" className="button primary" onClick={save} disabled={saving || testing}>
-          {saving ? 'Saving…' : 'Save Telegram Settings'}
-        </button>
-        <button type="button" className="button secondary" onClick={sendTest} disabled={testing || saving || !config.enabled || !config.bot_configured || !config.chat_id.trim()}>
-          {testing ? 'Sending…' : 'Send Test Message'}
-        </button>
-        <button type="button" className="button secondary" onClick={load} disabled={saving || testing}>Refresh Status</button>
-      </div>
+      <label className="settings-control"><span>Telegram Bot Token</span><input type="password" autoComplete="new-password" placeholder={config.bot_configured ? 'Saved token — enter only to replace' : 'Enter Telegram Bot Token'} value={botToken} onChange={e => setBotToken(e.target.value)} /><small>Encrypted by the backend; never returned to the browser.</small></label>
+      <label className="settings-control"><span>Telegram Chat ID</span><input type="text" value={config.chat_id} onChange={e => setConfig(current => ({ ...current, chat_id: e.target.value }))} placeholder="Personal or group Chat ID" /></label>
+      <label className="settings-toggle"><input type="checkbox" checked={config.enabled} onChange={e => setConfig(current => ({ ...current, enabled: e.target.checked }))} /><span><strong>Enable Telegram Integration</strong><small>Master switch for all automated notifications.</small></span></label>
+      <div className="telegram-credential-state"><span>Bot Token: <strong>{config.bot_configured ? 'Configured' : 'Not configured'}</strong></span><span>Chat ID: <strong>{config.chat_id ? 'Configured' : 'Not configured'}</strong></span></div>
     </section>
-    <p className="settings-ui-only-note">Security: the Bot Token is encrypted at rest using the configured KITE_TOKEN_ENCRYPTION_KEY. Keep that key private and back it up securely. If the key changes, the saved Telegram token must be entered again.</p>
+    <section className="panel telegram-settings-card">
+      <h3>Trade Lifecycle Notifications</h3>
+      {toggle('telegramPaperTradeEntryEnabled', 'Paper trade entries', 'Send a message when a paper trade is created.')}
+      {toggle('telegramPaperTradeExitEnabled', 'Paper trade exits', 'Send exit price, exit reason and realized P&L.')}
+      {toggle('telegramLiveFillEnabled', 'Live broker fills', 'Notify for broker-confirmed executions, not merely submitted orders.')}
+      {field('telegramLiveFillPollSeconds', 'Broker fill polling interval (seconds)', 'number', 'How often the Kite trade book is checked. Allowed: 5–300 seconds.', 5, 300)}
+    </section>
+    <section className="panel telegram-settings-card">
+      <h3>Profit / Loss Threshold Alerts</h3>
+      {toggle('telegramPnlAlertsEnabled', 'Enable P&L threshold alerts', 'Alert when an open trade crosses the profit or loss threshold.')}
+      {field('telegramPnlAlertThreshold', 'P&L threshold (₹)', 'number', 'Absolute per-trade threshold for both profit and loss alerts.', 1, 100000000)}
+      {field('telegramPnlAlertCheckSeconds', 'P&L check interval (seconds)', 'number', 'Polling interval for P&L threshold checks. Allowed: 5–300 seconds.', 5, 300)}
+      {toggle('telegramPnlAlertRearmEnabled', 'Re-arm after returning inside threshold', 'Allow another alert if P&L returns inside the threshold and crosses again.')}
+    </section>
+    <section className="panel telegram-settings-card">
+      <h3>Active Trade Summary</h3>
+      {toggle('telegramActiveSummaryEnabled', 'Enable active-trade summaries', 'Send periodic open-trade and available P&L summary during market hours.')}
+      {field('telegramActiveSummaryIntervalMinutes', 'Summary interval (minutes)', 'number', 'Allowed: 5–180 minutes.', 5, 180)}
+      {field('telegramActiveSummaryStartTime', 'Summary start time (IST)', 'time', '24-hour local exchange time.')}
+      {field('telegramActiveSummaryEndTime', 'Summary end time (IST)', 'time', '24-hour local exchange time; exclusive.')}
+    </section>
+    <section className="panel telegram-settings-card">
+      <h3>Daily Trading Summary</h3>
+      {toggle('telegramDailySummaryEnabled', 'Enable daily summary', 'Send trade counts and available realized/unrealized P&L once per weekday.')}
+      {field('telegramDailySummaryTime', 'Daily summary time (IST)', 'time', '24-hour time; default 15:45.')}
+    </section>
+    <section className="panel telegram-settings-card">
+      <h3>System Alerts</h3>
+      {toggle('telegramSystemAlertsEnabled', 'Enable system alerts', 'Forward application ERROR or CRITICAL events to Telegram.')}
+      <label className="settings-control"><span>Minimum severity</span><select value={config.notifications.telegramSystemAlertSeverity} onChange={e => changeNotification('telegramSystemAlertSeverity', e.target.value)}><option value="ERROR">ERROR and CRITICAL</option><option value="CRITICAL">CRITICAL only</option></select><small>Secrets and stack traces are not included in alert messages.</small></label>
+      {field('telegramSystemAlertCooldownMinutes', 'Duplicate alert cooldown (minutes)', 'number', 'Suppress repeated matching log events during this period. Allowed: 1–1440 minutes.', 1, 1440)}
+    </section>
+    <div className="settings-actions">
+      <button type="button" className="button primary" onClick={save} disabled={saving || testing}>{saving ? 'Saving…' : 'Save Telegram Settings'}</button>
+      <button type="button" className="button secondary" onClick={sendTest} disabled={testing || saving || !config.enabled || !config.bot_configured || !config.chat_id.trim()}>{testing ? 'Sending…' : 'Send Test Message'}</button>
+      <button type="button" className="button secondary" onClick={load} disabled={saving || testing}>Refresh Status</button>
+    </div>
+    <p className="settings-ui-only-note">The Bot Token is encrypted at rest using KITE_TOKEN_ENCRYPTION_KEY. Keep that key private and backed up.</p>
   </div>;
 }
-
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
   const [settings, setSettings] = useState({});
