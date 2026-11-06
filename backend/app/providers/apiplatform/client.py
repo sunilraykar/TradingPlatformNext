@@ -56,10 +56,29 @@ class APIPLATFORMClient:
         except APIPLATFORMAuthError:
             raise
         except requests.RequestException as exc:
-            status = getattr(getattr(exc, "response", None), "status_code", None)
+            failed_response = getattr(exc, "response", None)
+            status = getattr(failed_response, "status_code", None)
             suffix = f" (HTTP {status})" if status else ""
+            diagnostics: list[str] = []
+            if failed_response is not None:
+                content_type = failed_response.headers.get("Content-Type")
+                server = failed_response.headers.get("Server")
+                request_id = (
+                    failed_response.headers.get("CF-Ray")
+                    or failed_response.headers.get("X-Request-ID")
+                )
+                if content_type:
+                    diagnostics.append(f"content-type={content_type}")
+                if server:
+                    diagnostics.append(f"server={server}")
+                if request_id:
+                    diagnostics.append(f"request-id={request_id}")
+                body = " ".join((failed_response.text or "").split())
+                if body:
+                    diagnostics.append(f"response={body[:800]}")
+            detail = f" {'; '.join(diagnostics)}" if diagnostics else ""
             raise APIPLATFORMClientError(
-                f"APIPLATFORM request failed{suffix}: {type(exc).__name__}."
+                f"APIPLATFORM request failed{suffix}: {type(exc).__name__}.{detail}"
             ) from exc
 
     def get(self, endpoint: str, **kwargs: Any) -> Any:
