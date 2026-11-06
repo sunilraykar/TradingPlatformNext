@@ -406,3 +406,22 @@ def test_m_ttts_moves_stop_only_with_target_and_keeps_trail_counts_synchronized(
     assert last["stop_loss"] == 125.0
     assert last["target_trail_count"] == 3
     assert last["stop_loss_trail_count"] == 3
+
+
+def test_paper_close_calculates_gross_realized_pnl_for_buy_and_sell(monkeypatch):
+    monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
+    for trade_id, direction, expected in (
+        ("paper-buy-pnl", "BUY", 125.0),
+        ("paper-sell-pnl", "SELL", 125.0),
+    ):
+        trade_terminal._cache[trade_id] = {
+            "trade_id": trade_id, "execution_mode": "PAPER", "status": "OPEN",
+            "direction": direction, "quantity": 25, "entry_price": 100.0,
+            "version": 1, "updated_at": "2026-01-01T00:00:00+00:00",
+        }
+        exit_price = 105.0 if direction == "BUY" else 95.0
+        closed = trade_terminal.update_trade(trade_id, {
+            "status": "CLOSED", "exit_price": exit_price,
+            "average_exit_price": exit_price, "exit_reason": "Test close",
+        })
+        assert closed["gross_realized_pnl"] == expected
