@@ -9,10 +9,28 @@ from zoneinfo import ZoneInfo
 
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
+from sqlalchemy import text
+
+from app.db.session import get_engine
 from app.services.notification_events import enqueue_notification, notifications_enabled
 
 logger = logging.getLogger(__name__)
 IST = ZoneInfo("Asia/Kolkata")
+
+
+def _setting(key: str, default):
+    with get_engine().connect() as connection:
+        row = connection.execute(text("SELECT setting_value FROM app_settings WHERE setting_key = :key"), {"key": "ui." + key}).first()
+    if not row:
+        return default
+    value = row[0]
+    if isinstance(value, str):
+        import json
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            return value
+    return value
 
 
 def _format_time(value: Any) -> str:
@@ -29,7 +47,7 @@ def _format_time(value: Any) -> str:
 
 def process_trade_book(provider=None) -> dict[str, int]:
     """Queue durable notifications for broker-confirmed fills, never submitted orders."""
-    if not notifications_enabled():
+    if not notifications_enabled() or not bool(_setting("telegramLiveFillEnabled", True)):
         return {"checked": 0, "queued": 0}
     provider = provider or get_kite_provider()
     profile = provider.profile()
@@ -109,4 +127,8 @@ async def run_scheduler() -> None:
             logger.warning("Kite trade-fill notification poll unavailable: %s", exc)
         except Exception:
             logger.exception("Kite trade-fill notification poll failed")
-        await asyncio.sleep(15)
+        try:
+            interval = int(_setting("telegramLiveFillPollSeconds", 15))
+        except (TypeError, ValueError):
+            interval = 15
+        await asyncio.sleep(max(5, min(300, interval)))
