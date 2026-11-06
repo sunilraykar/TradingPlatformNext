@@ -32,6 +32,7 @@ from app.services import (
     live_market_data,
     paper_option_market_close,
     telegram_dispatcher,
+    notification_scheduler,
     trade_terminal,
 )
 from app.services.apiplatform_symbol_master import run_startup_symbol_master_refresh
@@ -132,6 +133,7 @@ async def lifespan(application: FastAPI):
         autotrender_cache_snapshot.run_daily_snapshot_scheduler(application.state.autotrender_auth)
     )
     telegram_dispatch_task = asyncio.create_task(telegram_dispatcher.run_scheduler())
+    notification_schedule_task = asyncio.create_task(notification_scheduler.run_scheduler())
     portfolio_snapshot_task = asyncio.create_task(run_daily_portfolio_snapshot_scheduler())
     apiplatform_symbol_master_task = asyncio.create_task(
         run_startup_symbol_master_refresh(apiplatform_client)
@@ -143,7 +145,7 @@ async def lifespan(application: FastAPI):
         tasks = (
             reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task,
             autotrender_worker_task, autotrender_snapshot_task, telegram_dispatch_task,
-            portfolio_snapshot_task, apiplatform_symbol_master_task,
+            notification_schedule_task, portfolio_snapshot_task, apiplatform_symbol_master_task,
         )
         for task in tasks:
             task.cancel()
