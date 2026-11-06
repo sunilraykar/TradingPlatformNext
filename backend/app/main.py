@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.account import router as account_router
 from app.api.autotrender_auth import router as autotrender_auth_router
+from app.api.apiplatform_auth import router as apiplatform_auth_router
 from app.api.autotrender_market_data import router as autotrender_market_data_router
 from app.api.kite_instruments import router as kite_instruments_router
 from app.api.routes import router
@@ -18,6 +19,7 @@ from app.api.notifications import router as notifications_router
 from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.autotrender.auth import AutoTrenderAuth
+from app.providers.apiplatform.registry import configure_apiplatform, shutdown_apiplatform
 from app.providers.kite.client import KiteProvider, KiteProviderError
 from app.providers.kite.registry import (
     clear_active_kite_session,
@@ -104,6 +106,10 @@ async def lifespan(application: FastAPI):
     configure_logging(settings.log_level)
     ensure_notification_schema()
     ensure_portfolio_snapshot_schema()
+    # Restore a valid persisted APIPLATFORM JWT without starting another login.
+    apiplatform_client = configure_apiplatform()
+    application.state.apiplatform_auth = apiplatform_client.auth
+    application.state.apiplatform_client = apiplatform_client
     if not hasattr(application.state, "autotrender_auth"):
         application.state.autotrender_auth = AutoTrenderAuth()
     if not hasattr(application.state, "autotrender_cache"):
@@ -130,6 +136,7 @@ async def lifespan(application: FastAPI):
         yield
     finally:
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
+        shutdown_apiplatform()
         tasks = (
             reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task,
             autotrender_worker_task, autotrender_snapshot_task, telegram_dispatch_task,
@@ -154,6 +161,7 @@ app.add_middleware(
 app.include_router(router, prefix="/api/v1")
 app.include_router(account_router, prefix="/api/v1")
 app.include_router(autotrender_auth_router, prefix="/api/v1")
+app.include_router(apiplatform_auth_router, prefix="/api/v1")
 app.include_router(autotrender_market_data_router, prefix="/api/v1")
 app.include_router(subscription_test_router, prefix="/api/v1")
 app.include_router(trades_router, prefix="/api/v1")
