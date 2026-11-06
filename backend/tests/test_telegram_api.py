@@ -26,7 +26,7 @@ def test_telegram_api_routes_are_registered():
 
 
 def test_notification_status_route_is_registered():
-    paths = {route.path for route in app.routes}
+    paths = set(app.openapi().get('paths', {}))
     assert "/api/v1/notifications/status" in paths
 
 
@@ -43,7 +43,7 @@ def test_notification_status_preflight_allows_vite_origin():
 
 
 def test_notification_dispatch_test_route_is_registered():
-    paths = {route.path for route in app.routes}
+    paths = set(app.openapi().get('paths', {}))
     assert "/api/v1/notifications/test-dispatch" in paths
 
 
