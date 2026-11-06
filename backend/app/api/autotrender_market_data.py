@@ -371,7 +371,8 @@ def export_historical_intraday_rows(
 ) -> Response:
     """Export the Historical Data table columns as plain scalar values."""
     normalized_index = index.upper()
-    if normalized_index not in _INDEX_CATEGORIES:
+    export_indices = list(_INDEX_CATEGORIES) if normalized_index == "ALL" else [normalized_index]
+    if any(name not in _INDEX_CATEGORIES for name in export_indices):
         raise HTTPException(status_code=404, detail="Unsupported AutoTrender index")
     if start_date and end_date and start_date > end_date:
         raise HTTPException(status_code=400, detail="Start date must be on or before the end date")
@@ -448,64 +449,67 @@ def export_historical_intraday_rows(
         if not isinstance(payload, dict):
             continue
         indices = payload.get("indices") or {}
-        index_data = indices.get(normalized_index, {}) if isinstance(indices, dict) else {}
-        intraday = index_data.get("intraday") if isinstance(index_data, dict) else None
-        if not isinstance(intraday, dict) or intraday.get("error"):
+        if not isinstance(indices, dict):
             continue
-        candidate = intraday.get("data") or intraday.get("rows") or intraday.get("result")
-        source_rows = candidate if isinstance(candidate, list) else [candidate] if isinstance(candidate, dict) else []
-        for row in source_rows:
-            if not isinstance(row, dict):
+        for export_index in export_indices:
+            index_data = indices.get(export_index, {})
+            intraday = index_data.get("intraday") if isinstance(index_data, dict) else None
+            if not isinstance(intraday, dict) or intraday.get("error"):
                 continue
-            if thresholds is None:
-                thresholds = _read_enter_thresholds()
-            evaluation = evaluate_signal(
-                row,
-                call_put_strength_diff=thresholds["callPutStrengthDiff"],
-                call_pcr=thresholds["callPcr"],
-                put_pcr=thresholds["putPcr"],
-                vwap_price_difference_buffer=thresholds["vwapPriceDifferenceBuffer"],
-            )
-            call_raw = pick(row, "call", "Call")
-            put_raw = pick(row, "put", "Put")
-            call_number = number(call_raw)
-            put_number = number(put_raw)
-            total_strength = call_number + put_number if call_number is not None and put_number is not None else None
-            call_strength = call_number / total_strength * 100 if total_strength and total_strength > 0 else None
-            put_strength = put_number / total_strength * 100 if total_strength and total_strength > 0 else None
-            strength_diff = call_strength - put_strength if call_strength is not None and put_strength is not None else None
+            candidate = intraday.get("data") or intraday.get("rows") or intraday.get("result")
+            source_rows = candidate if isinstance(candidate, list) else [candidate] if isinstance(candidate, dict) else []
+            for row in source_rows:
+                if not isinstance(row, dict):
+                    continue
+                if thresholds is None:
+                    thresholds = _read_enter_thresholds()
+                evaluation = evaluate_signal(
+                    row,
+                    call_put_strength_diff=thresholds["callPutStrengthDiff"],
+                    call_pcr=thresholds["callPcr"],
+                    put_pcr=thresholds["putPcr"],
+                    vwap_price_difference_buffer=thresholds["vwapPriceDifferenceBuffer"],
+                )
+                call_raw = pick(row, "call", "Call")
+                put_raw = pick(row, "put", "Put")
+                call_number = number(call_raw)
+                put_number = number(put_raw)
+                total_strength = call_number + put_number if call_number is not None and put_number is not None else None
+                call_strength = call_number / total_strength * 100 if total_strength and total_strength > 0 else None
+                put_strength = put_number / total_strength * 100 if total_strength and total_strength > 0 else None
+                strength_diff = call_strength - put_strength if call_strength is not None and put_strength is not None else None
 
-            price_number = number(pick(row, "price", "Price"))
-            vwap_number = number(pick(row, "vwap", "Vwap", "vWap", "VWAP"))
-            buffer_value = abs((price_number - vwap_number) / price_number * 100) if price_number and vwap_number is not None and price_number > 0 and vwap_number > 0 else None
+                price_number = number(pick(row, "price", "Price"))
+                vwap_number = number(pick(row, "vwap", "Vwap", "vWap", "VWAP"))
+                buffer_value = abs((price_number - vwap_number) / price_number * 100) if price_number and vwap_number is not None and price_number > 0 and vwap_number > 0 else None
 
-            # Match the Historical Data table's buildIntradayRows calculation:
-            # derive strength percentages, signed strength difference, VWAP gap,
-            # and BUY/SELL/WAIT from the current saved thresholds.
-            row_enter = evaluation.direction if evaluation.eligible else "WAIT"
-            if normalized_enter and row_enter != normalized_enter:
-                continue
+                # Match the Historical Data table's buildIntradayRows calculation:
+                # derive strength percentages, signed strength difference, VWAP gap,
+                # and BUY/SELL/WAIT from the current saved thresholds.
+                row_enter = evaluation.direction if evaluation.eligible else "WAIT"
+                if normalized_enter and row_enter != normalized_enter:
+                    continue
 
-            writer.writerow([
-                snapshot["trading_date"].isoformat() if snapshot["trading_date"] else "",
-                normalized_index,
-                payload.get("capture_interval_minutes", mins),
-                scalar(pick(row, "time", "Time", "mtime", "Mtime"), "value"),
-                scalar(call_raw, "value"),
-                scalar(put_raw, "value"),
-                scalar(pick(row, "diff", "Diff"), "value"),
-                scalar(pick(row, "pcr", "Pcr", "PCR"), "value"),
-                scalar(pick(row, "price", "Price"), "value"),
-                scalar(pick(row, "vwap", "Vwap", "vWap", "VWAP"), "value"),
-                signal(pick(row, "vwapSignal", "VwapSignal", "vWapSignal", "VWAPSignal")),
-                signal(pick(row, "optionSignal", "OptionSignal")),
-                round(call_strength, 4) if call_strength is not None else "",
-                round(put_strength, 4) if put_strength is not None else "",
-                round(strength_diff, 4) if strength_diff is not None else "",
-                round(buffer_value, 4) if buffer_value is not None else "",
-                row_enter,
-            ])
-            exported += 1
+                writer.writerow([
+                    snapshot["trading_date"].isoformat() if snapshot["trading_date"] else "",
+                    export_index,
+                    payload.get("capture_interval_minutes", mins),
+                    scalar(pick(row, "time", "Time", "mtime", "Mtime"), "value"),
+                    scalar(call_raw, "value"),
+                    scalar(put_raw, "value"),
+                    scalar(pick(row, "diff", "Diff"), "value"),
+                    scalar(pick(row, "pcr", "Pcr", "PCR"), "value"),
+                    scalar(pick(row, "price", "Price"), "value"),
+                    scalar(pick(row, "vwap", "Vwap", "vWap", "VWAP"), "value"),
+                    signal(pick(row, "vwapSignal", "VwapSignal", "vWapSignal", "VWAPSignal")),
+                    signal(pick(row, "optionSignal", "OptionSignal")),
+                    round(call_strength, 4) if call_strength is not None else "",
+                    round(put_strength, 4) if put_strength is not None else "",
+                    round(strength_diff, 4) if strength_diff is not None else "",
+                    round(buffer_value, 4) if buffer_value is not None else "",
+                    row_enter,
+                ])
+                exported += 1
 
     if exported == 0:
         raise HTTPException(
@@ -514,7 +518,8 @@ def export_historical_intraday_rows(
         )
     csv_content = "\ufeff" + output.getvalue()
     date_suffix = (f"_{start_date.isoformat()}" if start_date else "") + (f"_to_{end_date.isoformat()}" if end_date else "")
-    filename = f"{normalized_index.lower()}_intraday_history{date_suffix}.csv"
+    index_suffix = "all_indices" if normalized_index == "ALL" else normalized_index.lower()
+    filename = f"{index_suffix}_intraday_history{date_suffix}.csv"
     return Response(
         content=csv_content,
         media_type="text/csv; charset=utf-8",
