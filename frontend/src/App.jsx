@@ -1251,6 +1251,10 @@ function SettingsPanel() {
 }
 
 function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, autotrendSettings }) {
+  const [exportStartDate, setExportStartDate] = useState('');
+  const [exportEndDate, setExportEndDate] = useState('');
+  const [exportLoading, setExportLoading] = useState(false);
+
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [page, setPage] = useState(0);
@@ -1285,6 +1289,26 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
 
   useEffect(() => { load(); }, [load]);
 
+  const exportHistoricalIntraday = async () => {
+    if (exportLoading) return;
+    if (exportStartDate && exportEndDate && exportStartDate > exportEndDate) { setError('Export start date must be on or before the end date.'); return; }
+    setExportLoading(true); setError('');
+    try {
+      const params = new URLSearchParams({ mins: String(selected?.payload?.capture_interval_minutes || 5) });
+      if (exportStartDate) params.set('start_date', exportStartDate);
+      if (exportEndDate) params.set('end_date', exportEndDate);
+      if (enterFilter !== 'ALL') params.set('enter', enterFilter);
+      const response = await fetch(`${API}/api/v1/autotrender/indices/${encodeURIComponent(selectedIndex)}/intraday/export?${params.toString()}`, { headers: { Accept: "text/csv" } });
+      if (!response.ok) { const payload = await response.json().catch(() => ({})); throw new Error(typeof payload.detail === "string" ? payload.detail : `Export failed (${response.status})`); }
+      const blob = await response.blob();
+      const disposition = response.headers.get("Content-Disposition") || "";
+      const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1] || `${selectedIndex.toLowerCase()}_intraday_history.csv`;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a"); link.href = url; link.download = filename;
+      document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+    } catch (e) { setError(e.message || "Unable to export historical intraday records."); }
+    finally { setExportLoading(false); }
+  };
   const openSnapshot = async (snapshot) => {
     setSelected(null);
     setDetailLoading(true);
@@ -1424,7 +1448,16 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
         <AutoTrenderActiveTrades underlyings={[selectedIndex]} selectedDate={selected.trading_date} />
       </div>
       <section className="content-grid historical-dataset-grid">
-        <article className="panel historical-intraday-table-panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div><div className="historical-enter-filters" role="group" aria-label="Filter intraday records by Enter signal"><button type="button" className={enterFilter === 'ALL' ? 'selected' : 'button secondary'} onClick={() => setEnterFilter('ALL')}>All ({historicalIntradayRows.length})</button>{enterFilterValues.map((value) => <button key={value} type="button" className={enterFilter === value ? 'selected' : 'button secondary'} onClick={() => setEnterFilter(value)}>{value} ({historicalIntradayRows.filter((row) => String(row.enter ?? '').trim().toUpperCase() === value).length})</button>)}</div><KiteDataTable columnsOverride={['time','vwapSignal','optionSignal','enter', ...(!showIntradayDetails ? [] : ['call','put']), 'diff','pcr','price','vwap', ...(!showIntradayDetails ? [] : ['callStrength','putStrength']), 'strengthDiff','vwapPriceBufferPct']} rows={filteredHistoricalIntradayRows} onRowSelect={(row) => setSelectedIntradayTime(row.time)} /></article>
+        <article className="panel historical-intraday-table-panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Intraday data</h2></div><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div><div className="historical-intraday-export-toolbar">
+          <div className="historical-intraday-export-dates">
+            <label>From <input type="date" value={exportStartDate} max={exportEndDate || undefined} onChange={(event) => setExportStartDate(event.target.value)} /></label>
+            <label>To <input type="date" value={exportEndDate} min={exportStartDate || undefined} onChange={(event) => setExportEndDate(event.target.value)} /></label>
+            <span>{!exportStartDate && !exportEndDate ? 'All available dates' : 'Selected date range'}</span>
+          </div>
+          <button type="button" className="button primary" onClick={exportHistoricalIntraday} disabled={exportLoading || detailLoading}>
+            {exportLoading ? 'Preparing export…' : 'Export All Records'}
+          </button>
+        </div><div className="historical-enter-filters" role="group" aria-label="Filter intraday records by Enter signal"><button type="button" className={enterFilter === 'ALL' ? 'selected' : 'button secondary'} onClick={() => setEnterFilter('ALL')}>All ({historicalIntradayRows.length})</button>{enterFilterValues.map((value) => <button key={value} type="button" className={enterFilter === value ? 'selected' : 'button secondary'} onClick={() => setEnterFilter(value)}>{value} ({historicalIntradayRows.filter((row) => String(row.enter ?? '').trim().toUpperCase() === value).length})</button>)}</div><KiteDataTable columnsOverride={['time','vwapSignal','optionSignal','enter', ...(!showIntradayDetails ? [] : ['call','put']), 'diff','pcr','price','vwap', ...(!showIntradayDetails ? [] : ['callStrength','putStrength']), 'strengthDiff','vwapPriceBufferPct']} rows={filteredHistoricalIntradayRows} onRowSelect={(row) => setSelectedIntradayTime(row.time)} /></article>
         <article className="panel"><div className="panel-header"><div><div className="eyebrow">{'HISTORICAL / ' + selectedIndex}</div><h2>Open-interest graph</h2></div></div><pre>{JSON.stringify(selected.payload?.indices?.[selectedIndex]?.oi_graph ?? { note: 'OI graph is only captured for FINNIFTY and SENSEX.', index: selectedIndex }, null, 2)}</pre></article>
       </section>
       <details className="historical-raw-payload"><summary>View complete saved JSON payload · SHA-256 {selected.payload_hash || '—'}</summary><pre>{JSON.stringify(selected.payload, null, 2)}</pre></details>
