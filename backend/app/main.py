@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.account import router as account_router
+from app.api.apiplatform_option_chain import router as apiplatform_option_chain_router
 from app.api.apiplatform_auth import router as apiplatform_auth_router
 from app.api.autotrender_auth import router as autotrender_auth_router
 from app.api.autotrender_market_data import router as autotrender_market_data_router
@@ -172,6 +173,7 @@ app.include_router(router, prefix="/api/v1")
 app.include_router(account_router, prefix="/api/v1")
 app.include_router(autotrender_auth_router, prefix="/api/v1")
 app.include_router(apiplatform_auth_router, prefix="/api/v1")
+app.include_router(apiplatform_option_chain_router, prefix="/api/v1")
 app.include_router(autotrender_market_data_router, prefix="/api/v1")
 app.include_router(subscription_test_router, prefix="/api/v1")
 app.include_router(trades_router, prefix="/api/v1")
