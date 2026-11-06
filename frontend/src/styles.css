@@ -1388,3 +1388,15 @@ select,input,textarea{
 .dashboard-day-trades{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px;min-width:0}
 .dashboard-day-trades .autotrend-active-trades{max-height:420px;min-height:180px}
 @media(max-width:760px){.dashboard-day-trades{grid-template-columns:1fr}}
+
+
+/* Explicit profit/loss colors for the AutoTrender dashboard Active and Closed totals. */
+.dashboard-day-trades .autotrend-trade-total-pnl{
+  display:inline-block;
+  font-family:'DM Mono',monospace;
+  font-size:13px;
+  font-weight:700;
+  white-space:nowrap;
+}
+.dashboard-day-trades .autotrend-trade-total-pnl.positive{color:var(--green,#34d399)!important}
+.dashboard-day-trades .autotrend-trade-total-pnl.negative{color:var(--red,#f87171)!important}
