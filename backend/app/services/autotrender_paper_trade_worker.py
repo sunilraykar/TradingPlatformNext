@@ -20,8 +20,8 @@ from app.providers.autotrender.auth import AutoTrenderAuth
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import trade_terminal
-from app.services.notification_events import record_autotrender_signal
 from app.services.autotrender_signal_evaluator import Evaluation, evaluate_signal
+from app.services.notification_events import record_autotrender_signal
 from app.services.option_contract_selector import select_atm_contract
 
 logger = logging.getLogger(__name__)
