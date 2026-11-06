@@ -292,8 +292,9 @@ export default function LtpOptionChainDashboard() {
   ];
   const marketDirection = data.symbolMarketDirection && data.symbolMarketDirection.marketDirection ? data.symbolMarketDirection.marketDirection : 'Market direction unavailable';
   const fetchedAt = data.FetchTime || (data.symbolMarketDirection && data.symbolMarketDirection.actualFetchTime) || '—';
-  const change = spotQuote && spotQuote.ohlc && n(spotQuote.ohlc.close) && n(spotQuote.last_price)
-    ? (n(spotQuote.last_price) - n(spotQuote.ohlc.close)) / n(spotQuote.ohlc.close) * 100 : null;
+  const selectedQuote = priceMode === 'SPOT' ? spotQuote : futureQuote;
+  const change = selectedQuote && selectedQuote.ohlc && n(selectedQuote.ohlc.close) && n(selectedQuote.last_price)
+    ? (n(selectedQuote.last_price) - n(selectedQuote.ohlc.close)) / n(selectedQuote.ohlc.close) * 100 : null;
   const total = (field) => visibleRows.reduce((sum, row) => sum + (n(row[field]) || 0), 0);
 
   return <section className="ltp-option-chain">
