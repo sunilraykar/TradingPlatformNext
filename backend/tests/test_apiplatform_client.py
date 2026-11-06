@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 from app.providers.apiplatform.client import APIPLATFORMClient
@@ -34,6 +35,25 @@ def test_client_uses_configured_base_url():
 
     args, _kwargs = auth.session.request.call_args
     assert args == ("GET", "https://example.test/api/health")
+
+
+def test_registry_uses_base_url_from_application_settings(monkeypatch):
+    from app.providers.apiplatform import registry
+
+    auth = MagicMock()
+    monkeypatch.setattr(
+        registry,
+        "get_settings",
+        lambda: SimpleNamespace(apiplatform_base_url="https://configured.example/api"),
+    )
+    monkeypatch.setattr(registry, "APIPLATFORMAuth", lambda: auth)
+
+    client = registry.configure_apiplatform()
+
+    try:
+        assert client.base_url == "https://configured.example/api/"
+    finally:
+        registry.shutdown_apiplatform()
 
 
 def test_client_reauthenticates_once_after_unauthorized_response():
