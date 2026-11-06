@@ -464,14 +464,6 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
     return summary;
   }, { profit: 0, loss: 0, net: 0 });
 
-  const summarizeTrades = (items) => items.reduce((summary, trade) => {
-    const total = calculateTradePnl(trade);
-    if (total === null) return summary;
-    summary.net += total;
-    return summary;
-  }, { net: 0 });
-  const allOpenPnl = summarizeTrades(trades.filter((trade) => !isTerminalStatus(trade.status)));
-  const allClosedPnl = summarizeTrades(trades.filter((trade) => String(trade.status || '').toUpperCase() === 'CLOSED'));
 
   return <section className="trade-terminal-page">
     <div className="trade-terminal-overview panel"><div className="trade-terminal-actions"><button className="button secondary" onClick={exportVisibleTrades} disabled={!displayedTrades.length}>Export CSV ({displayedTrades.length})</button><button className="button secondary" onClick={reconcileLive} disabled={loading}>{loading ? 'Syncing…' : 'Sync Live Positions'}</button><button className="button primary" onClick={() => { setShowCreate(true); setSymbolQuery(''); setSymbolExchange('ALL'); setSymbolType('ALL'); }}>+ New Paper Trade</button></div>
@@ -482,8 +474,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Total Profit</span><strong style={{ fontSize: "1rem" }} className="holding-pnl-positive">{formatPnl(pnlSummary.profit)}</strong></div>
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Total Loss</span><strong style={{ fontSize: "1rem" }} className="holding-pnl-negative">{formatPnl(-pnlSummary.loss)}</strong></div>
       <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>Net P&amp;L</span><strong style={{ fontSize: "1rem" }} className={pnlSummary.net >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{formatPnl(pnlSummary.net)}</strong></div>
-      <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>All Open P&amp;L</span><strong style={{ fontSize: "1rem" }} className={allOpenPnl.net >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{formatPnl(allOpenPnl.net)}</strong></div>
-      <div className="metric" style={{ padding: "8px 10px", minHeight: 0 }}><span style={{ fontSize: "0.75rem" }}>All Closed P&amp;L</span><strong style={{ fontSize: "1rem" }} className={allClosedPnl.net >= 0 ? 'holding-pnl-positive' : 'holding-pnl-negative'}>{formatPnl(allClosedPnl.net)}</strong></div>
+
     </div>
     </div>
     {error && <div className="error-banner"><strong>Trade terminal issue</strong><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
