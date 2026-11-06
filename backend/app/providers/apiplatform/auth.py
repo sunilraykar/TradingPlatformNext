@@ -199,6 +199,10 @@ class APIPLATFORMAuth:
             cookies, user_agent = self._browser_cookies()
             self._apply_browser_cookies(cookies)
             self.user_agent = user_agent
+            if user_agent:
+                # Reuse the browser identity for subsequent APIPLATFORM API calls,
+                # not only for the initial Basic-auth login request.
+                self.session.headers["User-Agent"] = user_agent
             headers = {
                 "accept": "application/json, text/plain, */*",
                 "authorization": basic_auth,
