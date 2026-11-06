@@ -13,7 +13,6 @@ from sqlalchemy import text
 from app.db.session import get_engine
 from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
-
 from app.services.notification_events import enqueue_notification, notifications_enabled
 
 logger = logging.getLogger(__name__)
