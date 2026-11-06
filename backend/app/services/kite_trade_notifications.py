@@ -56,6 +56,15 @@ def process_trade_book(provider=None) -> dict[str, int]:
             logger.warning("Skipping incomplete Kite trade fill trade_id=%s", fill_id)
             continue
         timestamp = fill.get("fill_timestamp") or fill.get("exchange_timestamp") or fill.get("order_timestamp")
+        occurred_at = timestamp
+        if timestamp:
+            try:
+                parsed_timestamp = timestamp if isinstance(timestamp, datetime) else datetime.fromisoformat(str(timestamp).replace("Z", "+00:00"))
+                if parsed_timestamp.tzinfo is None:
+                    parsed_timestamp = parsed_timestamp.replace(tzinfo=IST)
+                occurred_at = parsed_timestamp
+            except (TypeError, ValueError):
+                occurred_at = None
         body = (
             f"{'🟢' if side == 'BUY' else '🔴'} LIVE TRADE EXECUTION\n"
             f"Account: {account_id}\n"
@@ -84,7 +93,7 @@ def process_trade_book(provider=None) -> dict[str, int]:
                 "telegram_text": body,
             },
             deduplication_key=f"kite-live-fill:{account_id}:{fill_id}",
-            occurred_at=timestamp,
+            occurred_at=occurred_at,
         )
         if result.get("queued"):
             queued += 1
