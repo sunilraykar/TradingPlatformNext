@@ -88,7 +88,7 @@ def _process_pnl_alerts(now: datetime) -> int:
     threshold = _pnl_threshold()
     sent = 0
     for trade in trade_terminal.list_trades(status_filter="OPEN"):
-        pnl, label = _trade_pnl(trade)
+        pnl, _label = _trade_pnl(trade)
         if pnl is None:
             continue
         side = "PROFIT" if pnl >= threshold else "LOSS" if pnl <= -threshold else None
