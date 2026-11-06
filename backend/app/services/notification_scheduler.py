@@ -88,7 +88,7 @@ def _process_pnl_alerts(now: datetime) -> int:
     threshold = _pnl_threshold()
     sent = 0
     for trade in trade_terminal.list_trades(status_filter="OPEN"):
-        pnl, _label = _trade_pnl(trade)
+        pnl, label = _trade_pnl(trade)
         if pnl is None:
             continue
         side = "PROFIT" if pnl >= threshold else "LOSS" if pnl <= -threshold else None
@@ -140,7 +140,7 @@ def _active_trade_summary(now: datetime) -> str | None:
     total = 0.0
     known = 0
     for trade in trades[:20]:
-        pnl, label = _trade_pnl(trade)
+        pnl, _label = _trade_pnl(trade)
         symbol = trade.get("instrument_symbol") or trade.get("underlying") or "Unknown"
         value = f"₹{pnl:+,.2f}" if pnl is not None else "N/A"
         if pnl is not None:
