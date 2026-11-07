@@ -415,3 +415,98 @@
 .ltp-chart-axis{fill:#f1f5fb!important;font-size:15px!important;font-weight:800!important}
 .ltp-level-label{font-size:14px!important;font-weight:900!important;paint-order:stroke}
 .ltp-chart-legend,.ltp-chart-footer{color:#e5edf7!important;font-weight:700!important}
+
+
+/* Final legibility overrides for dense option-chain rows and all nested text. */
+.ltp-option-chain .ltp-option-table th{
+  font-size:12px!important;
+  line-height:1.25!important;
+  font-weight:900!important;
+  padding:7px 5px!important;
+  color:#fff!important;
+}
+.ltp-option-chain .ltp-option-table tbody td{
+  font-size:12px!important;
+  line-height:1.2!important;
+  font-weight:800!important;
+  padding:4px 5px!important;
+  color:#f7faff!important;
+}
+.ltp-option-chain .ltp-option-table tbody td strong{
+  display:inline-block;
+  color:inherit!important;
+  font-size:12px!important;
+  line-height:1.2!important;
+  font-weight:900!important;
+}
+.ltp-option-chain .ltp-option-table tbody td small{
+  display:block;
+  color:#e6edf6!important;
+  font-size:10px!important;
+  line-height:1.15!important;
+  font-weight:800!important;
+  opacity:1!important;
+}
+.ltp-option-chain .ltp-option-table tbody td.positive,
+.ltp-option-chain .ltp-option-table tbody td.positive strong,
+.ltp-option-chain .ltp-option-table tbody td.positive small{color:#69f0a5!important}
+.ltp-option-chain .ltp-option-table tbody td.negative,
+.ltp-option-chain .ltp-option-table tbody td.negative strong,
+.ltp-option-chain .ltp-option-table tbody td.negative small{color:#ff858d!important}
+
+/* Keep the ranking fills, but guarantee dark, readable text on every highlighted cell. */
+.ltp-option-chain .ltp-option-table tbody td[class*="ltp-rank-"]{font-weight:900!important}
+.ltp-option-chain .ltp-option-table tbody td[class*="ltp-rank-"] *,
+.ltp-option-chain .ltp-option-table tbody td[class*="ltp-rank-"] strong,
+.ltp-option-chain .ltp-option-table tbody td[class*="ltp-rank-"] small{color:#17212d!important}
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOiChg-first,
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOiChg-second{color:#351018!important}
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOi-first,
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOi-second{color:#102b40!important}
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callVol-first,
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callVol-second{color:#302900!important}
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putVol-first,
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putVol-second{color:#103c36!important}
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOi-first,
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOi-second{color:#172f55!important}
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOiChg-first,
+.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOiChg-second{color:#1b3c12!important}
+.ltp-option-chain .ltp-option-table tbody td[class*="ltp-rank-"] *,
+.ltp-option-chain .ltp-option-table tbody td[class*="ltp-rank-"] strong,
+.ltp-option-chain .ltp-option-table tbody td[class*="ltp-rank-"] small{color:inherit!important}
+
+.ltp-option-chain .ltp-option-table .ltp-reversal{
+  display:inline-block!important;
+  padding:3px 5px!important;
+  font-size:9px!important;
+  line-height:1.2!important;
+  font-weight:900!important;
+}
+.ltp-option-chain .ltp-option-table .ltp-option-price{
+  color:#e8eef6!important;
+  font-size:10px!important;
+  font-weight:800!important;
+}
+.ltp-option-chain .ltp-option-table .ltp-strike-cell,
+.ltp-option-chain .ltp-option-table .ltp-strike-cell *{
+  color:#fff!important;
+  font-size:12px!important;
+  font-weight:900!important;
+}
+.ltp-option-chain .ltp-option-table tfoot td,
+.ltp-option-chain .ltp-option-table tfoot td *{
+  color:#fff!important;
+  font-size:10px!important;
+  font-weight:900!important;
+}
+.ltp-option-chain .ltp-rs-chip,
+.ltp-option-chain .ltp-rs-chip *{
+  color:#17212d!important;
+  font-size:10px!important;
+  font-weight:900!important;
+}
+.ltp-option-chain .ltp-spot-marker-row td{font-size:11px!important}
+@media(max-width:1150px){
+  .ltp-option-chain .ltp-option-table tbody td{font-size:11px!important}
+  .ltp-option-chain .ltp-option-table tbody td small{font-size:9px!important}
+}
