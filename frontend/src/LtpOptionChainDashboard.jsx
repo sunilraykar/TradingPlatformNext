@@ -124,8 +124,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima, totals }) {
   const putVol = n(row.putVol);
   const callChg = n(row.callOIchg);
   const putChg = n(row.putOIchg);
-  const callChgPct = n(row.callOIchgPercent ?? row.callOIChangePercent ?? row.callOIChangePercentage)
-    ?? (callOi ? callChg / callOi * 100 : null);
+  const callChgPct = n(row.callOIchgPercent ?? row.callOIChangePercent ?? row.callOIChangePercentage);
   const putChgPct = n(row.putOIchgPercent ?? row.putOIChangePercent ?? row.putOIChangePercentage);
   const callOiShare = totals.callOi ? callOi / totals.callOi * 100 : null;
   const putOiShare = totals.putOi ? putOi / totals.putOi * 100 : null;
