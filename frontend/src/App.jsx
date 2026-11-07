@@ -484,7 +484,6 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
 
 function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
   const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
-  const [apiplatformLevels, setApiplatformLevels] = useState({});
   const inFlight = useRef(false);
   useEffect(() => {
     let cancelled = false;
@@ -518,63 +517,7 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [mins, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
 
-  useEffect(() => {
-    let cancelled = false;
-    let busy = false;
-    let expiryBySymbol = null;
-    const loadApiplatformLevels = async () => {
-      if (busy) return;
-      busy = true;
-      try {
-        if (!expiryBySymbol) {
-          const metadataResults = await Promise.allSettled(DEFAULT_INDICES.map(async (symbol) => {
-            const metadata = await api('/apiplatform/option-chain/metadata?symbol=' + encodeURIComponent(symbol));
-            const expiryInfo = (metadata.expiries || [])[0];
-            return expiryInfo?.expiry ? {
-              expiry: expiryInfo.expiry,
-              lotSize: expiryInfo.lot_size || metadata.default_lot_size || 1,
-            } : null;
-          }));
-          expiryBySymbol = Object.fromEntries(DEFAULT_INDICES.map((symbol, index) => [
-            symbol,
-            metadataResults[index].status === 'fulfilled' ? metadataResults[index].value : null,
-          ]));
-        }
-        const results = await Promise.allSettled(DEFAULT_INDICES.map(async (symbol) => {
-          const expiryInfo = expiryBySymbol[symbol];
-          if (!expiryInfo?.expiry) return { symbol, levels: [] };
-          const payload = await api('/apiplatform/option-chain/levels?' + new URLSearchParams({
-            symbol, expiry: expiryInfo.expiry, lotSize: String(expiryInfo.lotSize),
-          }).toString());
-          const rs = Array.isArray(payload?.RS_Status) ? (payload.RS_Status[0] || {}) : {};
-          const model = payload?.symbolMarketDirection?.reversalModel || {};
-          const definitions = [
-            { key: 't1', label: 'T1', value: rs.rreversal, color: '#ff6474' },
-            { key: 't2', label: 'T2', value: rs.rreversalNext, color: '#ffad42' },
-            { key: 's1', label: 'S1', value: rs.sreversal, color: '#35dc8a' },
-            { key: 's2', label: 'S2', value: rs.sreversalBack, color: '#43c8e8' },
-            { key: 'max-pain-upper', label: 'Max Pain ↑', value: model.resistanceSL, color: '#ff9b45' },
-            { key: 'max-pain-lower', label: 'Max Pain ↓', value: model.supportSL, color: '#ff9b45' },
-          ];
-          return { symbol, levels: definitions.filter((level) => numericValue(level.value) !== null) };
-        }));
-        if (!cancelled) {
-          setApiplatformLevels((current) => {
-            const next = { ...current };
-            results.forEach((result, index) => {
-              if (result.status === 'fulfilled') next[DEFAULT_INDICES[index]] = result.value.levels;
-            });
-            return next;
-          });
-        }
-      } finally {
-        busy = false;
-      }
-    };
-    loadApiplatformLevels();
-    const timer = window.setInterval(loadApiplatformLevels, 5000);
-    return () => { cancelled = true; window.clearInterval(timer); };
-  }, []);
+
 
   return <section className="all-indices-dashboard" aria-label="Dashboard index charts">
     <div className="all-indices-grid">
@@ -593,7 +536,7 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
         const summaryPrice = quotePrice ?? latest?.price ?? latest?.close ?? latest?.ltp;
         return <article className="panel all-indices-card" key={symbol}>
           <div className="all-indices-card-heading"><h3>{symbol}</h3><div>{latest ? <><span>PRICE</span><strong>{number(summaryPrice)}</strong><span>VWAP</span><strong>{number(latest.vwap)}</strong></> : <span>{item.loading ? 'Loading…' : item.error ? 'Data unavailable' : 'Waiting for data'}</span>}</div></div>
-          {item.error && !item.rows.length ? <div className="chart-empty">{item.error}</div> : <PriceVwapChart rows={item.rows} levels={apiplatformLevels[symbol] || []} entryStartTime={settings.autoTrenderEntryStartTime} entryEndTime={settings.autoTrenderEntryEndTime} summary={{ price: summaryPrice, dayChangePercent, dayChangeAbsolute }} compact />}
+          {item.error && !item.rows.length ? <div className="chart-empty">{item.error}</div> : <PriceVwapChart rows={item.rows} entryStartTime={settings.autoTrenderEntryStartTime} entryEndTime={settings.autoTrenderEntryEndTime} summary={{ price: summaryPrice, dayChangePercent, dayChangeAbsolute }} compact />}
         </article>;
       })}
     </div>
@@ -1782,6 +1725,7 @@ export default function App() {
   const selectedIndexRef = useRef(index);
   selectedIndexRef.current = index;
   const [kiteIndexQuotes, setKiteIndexQuotes] = useState(null);
+  const [individualApiplatformLevels, setIndividualApiplatformLevels] = useState([]);
   const [mins, setMins] = useState(3);
   const [intraday, setIntraday] = useState(null);
   const [oi, setOi] = useState(null);
@@ -1865,6 +1809,46 @@ export default function App() {
     setLoading(false);
     refreshInFlight.current = false;
   }, [index, mins]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let busy = false;
+    let expiryInfo = null;
+    setIndividualApiplatformLevels([]);
+    const loadLevels = async () => {
+      if (busy || applicationTab !== 'autotrender' || autotrenderView !== 'live') return;
+      busy = true;
+      try {
+        if (!expiryInfo) {
+          const metadata = await api('/apiplatform/option-chain/metadata?symbol=' + encodeURIComponent(index));
+          const expiry = (metadata.expiries || [])[0];
+          if (!expiry?.expiry) return;
+          expiryInfo = { expiry: expiry.expiry, lotSize: expiry.lot_size || metadata.default_lot_size || 1 };
+        }
+        const payload = await api('/apiplatform/option-chain/levels?' + new URLSearchParams({
+          symbol: index, expiry: expiryInfo.expiry, lotSize: String(expiryInfo.lotSize),
+        }).toString());
+        const rs = Array.isArray(payload?.RS_Status) ? (payload.RS_Status[0] || {}) : {};
+        const model = payload?.symbolMarketDirection?.reversalModel || {};
+        const levels = [
+          { key: 't1', label: 'T1', value: rs.rreversal, color: '#ff6474' },
+          { key: 't2', label: 'T2', value: rs.rreversalNext, color: '#ffad42' },
+          { key: 's1', label: 'S1', value: rs.sreversal, color: '#35dc8a' },
+          { key: 's2', label: 'S2', value: rs.sreversalBack, color: '#43c8e8' },
+          { key: 'max-pain-upper', label: 'Max Pain ↑', value: model.resistanceSL, color: '#ff9b45' },
+          { key: 'max-pain-lower', label: 'Max Pain ↓', value: model.supportSL, color: '#ff9b45' },
+        ].filter((level) => numericValue(level.value) !== null);
+        if (!cancelled) setIndividualApiplatformLevels(levels);
+      } catch (error) {
+        // Keep the last valid levels visible during transient provider errors.
+      } finally {
+        busy = false;
+      }
+    };
+    loadLevels();
+    const timer = window.setInterval(loadLevels, 5000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [index, applicationTab, autotrenderView]);
 
   useEffect(() => {
     refresh();
@@ -2194,7 +2178,7 @@ export default function App() {
           <article className="panel price-vwap-panel">
             <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 7fr) minmax(260px, 3fr)' }}>
               <div className="price-vwap-graph-column">
-                <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} selectedContract={selectedContract?.status === 'SELECTED' ? selectedContract : null} tradeAction={selectedContract?.status === 'SELECTED' ? { onClick: enterManualAutoTrenderTrade, loading: manualTradeLoading, disabled: manualTradeLoading || !['BUY', 'SELL'].includes(contractSignal) || selectedContract.signal !== contractSignal } : null} tradeFeedback={manualTradeError ? <span className="manual-trade-error">{manualTradeError}</span> : manualTradeMessage ? <span className="manual-trade-success">{manualTradeMessage}</span> : null} showHeading />
+                <PriceVwapChart rows={calculatedRows} levels={individualApiplatformLevels} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} selectedContract={selectedContract?.status === 'SELECTED' ? selectedContract : null} tradeAction={selectedContract?.status === 'SELECTED' ? { onClick: enterManualAutoTrenderTrade, loading: manualTradeLoading, disabled: manualTradeLoading || !['BUY', 'SELL'].includes(contractSignal) || selectedContract.signal !== contractSignal } : null} tradeFeedback={manualTradeError ? <span className="manual-trade-error">{manualTradeError}</span> : manualTradeMessage ? <span className="manual-trade-success">{manualTradeMessage}</span> : null} showHeading />
               </div>
             </div>
           </article>
