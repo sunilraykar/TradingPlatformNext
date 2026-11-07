@@ -288,11 +288,15 @@ export default function LtpOptionChainDashboard() {
   useEffect(() => {
     if (!auth.authenticated || !expiry) return undefined;
     let active = true;
-    const query = new URLSearchParams({ symbol, expiry, price_mode: priceMode });
-    request('/apiplatform/option-chain/candles?' + query.toString())
-      .then((chart) => { if (active) setCandles(chart.candles || []); })
-      .catch(() => { if (active) setCandles([]); });
-    return () => { active = false; };
+    const refreshCandles = () => {
+      const query = new URLSearchParams({ symbol, expiry, price_mode: priceMode });
+      request('/apiplatform/option-chain/candles?' + query.toString())
+        .then((chart) => { if (active) setCandles(chart.candles || []); })
+        .catch(() => { if (active) setCandles([]); });
+    };
+    refreshCandles();
+    const timer = window.setInterval(refreshCandles, 60000);
+    return () => { active = false; window.clearInterval(timer); };
   }, [auth.authenticated, symbol, expiry, priceMode]);
 
   const chartLevels = [
