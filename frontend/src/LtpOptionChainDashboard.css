@@ -67,3 +67,21 @@
 .ltp-footer{padding:12px 2px 0;color:#778292;font-size:9px}
 @media(max-width:1150px){.ltp-market-strip{grid-template-columns:repeat(4,minmax(0,1fr))}.ltp-workspace{grid-template-columns:minmax(0,1fr)}.ltp-table-scroll{max-height:520px}.ltp-intelligence-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ltp-intelligence-title{grid-column:span 2}}
 @media(max-width:650px){.ltp-option-chain{padding:8px}.ltp-option-toolbar{align-items:flex-start}.ltp-controls{width:100%;flex:1 1 100%}.ltp-controls label{flex:1}.ltp-controls select{width:100%;min-width:0}.ltp-market-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ltp-market-strip>div:first-child{grid-column:span 2}.ltp-direction-banner{align-items:flex-start;flex-direction:column;gap:4px}.ltp-intelligence-strip{grid-template-columns:1fr}.ltp-intelligence-title{grid-column:auto}.ltp-panel-heading{align-items:flex-start}.ltp-panel-heading>small{white-space:normal;text-align:right}.ltp-table-scroll{max-height:470px;min-height:300px}.ltp-auth-banner{align-items:flex-start;flex-direction:column}}
+
+/* Full-width intraday chart, risk bands and spot marker in the strike column. */
+.ltp-candle-chart{padding:8px 4px 2px;min-height:300px}
+.ltp-candle-chart svg{width:100%;height:auto;min-height:300px;max-height:none;overflow:visible}
+.ltp-chart-zone.resistance-zone{fill:rgba(226,65,65,.10);stroke:rgba(226,65,65,.45);stroke-width:1}
+.ltp-chart-zone.support-zone{fill:rgba(37,166,77,.10);stroke:rgba(37,166,77,.45);stroke-width:1}
+.ltp-level-line{stroke-width:1.5;stroke-dasharray:5 3}
+.ltp-level-label{font-size:9px;paint-order:stroke;stroke:#fff;stroke-width:2px;stroke-linejoin:round}
+.ltp-live-price line{stroke:#e32636;stroke-width:1.8}
+.ltp-live-price rect{fill:#e32636}
+.ltp-live-price text{fill:#fff;font-family:Consolas,monospace;font-size:9px;font-weight:800}
+.ltp-spot-marker-row td{height:27px;padding:3px 7px!important;border-top:2px solid #ed2734!important;border-bottom:2px solid #ed2734!important;background:#fff!important;color:#d92331!important;font-size:8px!important;font-weight:800}
+.ltp-spot-marker-row td:first-child{text-align:left!important}
+.ltp-spot-marker-row td:last-child{text-align:right!important}
+.ltp-spot-marker-row td span{opacity:.7}
+.ltp-spot-marker-row td.ltp-spot-marker-cell{min-width:72px;background:#fff1f1!important;text-align:center!important}
+.ltp-spot-marker-cell strong,.ltp-spot-marker-cell b{display:block;line-height:1.2}
+.ltp-spot-marker-cell b{font-size:10px}
