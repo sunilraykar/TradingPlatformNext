@@ -1035,3 +1035,92 @@
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+
+/* Compact the combined controls + market-level overview row to ~60% of its previous height. */
+.ltp-option-chain .ltp-overview-row {
+  gap: 6px;
+  margin-bottom: 6px;
+  align-items: center;
+}
+.ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
+  min-height: 0;
+  padding: 4px 8px;
+  gap: 7px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-brand {
+  gap: 6px;
+  min-width: 138px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-brand-icon {
+  width: 25px;
+  height: 25px;
+  font-size: 17px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-brand strong {
+  font-size: 11px;
+  line-height: 1.1;
+}
+.ltp-option-chain .ltp-overview-row .ltp-brand small {
+  margin-top: 1px;
+  font-size: 8px;
+  line-height: 1.1;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls {
+  align-items: center;
+  gap: 5px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label {
+  gap: 2px;
+  font-size: 8px;
+  line-height: 1;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls select,
+.ltp-option-chain .ltp-overview-row .ltp-controls input,
+.ltp-option-chain .ltp-overview-row .ltp-refresh {
+  height: 25px;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  font-size: 11px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls select,
+.ltp-option-chain .ltp-overview-row .ltp-controls input {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-feed-status {
+  gap: 5px;
+  font-size: 9px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-feed-status i {
+  width: 6px;
+  height: 6px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-market-strip > div {
+  padding: 4px 4px;
+  gap: 2px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-market-strip > div > span {
+  font-size: 8px;
+  line-height: 1.05;
+  letter-spacing: .25px;
+}
+.ltp-option-chain .ltp-overview-row .ltp-market-strip > div > strong {
+  font-size: 11px;
+  line-height: 1.05;
+}
+.ltp-option-chain .ltp-overview-row .ltp-market-price strong {
+  font-size: 15px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-market-price small {
+  font-size: 8px;
+  line-height: 1;
+}
+@media (max-width: 1500px) {
+  .ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
+    padding: 5px 8px;
+  }
+  .ltp-option-chain .ltp-overview-row .ltp-market-strip > div {
+    padding: 5px 4px;
+  }
+}
