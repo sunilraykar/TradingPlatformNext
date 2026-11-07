@@ -965,3 +965,73 @@
 @media(max-width:900px){.ltp-lightweight-canvas{height:520px;min-height:520px}}
 
 .ltp-lightweight-level-key a{margin-left:auto;color:#a9c8e8;text-decoration:underline;text-underline-offset:2px;font-size:10px;font-weight:800}
+
+
+/* Desktop overview: controls and market metrics share one horizontal row. */
+.ltp-overview-row {
+  display: grid;
+  grid-template-columns: minmax(620px, 0.95fr) minmax(0, 1.35fr);
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 8px;
+  min-width: 0;
+}
+.ltp-overview-row .ltp-option-toolbar {
+  min-width: 0;
+  height: 100%;
+  margin: 0;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding: 8px 10px;
+}
+.ltp-overview-row .ltp-brand {
+  flex: 0 0 auto;
+  min-width: 150px;
+  gap: 7px;
+}
+.ltp-overview-row .ltp-brand strong { white-space: nowrap; }
+.ltp-overview-row .ltp-brand small { white-space: nowrap; }
+.ltp-overview-row .ltp-controls {
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+.ltp-overview-row .ltp-controls label { min-width: 0; }
+.ltp-overview-row .ltp-controls select,
+.ltp-overview-row .ltp-controls input { min-width: 0; max-width: 100%; }
+.ltp-overview-row .ltp-feed-status { flex: 0 0 auto; }
+.ltp-overview-row .ltp-market-strip {
+  grid-template-columns: repeat(7, minmax(0, 1fr)) !important;
+  min-width: 0;
+  margin: 0;
+  height: 100%;
+}
+.ltp-overview-row .ltp-market-strip > div {
+  min-width: 0;
+  padding: 7px 5px;
+  gap: 4px;
+  text-align: center;
+}
+.ltp-overview-row .ltp-market-strip > div > span {
+  font-size: 10px;
+  line-height: 1.2;
+}
+.ltp-overview-row .ltp-market-strip > div > strong {
+  font-size: 13px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+.ltp-overview-row .ltp-market-price strong { font-size: 17px !important; }
+@media (max-width: 1500px) {
+  .ltp-overview-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ltp-overview-row .ltp-option-toolbar { flex-wrap: wrap; }
+  .ltp-overview-row .ltp-controls { flex-wrap: wrap; }
+}
+@media (max-width: 760px) {
+  .ltp-overview-row .ltp-market-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
