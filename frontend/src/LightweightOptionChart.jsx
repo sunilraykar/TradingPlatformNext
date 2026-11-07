@@ -57,7 +57,7 @@ export default function LightweightOptionChart({ candles = [], livePrice, levels
         background: { type: 'solid', color: '#142438' },
         textColor: '#e8f0fa',
         fontFamily: 'Inter, Segoe UI, sans-serif',
-        fontSize: 13,
+        fontSize: 11,
       },
       grid: {
         vertLines: { color: '#263b52' },
