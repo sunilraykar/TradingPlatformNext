@@ -1133,3 +1133,48 @@
 /* Compact the Lightweight chart's T1/T2/S1/S2 reference labels. */
 .ltp-lightweight-level-key{font-size:8px!important;gap:4px 9px!important;padding:4px 3px 1px!important}
 .ltp-lightweight-level-key a{font-size:8px!important}
+
+
+/* Market Intelligence view tabs occupy the left side of the overview row. */
+.ltp-overview-row .ltp-section-tabs {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-self: start;
+  align-self: stretch;
+  gap: 6px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border, #344356);
+  border-radius: 8px;
+  background: var(--panel, #1b2634);
+}
+.ltp-section-tabs button {
+  min-height: 30px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted, #a8b5c5);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.ltp-section-tabs button.active {
+  color: #fff;
+  background: #e95b35;
+  border-color: #ff8058;
+  box-shadow: 0 1px 4px rgba(0,0,0,.22);
+}
+.ltp-section-tabs button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+@media (max-width: 1500px) {
+  .ltp-overview-row .ltp-section-tabs {
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
