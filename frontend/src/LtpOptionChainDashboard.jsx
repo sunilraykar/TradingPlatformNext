@@ -156,6 +156,70 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
   </tr>;
 }
 
+
+function SwingTradePanel() {
+  const [side, setSide] = useState('bullish');
+  const [payload, setPayload] = useState({ bullish: [], bearish: [], counts: {} });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
+  useEffect(() => {
+    let active = true, busy = false;
+    const refresh = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const next = await request('/apiplatform/swing/live');
+        if (!active) return;
+        setPayload({ bullish: Array.isArray(next.bullish) ? next.bullish : [], bearish: Array.isArray(next.bearish) ? next.bearish : [], counts: next.counts || {} });
+        setLastUpdated(new Date());
+        setError('');
+      } catch (e) { if (active) setError(e.message || 'Unable to refresh Swing Trade data.'); }
+      finally { busy = false; if (active) setLoading(false); }
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 5000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
+  const rows = payload[side] || [];
+  const number = (value) => {
+    if (value === null || value === undefined || value === '') return '—';
+    const parsed = Number(String(value).replace(/,/g, ''));
+    return Number.isFinite(parsed) ? parsed.toLocaleString('en-IN', { maximumFractionDigits: 2 }) : String(value);
+  };
+  const starField = side === 'bullish' ? 'S_OI_BullishStarRating' : 'R_OI_BearishStarRating';
+  const statusField = side === 'bullish' ? 'S_OI_Status' : 'R_OI_Status';
+  const oiField = side === 'bullish' ? 'S_OI' : 'R_OI';
+  return <section className="ltp-swing-panel">
+    <div className="ltp-swing-heading">
+      <div><span>APIPLATFORM · IDADDY SWING LIVE</span><h2>Swing Trade Signals</h2></div>
+      <div className="ltp-swing-live"><i /> LIVE · 5 SEC</div>
+    </div>
+    <div className="ltp-swing-toolbar">
+      <div className="ltp-swing-tabs" role="tablist" aria-label="Swing signal direction">
+        <button type="button" role="tab" aria-selected={side === 'bullish'} className={side === 'bullish' ? 'bullish active' : 'bullish'} onClick={() => setSide('bullish')}>BULLISH <b>{payload.counts.bullish ?? payload.bullish.length}</b></button>
+        <button type="button" role="tab" aria-selected={side === 'bearish'} className={side === 'bearish' ? 'bearish active' : 'bearish'} onClick={() => setSide('bearish')}>BEARISH <b>{payload.counts.bearish ?? payload.bearish.length}</b></button>
+      </div>
+      <div className="ltp-swing-refresh-meta"><span>{lastUpdated ? 'Updated ' + lastUpdated.toLocaleTimeString('en-IN') : (loading ? 'Connecting…' : 'Waiting for data')}</span>{error && <strong title={error}>Refresh issue · retaining last data</strong>}</div>
+    </div>
+    <div className="ltp-swing-table-wrap">
+      <table className="ltp-swing-table">
+        <thead><tr><th>TIME</th><th>SYMBOL</th><th>LOT SIZE</th><th>STATUS [SHIFTING]</th><th>CMP</th><th>PUT H OI REVERSAL</th><th>CALL H OI REVERSAL</th><th>OI</th><th>STAR RATING</th></tr></thead>
+        <tbody>{rows.map((row) => {
+          const status = String(row[statusField] || '—').toUpperCase();
+          return <tr key={row.symbol}>
+            <td className="time">{row.FetchTime || '—'}</td><td className="symbol">{row.symbol}</td><td>{number(row.lotSize)}</td>
+            <td><span className={'ltp-swing-status ' + (status === 'STRONG' ? 'strong' : status === 'WTB' ? 'wtb' : status === 'WTT' ? 'wtt' : '')}>{status}</span></td>
+            <td className="cmp">{number(row['Price-S'])}</td><td>{row.S_OI_Reversal ?? '—'}</td><td>{row.R_OI_Reversal ?? '—'}</td><td>{number(row[oiField])}</td><td><span className="ltp-swing-stars">{number(row[starField])}</span></td>
+          </tr>;
+        })}
+        {!rows.length && <tr><td colSpan="9" className="ltp-swing-empty">{loading ? 'Loading live Swing Trade records…' : error ? 'Unable to load Swing Trade records.' : 'No records match the configured filters.'}</td></tr>}</tbody>
+      </table>
+    </div>
+    <div className="ltp-swing-footnote">Filters: Star Rating 0–1 · Bullish status STRONG/WTT · Bearish status STRONG/WTB · Duplicate symbols retain the last qualifying API record · API order preserved.</div>
+  </section>;
+}
+
 export default function LtpOptionChainDashboard() {
   const [symbols, setSymbols] = useState(DEFAULT_SYMBOLS);
   const [symbol, setSymbol] = useState('NIFTY');
@@ -175,6 +239,7 @@ export default function LtpOptionChainDashboard() {
   const [candles, setCandles] = useState([]);
   const [chartType, setChartType] = useState('classic');
   const [feedConnected, setFeedConnected] = useState(false);
+  const [activeView, setActiveView] = useState('option-chain');
   const chainRequestId = useRef(0);
   const metadataRequestId = useRef(0);
 
@@ -362,8 +427,8 @@ export default function LtpOptionChainDashboard() {
   return <section className="ltp-option-chain">
     <div className="ltp-overview-row">
     <nav className="ltp-section-tabs" aria-label="Market Intelligence view">
-      <button type="button" className="active" aria-current="page">Option Chain</button>
-      <button type="button" disabled title="Swing Trade view will be configured later">Swing Trade</button>
+      <button type="button" className={activeView === "option-chain" ? "active" : ""} aria-current={activeView === "option-chain" ? "page" : undefined} onClick={() => setActiveView("option-chain")}>Option Chain</button>
+      <button type="button" className={activeView === "swing-trade" ? "active" : ""} aria-current={activeView === "swing-trade" ? "page" : undefined} onClick={() => setActiveView("swing-trade")}>Swing Trade</button>
     </nav>
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
@@ -396,7 +461,7 @@ export default function LtpOptionChainDashboard() {
 
     </div>
 
-    <section className="ltp-workspace">
+    {activeView === "swing-trade" ? <SwingTradePanel /> : <section className="ltp-workspace">
       <article className="ltp-option-panel">
         <div className="ltp-chain-count"><span>{visibleRows.length} strikes shown · {rows.length} returned</span></div>
         <div className="ltp-table-scroll"><table className="ltp-option-table">
@@ -477,7 +542,7 @@ export default function LtpOptionChainDashboard() {
           </article>
         </section>
       </aside>
-    </section>
+    </section>}
 
     <footer className="ltp-footer">Market data is provided by APIPLATFORM and Kite Connect. Verify all levels independently before placing trades.</footer>
   </section>;
