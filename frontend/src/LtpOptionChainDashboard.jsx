@@ -109,7 +109,7 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
   </svg></div>;
 }
 
-function OptionRow({ row, spot, quotes, instruments, maxima, totals }) {
+function OptionRow({ row, spot, quotes, instruments, maxima }) {
   const strike = n(row.strike);
   const call = instruments.get(String(strike) + ':CE');
   const put = instruments.get(String(strike) + ':PE');
@@ -124,12 +124,14 @@ function OptionRow({ row, spot, quotes, instruments, maxima, totals }) {
   const putVol = n(row.putVol);
   const callChg = n(row.callOIchg);
   const putChg = n(row.putOIchg);
-  const callChgPct = n(row.callOIchgPercent ?? row.callOIChangePercent ?? row.callOIChangePercentage);
-  const putChgPct = n(row.putOIchgPercent ?? row.putOIChangePercent ?? row.putOIChangePercentage);
-  const callOiShare = totals.callOi ? callOi / totals.callOi * 100 : null;
-  const putOiShare = totals.putOi ? putOi / totals.putOi * 100 : null;
-  const callVolShare = totals.callVol ? callVol / totals.callVol * 100 : null;
-  const putVolShare = totals.putVol ? putVol / totals.putVol * 100 : null;
+  // Every metric is normalized against the maximum absolute value in its own
+  // column across the full provider response. Preserve the sign for OI change.
+  const callChgPct = maxima.callOiChg ? callChg / maxima.callOiChg * 100 : null;
+  const putChgPct = maxima.putOiChg ? putChg / maxima.putOiChg * 100 : null;
+  const callOiShare = maxima.callOi ? callOi / maxima.callOi * 100 : null;
+  const putOiShare = maxima.putOi ? putOi / maxima.putOi * 100 : null;
+  const callVolShare = maxima.callVol ? callVol / maxima.callVol * 100 : null;
+  const putVolShare = maxima.putVol ? putVol / maxima.putVol * 100 : null;
   const isAtm = spot !== null && strike !== null && Math.abs(spot - strike) < 0.01;
   const reversal = (value, quote) => <><span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span><small className="ltp-option-price">LTP {fmt(quote && quote.last_price)}</small></>;
   return <tr className={isAtm ? 'ltp-atm-row' : ''}>
@@ -188,11 +190,13 @@ export default function LtpOptionChainDashboard() {
   }, [rows, underlying]);
 
   const maxima = useMemo(() => ({
-    callOi: Math.max(0, ...visibleRows.map((r) => n(r.callOI) || 0)),
-    putOi: Math.max(0, ...visibleRows.map((r) => n(r.putOI) || 0)),
-    callVol: Math.max(0, ...visibleRows.map((r) => n(r.callVol) || 0)),
-    putVol: Math.max(0, ...visibleRows.map((r) => n(r.putVol) || 0)),
-  }), [visibleRows]);
+    callOiChg: Math.max(0, ...rows.map((r) => Math.abs(n(r.callOIchg) || 0))),
+    callOi: Math.max(0, ...rows.map((r) => n(r.callOI) || 0)),
+    callVol: Math.max(0, ...rows.map((r) => n(r.callVol) || 0)),
+    putVol: Math.max(0, ...rows.map((r) => n(r.putVol) || 0)),
+    putOi: Math.max(0, ...rows.map((r) => n(r.putOI) || 0)),
+    putOiChg: Math.max(0, ...rows.map((r) => Math.abs(n(r.putOIchg) || 0))),
+  }), [rows]);
 
   const loadMetadata = useCallback(async (selected) => {
     const requestId = ++metadataRequestId.current;
@@ -330,12 +334,6 @@ export default function LtpOptionChainDashboard() {
   const change = selectedQuote && selectedQuote.ohlc && n(selectedQuote.ohlc.close) && n(selectedQuote.last_price)
     ? (n(selectedQuote.last_price) - n(selectedQuote.ohlc.close)) / n(selectedQuote.ohlc.close) * 100 : null;
   const total = (field) => visibleRows.reduce((sum, row) => sum + (n(row[field]) || 0), 0);
-  const chainTotals = {
-    callOi: total('callOI'),
-    putOi: total('putOI'),
-    callVol: total('callVol'),
-    putVol: total('putVol'),
-  };
 
   return <section className="ltp-option-chain">
     <section className="ltp-option-toolbar">
@@ -389,7 +387,7 @@ export default function LtpOptionChainDashboard() {
             const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
             const showSpot = underlying !== null && strike !== null && (underlying >= strike && (nextStrike === null || underlying < nextStrike));
             return <React.Fragment key={row._id || row.strike}>
-              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} totals={chainTotals} />
+              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} />
               {showSpot && <tr className="ltp-spot-marker-row">
                 <td colSpan="4"><div className="ltp-rs-indicators ltp-rs-call">
                   <span className="ltp-rs-chip"><b>{rs.R_OI_Status || '—'}</b><strong>{fmt(rs.R_OI_ShiftingStrike_per, 2)}%</strong><small>OI · {rs.R_OI_Strike || '—'}{rs.R_OI_Shifting ? ' → ' + (rs.R_OI_ShiftingStrike || '—') : ''}</small></span>
