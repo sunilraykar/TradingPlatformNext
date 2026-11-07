@@ -343,3 +343,75 @@
 .ltp-option-table td.ltp-rank-putOi-second{background:#dce9ff!important;color:#263f65!important;font-weight:850}
 .ltp-option-table td.ltp-rank-putOiChg-first{background:#b9e6a2!important;color:#1b3c12!important;font-weight:900}
 .ltp-option-table td.ltp-rank-putOiChg-second{background:#dff2d2!important;color:#2b4820!important;font-weight:850}
+
+
+/* Readability pass: enforce strong contrast for every table value and sub-line. */
+.ltp-option-table th{
+  color:#ffffff!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  letter-spacing:.15px;
+}
+.ltp-option-table td{
+  color:#f8fafc!important;
+  font-size:11px!important;
+  font-weight:750!important;
+  text-shadow:none!important;
+}
+.ltp-option-table td strong{
+  color:inherit!important;
+  font-size:11px!important;
+  font-weight:900!important;
+}
+.ltp-option-table td small{
+  color:#e5edf7!important;
+  opacity:1!important;
+  font-size:9px!important;
+  font-weight:750!important;
+}
+.ltp-option-table td.positive,
+.ltp-option-table td.positive small{color:#75f0aa!important}
+.ltp-option-table td.negative,
+.ltp-option-table td.negative small{color:#ff9299!important}
+
+/* Ranked cells use dark foregrounds on their light backgrounds, including nested values. */
+.ltp-option-table td.ltp-rank-callOiChg-first,
+.ltp-option-table td.ltp-rank-callOiChg-first *,
+.ltp-option-table td.ltp-rank-callOiChg-second,
+.ltp-option-table td.ltp-rank-callOiChg-second *{color:#351018!important}
+.ltp-option-table td.ltp-rank-callOi-first,
+.ltp-option-table td.ltp-rank-callOi-first *,
+.ltp-option-table td.ltp-rank-callOi-second,
+.ltp-option-table td.ltp-rank-callOi-second *{color:#102b40!important}
+.ltp-option-table td.ltp-rank-callVol-first,
+.ltp-option-table td.ltp-rank-callVol-first *,
+.ltp-option-table td.ltp-rank-callVol-second,
+.ltp-option-table td.ltp-rank-callVol-second *{color:#302900!important}
+.ltp-option-table td.ltp-rank-putVol-first,
+.ltp-option-table td.ltp-rank-putVol-first *,
+.ltp-option-table td.ltp-rank-putVol-second,
+.ltp-option-table td.ltp-rank-putVol-second *{color:#103c36!important}
+.ltp-option-table td.ltp-rank-putOi-first,
+.ltp-option-table td.ltp-rank-putOi-first *,
+.ltp-option-table td.ltp-rank-putOi-second,
+.ltp-option-table td.ltp-rank-putOi-second *{color:#172f55!important}
+.ltp-option-table td.ltp-rank-putOiChg-first,
+.ltp-option-table td.ltp-rank-putOiChg-first *,
+.ltp-option-table td.ltp-rank-putOiChg-second,
+.ltp-option-table td.ltp-rank-putOiChg-second *{color:#1b3c12!important}
+
+/* Keep reversal labels legible without relying on muted inherited text. */
+.ltp-option-table .ltp-reversal{font-size:8px!important;font-weight:900!important}
+.ltp-option-table .ltp-reversal.positive{color:#b9ffd4!important}
+.ltp-option-table .ltp-reversal.negative{color:#ffe0e3!important}
+.ltp-option-table tfoot td{color:#ffffff!important;font-size:9px!important;font-weight:850!important}
+.ltp-option-table tfoot td strong{color:#ffffff!important;font-size:10px!important}
+.ltp-option-table .ltp-strike-cell,
+.ltp-option-table .ltp-strike-cell *{color:#ffffff!important}
+.ltp-spot-marker-row td{color:#ffffff!important;font-weight:850!important}
+.ltp-rs-chip,.ltp-rs-chip *{text-shadow:none!important}
+.ltp-panel-heading h2{color:#ffffff!important;font-size:15px!important}
+.ltp-panel-heading>small{color:#e0e9f4!important;font-weight:700!important}
+.ltp-chart-axis{fill:#f1f5fb!important;font-size:15px!important;font-weight:800!important}
+.ltp-level-label{font-size:14px!important;font-weight:900!important;paint-order:stroke}
+.ltp-chart-legend,.ltp-chart-footer{color:#e5edf7!important;font-weight:700!important}
