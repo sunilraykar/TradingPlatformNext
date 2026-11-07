@@ -147,6 +147,37 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
+
+function ApiplatformLevelBar({ levels = [], spotPrice = null }) {
+  const byKey = new Map((Array.isArray(levels) ? levels : []).map((level) => [level.key, numericValue(level.value)]));
+  const points = [
+    { key: 'max-pain-lower', label: 'Max Pain (S)', color: '#287be8' },
+    { key: 's2', label: 'S2', color: '#38b9d5' },
+    { key: 's1', label: 'S1', color: '#2fc878' },
+    { key: 'spot', label: 'SPOT', color: '#f5dc35', spot: true },
+    { key: 't1', label: 'T1', color: '#ed5967' },
+    { key: 't2', label: 'T2', color: '#f27b43' },
+    { key: 'max-pain-upper', label: 'Max Pain (R)', color: '#a64bd0' },
+  ].map((point) => ({ ...point, value: point.spot ? spotPrice : byKey.get(point.key) }))
+    .filter((point) => point.value !== null && point.value !== undefined && Number.isFinite(Number(point.value)));
+  if (points.length < 2) return <div style={{ minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted, #8da0bb)', fontSize: 11 }}>Waiting for spot and APIPLATFORM support/resistance levels…</div>;
+  const values = points.map((point) => Number(point.value));
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const position = (value) => 18 + ((Number(value) - min) / span) * 82;
+  const format = (value) => Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 });
+  return <div aria-label="Spot position relative to APIPLATFORM support and resistance levels" style={{ position: 'relative', height: 78, margin: '2px 14px 7px', minWidth: 600 }}>
+    <div style={{ position: 'absolute', left: '18%', right: 0, top: 55, height: 8, borderRadius: 8, background: 'linear-gradient(90deg,#2584e8 0%,#27c77c 32%,#f4dc35 55%,#f38a3e 76%,#e84c62 100%)', boxShadow: '0 0 8px rgba(70,190,150,.22)' }} />
+    {points.map((point) => <div key={point.key} style={{ position: 'absolute', left: `${position(point.value)}%`, top: 0, transform: 'translateX(-50%)', width: point.spot ? 76 : 72, textAlign: 'center', zIndex: point.spot ? 2 : 1 }}>
+      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '4px 7px', minWidth: point.spot ? 72 : 62, borderRadius: 8, color: '#fff', background: point.color, boxShadow: point.spot ? '0 0 12px rgba(245,220,53,.28)' : 'none', fontSize: 10, lineHeight: 1.25 }}>
+        <strong>{point.label}</strong><strong style={{ fontSize: 11 }}>{format(point.value)}</strong>
+      </div>
+      <span style={{ display: 'block', width: point.spot ? 13 : 11, height: point.spot ? 13 : 11, margin: '8px auto 0', borderRadius: '50%', background: point.color, border: '2px solid #f5f7fa', boxSizing: 'content-box' }} />
+    </div>)}
+  </div>;
+}
+
 function PriceVwapChart({ rows, levels = [], entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, selectedContract = null, tradeAction = null, tradeFeedback = null, showHeading = false, compact = false, headingEyebrow = 'INTRADAY PRICE ACTION' }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
@@ -162,8 +193,7 @@ function PriceVwapChart({ rows, levels = [], entryStartTime = '10:00', entryEndT
     .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer, strengthDiff: row.strengthDiff, callStrength: row.callStrength, putStrength: row.putStrength, enter: row.enter, optionSignal: row.optionSignal, vwapSignal: row.vwapSignal }))
     .filter((row) => row.minutes !== null && row.minutes >= sessionStart && row.minutes <= sessionEnd && (row.price !== null || row.vwap !== null))
     .sort((a, b) => a.minutes - b.minutes);
-  const chartLevels = (Array.isArray(levels) ? levels : []).map((level) => ({ ...level, value: numericValue(level.value) })).filter((level) => level.value !== null);
-  const values = [...usable.flatMap((row) => [row.price, row.vwap]), ...chartLevels.map((level) => level.value)].filter((value) => value !== null && Number.isFinite(value));
+  const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
   if (usable.length < 2 || !values.length) {
     return <div className="chart-empty">Waiting for market data. Updates begin at 9:30 AM.</div>;
   }
@@ -230,10 +260,6 @@ function PriceVwapChart({ rows, levels = [], entryStartTime = '10:00', entryEndT
         <line x1="12" x2="708" y1="34" y2="34" className="zero-line" />
         <line x1="12" x2="708" y1="118" y2="118" className="zero-line" />
         <line x1="12" x2="708" y1="202" y2="202" className="zero-line" />
-        {chartLevels.map((level) => <g key={level.key || level.label}>
-          <line x1="12" x2="708" y1={y(level.value)} y2={y(level.value)} stroke={level.color || '#fbbf24'} strokeWidth="1.6" strokeDasharray="6 4" opacity="0.95" />
-          <text x="704" y={Math.max(11, Math.min(198, y(level.value) - 4))} textAnchor="end" fill={level.color || '#fbbf24'} fontSize="10" fontWeight="700" paintOrder="stroke" stroke="#101a2a" strokeWidth="3">{level.label} {formatPrice(level.value)}</text>
-        </g>)}
         {[{ time: entryStartTime, label: 'Entry start', color: '#38bdf8' }, { time: entryEndTime, label: 'Entry cutoff', color: '#fbbf24' }].map((marker) => {
           const minutes = parseMinutes(marker.time);
           if (minutes === null || minutes < sessionStart || minutes > sessionEnd) return null;
@@ -2178,7 +2204,7 @@ export default function App() {
           <article className="panel price-vwap-panel">
             <div className="price-vwap-layout" style={{ gridTemplateColumns: 'minmax(0, 7fr) minmax(260px, 3fr)' }}>
               <div className="price-vwap-graph-column">
-                <PriceVwapChart rows={calculatedRows} levels={individualApiplatformLevels} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} selectedContract={selectedContract?.status === 'SELECTED' ? selectedContract : null} tradeAction={selectedContract?.status === 'SELECTED' ? { onClick: enterManualAutoTrenderTrade, loading: manualTradeLoading, disabled: manualTradeLoading || !['BUY', 'SELL'].includes(contractSignal) || selectedContract.signal !== contractSignal } : null} tradeFeedback={manualTradeError ? <span className="manual-trade-error">{manualTradeError}</span> : manualTradeMessage ? <span className="manual-trade-success">{manualTradeMessage}</span> : null} showHeading />
+                <PriceVwapChart rows={calculatedRows} entryStartTime={autotrendSettings.autoTrenderEntryStartTime} entryEndTime={autotrendSettings.autoTrenderEntryEndTime} selectedTime={selectedLiveIntradayTime} summary={{ price: kiteIndexRecord?.last_price ?? latest.price ?? latest.close ?? latest.ltp, dayChangePercent: dailyChangePercent, dayChangeAbsolute: dailyChangeAbsolute }} enterValue={calculatedRowsDescending[0]?.enter || '—'} selectedContract={selectedContract?.status === 'SELECTED' ? selectedContract : null} tradeAction={selectedContract?.status === 'SELECTED' ? { onClick: enterManualAutoTrenderTrade, loading: manualTradeLoading, disabled: manualTradeLoading || !['BUY', 'SELL'].includes(contractSignal) || selectedContract.signal !== contractSignal } : null} tradeFeedback={manualTradeError ? <span className="manual-trade-error">{manualTradeError}</span> : manualTradeMessage ? <span className="manual-trade-success">{manualTradeMessage}</span> : null} showHeading />
               </div>
             </div>
           </article>
@@ -2190,6 +2216,7 @@ export default function App() {
         <article className="panel intraday-panel calculated-table-panel">
           <div className="panel-header"><div><h2>Intraday Table</h2></div><div className="panel-actions"><span className="data-count">{filteredLiveIntradayRows.length} / {calculatedRows.length} points</span><button type="button" className="button secondary" onClick={() => setShowIntradayDetails((visible) => !visible)}>{showIntradayDetails ? 'Hide Details' : 'Show Details'}</button></div></div>
           <div className="historical-enter-filters" role="group" aria-label="Filter live intraday records by Enter signal">{['ALL', 'BUY', 'SELL', 'WAIT'].map((signal) => <button key={signal} type="button" className={liveEnterFilter === signal ? 'selected' : 'button secondary'} onClick={() => setLiveEnterFilter(signal)}>{signal === 'ALL' ? 'All' : signal} ({liveEnterFilterCount(signal)})</button>)}</div>
+          <ApiplatformLevelBar levels={individualApiplatformLevels} spotPrice={numericValue(kiteIndexRecord?.last_price ?? kiteIndexRecord?.price ?? kiteIndexRecord?.ltp)} />
           <div className="table-scroll calculated-table-scroll"><table className="calculated-table"><thead><tr><th>Time</th><th>VWAP Signal</th><th>Option Signal</th><th>Enter</th>{showIntradayDetails && <><th>Call</th><th>Put</th></>}<th>Diff</th><th>PCR</th><th>Price</th><th>VWAP</th>{showIntradayDetails && <><th>Call Strength (%)</th><th>Put Strength (%)</th></>}<th>Call-Put Strength Diff</th><th>Price − VWAP / Buffer (%)</th></tr></thead>
             <tbody>{filteredLiveIntradayRows.slice(0, 100).map((row) => <tr key={row.key} onClick={() => setSelectedLiveIntradayTime(row.time)} style={{ cursor: 'pointer', background: selectedLiveIntradayTime === row.time ? 'rgba(56,189,248,0.10)' : undefined }} title={`Time: ${row.time || '—'}\nPCR: ${number(row.pcr, 2)}\nPrice: ${number(row.price)}\nVWAP: ${number(row.vwap)}\nVWAP-Price Buffer: ${row.price === null || row.vwap === null ? '—' : number(row.price - row.vwap)}\nVWAP-Price Buffer (%): ${row.buffer === null ? '—' : number(row.buffer, 3) + '%'}`}>
               <td>{row.time || '—'}</td><td><span className={'signal-tag ' + (row.vwapSignal === 'BUY' ? 'signal-buy' : row.vwapSignal === 'SELL' ? 'signal-sell' : '')}>{row.vwapSignal || '—'}</span></td><td><span className={'signal-tag ' + (row.optionSignal === 'BUY' ? 'signal-buy' : row.optionSignal === 'SELL' ? 'signal-sell' : '')}>{row.optionSignal || '—'}</span></td><td><span className={'signal-tag enter-tag ' + row.enter.toLowerCase()}>{row.enter}</span></td>{showIntradayDetails && <><td>{number(row.call)}</td><td>{number(row.put)}</td></>}<td>{number(row.diff)}</td><td>{number(row.pcr, 2)}</td><td>{number(row.price)}</td><td>{number(row.vwap)}</td>
