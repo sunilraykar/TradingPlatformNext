@@ -203,6 +203,32 @@ def fetch_apiplatform_option_chain(
     }
 
 
+@router.get("/levels")
+def option_chain_market_levels(
+    symbol: str = Query(default="NIFTY", max_length=30),
+    expiry: str = Query(..., min_length=8, max_length=10),
+    lot_size: int = Query(..., alias="lotSize", ge=1, le=100000),
+) -> dict[str, Any]:
+    """Fetch only APIPLATFORM chart levels without registering Kite quote subscriptions."""
+    key = _symbol(symbol)
+    expiry_text = _expiry(expiry).strftime("%d-%m-%Y")
+    try:
+        payload = get_apiplatform_client().fetch_option_chain(key, expiry_text, lot_size)
+    except Exception as exc:
+        logger.exception("APIPLATFORM market-level fetch failed for %s %s", key, expiry_text)
+        raise HTTPException(status_code=502, detail="APIPLATFORM market-level request failed.") from exc
+
+    rs_status = payload.get("RS_Status", []) if isinstance(payload, dict) else []
+    direction = payload.get("symbolMarketDirection", {}) if isinstance(payload, dict) else {}
+    return {
+        "symbol": key,
+        "expiry": expiry_text,
+        "RS_Status": rs_status,
+        "symbolMarketDirection": direction,
+        "fetch_time": payload.get("FetchTime") if isinstance(payload, dict) else None,
+    }
+
+
 @router.get("/live-quotes")
 def option_chain_live_quotes(
     instrument_tokens: list[int] = Query(..., min_length=1, max_length=500),
