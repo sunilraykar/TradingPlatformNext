@@ -85,3 +85,23 @@
 .ltp-spot-marker-row td.ltp-spot-marker-cell{min-width:72px;background:#fff1f1!important;text-align:center!important}
 .ltp-spot-marker-cell strong,.ltp-spot-marker-cell b{display:block;line-height:1.2}
 .ltp-spot-marker-cell b{font-size:10px}
+
+/* Improve readability of chart annotations at the dashboard's split-panel width. */
+.ltp-candle-chart{padding:12px 8px 6px;min-height:360px}
+.ltp-candle-chart svg{min-height:360px}
+.ltp-chart-axis{font-size:15px;font-weight:600}
+.ltp-level-label{font-size:13px;font-weight:800;stroke-width:3px}
+.ltp-live-price text{font-size:12px;font-weight:900}
+.ltp-chart-grid{stroke-width:1.2}
+.ltp-level-line{stroke-width:2}
+.ltp-chart-empty{min-height:360px}
+.ltp-chart-empty strong{font-size:15px}
+.ltp-chart-empty small{max-width:300px;font-size:13px;line-height:1.55}
+.ltp-chart-legend{font-size:12px;gap:16px}
+.ltp-chart-legend i{width:19px;height:3px}
+.ltp-chart-quote strong{font-size:21px}
+.ltp-chart-quote span{font-size:11px}
+@media(max-width:1150px){
+  .ltp-candle-chart{min-height:340px}
+  .ltp-candle-chart svg{min-height:340px}
+}
