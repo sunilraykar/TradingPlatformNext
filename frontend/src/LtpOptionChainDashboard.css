@@ -861,3 +861,55 @@
 @media(max-width:600px){
   .ltp-intelligence-groups{grid-template-columns:1fr!important}
 }
+
+
+/* Readability pass: increase dashboard typography by approximately 30%. */
+.ltp-option-chain .ltp-brand strong{font-size:18px!important}
+.ltp-option-chain .ltp-brand small{font-size:13px!important}
+.ltp-option-chain .ltp-controls label{font-size:14px!important}
+.ltp-option-chain .ltp-controls select,
+.ltp-option-chain .ltp-controls input{font-size:17px!important}
+.ltp-option-chain .ltp-refresh{font-size:16px!important}
+.ltp-option-chain .ltp-feed-status{font-size:14px!important}
+.ltp-option-chain .ltp-direction-banner span{font-size:13px!important}
+.ltp-option-chain .ltp-direction-banner strong{font-size:19px!important}
+.ltp-option-chain .ltp-direction-banner small{font-size:16px!important}
+.ltp-option-chain .ltp-market-strip span{font-size:13px!important}
+.ltp-option-chain .ltp-market-strip strong{font-size:19px!important}
+.ltp-option-chain .ltp-market-strip>div:first-child strong{font-size:28px!important}
+.ltp-option-chain .ltp-market-price small{font-size:14px!important}
+.ltp-option-chain .ltp-chain-count,
+.ltp-option-chain .ltp-chain-count span{font-size:14px!important}
+.ltp-option-chain .ltp-option-table th{font-size:14px!important}
+.ltp-option-chain .ltp-option-table td{font-size:16px!important}
+.ltp-option-chain .ltp-option-table td small{font-size:13px!important}
+.ltp-option-chain .ltp-strike-cell strong{font-size:17px!important}
+.ltp-option-chain .ltp-strike-cell small{font-size:12px!important}
+.ltp-option-chain .ltp-reversal{font-size:13px!important}
+.ltp-option-chain .ltp-spot-marker-row td{font-size:13px!important}
+.ltp-option-chain .ltp-spot-marker-cell b{font-size:16px!important}
+.ltp-option-chain .ltp-rs-chip{font-size:13px!important}
+.ltp-option-chain .ltp-option-table tfoot td{font-size:14px!important}
+.ltp-option-chain .ltp-table-legend{font-size:14px!important}
+.ltp-option-chain .ltp-panel-heading span{font-size:13px!important}
+.ltp-option-chain .ltp-panel-heading h2{font-size:20px!important}
+.ltp-option-chain .ltp-panel-heading>small{font-size:14px!important}
+.ltp-option-chain .ltp-chart-quote strong{font-size:30px!important}
+.ltp-option-chain .ltp-chart-quote span{font-size:14px!important}
+.ltp-option-chain .ltp-chart-axis{font-size:19px!important}
+.ltp-option-chain .ltp-level-label{font-size:17px!important}
+.ltp-option-chain .ltp-live-price text{font-size:16px!important}
+.ltp-option-chain .ltp-chart-empty strong{font-size:20px!important}
+.ltp-option-chain .ltp-chart-empty small{font-size:17px!important}
+.ltp-option-chain .ltp-chart-footer{font-size:13px!important}
+.ltp-option-chain .ltp-intelligence-group h3{font-size:17px!important}
+.ltp-option-chain .ltp-intelligence-group span{font-size:13px!important}
+.ltp-option-chain .ltp-intelligence-group strong{font-size:16px!important}
+.ltp-option-chain .ltp-intelligence-group small{font-size:13px!important}
+.ltp-option-chain .ltp-footer{font-size:13px!important}
+@media(max-width:650px){
+  .ltp-option-chain .ltp-option-table th{font-size:12px!important}
+  .ltp-option-chain .ltp-option-table td{font-size:13px!important}
+  .ltp-option-chain .ltp-chart-axis{font-size:16px!important}
+  .ltp-option-chain .ltp-level-label{font-size:14px!important}
+}
