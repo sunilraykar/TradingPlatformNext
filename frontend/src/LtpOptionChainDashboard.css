@@ -947,3 +947,19 @@
   font-size:12px!important;
   font-weight:850!important;
 }
+
+
+/* Lightweight Charts toggle and responsive canvas, preserving the 65:35 workspace. */
+.ltp-chart-heading-actions{display:flex;align-items:center;gap:10px}
+.ltp-chart-toggle{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid #52677e;border-radius:6px;background:#142438}
+.ltp-chart-toggle button{border:0;border-radius:4px;padding:5px 9px;background:transparent;color:#dce8f5;font-size:11px;font-weight:850;cursor:pointer}
+.ltp-chart-toggle button.active{background:#f36a22;color:#fff;box-shadow:0 1px 4px #0005}
+.ltp-lightweight-chart{position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:440px;padding:6px 7px 4px;background:#142438}
+.ltp-lightweight-canvas{position:relative;z-index:1;flex:1 1 auto;width:100%;height:clamp(440px,calc(100vh - 430px),620px);min-height:440px}
+.ltp-lightweight-empty{position:absolute;z-index:2;top:45%;left:50%;transform:translate(-50%,-50%);padding:7px 11px;border:1px solid #52677e;border-radius:5px;background:#142438dd;color:#f4f8fd;font-size:12px;font-weight:850;pointer-events:none}
+.ltp-lightweight-level-key{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 12px;padding:6px 3px 2px;color:#dce8f5;font-size:10px;font-weight:850}
+.ltp-lightweight-level-key .t1{color:#ff7885}
+.ltp-lightweight-level-key .t2{color:#ffc06a}
+.ltp-lightweight-level-key .s1{color:#55e89d}
+.ltp-lightweight-level-key .s2{color:#64d9f3}
+@media(max-width:900px){.ltp-lightweight-canvas{height:520px;min-height:520px}}
