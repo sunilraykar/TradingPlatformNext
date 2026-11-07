@@ -160,20 +160,20 @@ function ApiplatformLevelBar({ levels = [], spotPrice = null }) {
     { key: 'max-pain-upper', label: 'Max Pain (R)', color: '#a64bd0' },
   ].map((point) => ({ ...point, value: point.spot ? spotPrice : byKey.get(point.key) }))
     .filter((point) => point.value !== null && point.value !== undefined && Number.isFinite(Number(point.value)));
-  if (points.length < 2) return <div style={{ minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted, #8da0bb)', fontSize: 11 }}>Waiting for spot and APIPLATFORM support/resistance levels…</div>;
+  if (points.length < 2) return <div style={{ minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted, #8da0bb)', fontSize: 11 }}>Waiting for spot and APIPLATFORM support/resistance levels…</div>;
   const values = points.map((point) => Number(point.value));
   const min = Math.min(...values);
   const max = Math.max(...values);
   const span = max - min || 1;
-  const position = (value) => 18 + ((Number(value) - min) / span) * 82;
+  const position = (value) => 6 + ((Number(value) - min) / span) * 88;
   const format = (value) => Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 });
-  return <div aria-label="Spot position relative to APIPLATFORM support and resistance levels" style={{ position: 'relative', height: 78, margin: '2px 14px 7px', minWidth: 600 }}>
-    <div style={{ position: 'absolute', left: '18%', right: 0, top: 55, height: 8, borderRadius: 8, background: 'linear-gradient(90deg,#2584e8 0%,#27c77c 32%,#f4dc35 55%,#f38a3e 76%,#e84c62 100%)', boxShadow: '0 0 8px rgba(70,190,150,.22)' }} />
-    {points.map((point) => <div key={point.key} style={{ position: 'absolute', left: `${position(point.value)}%`, top: 0, transform: 'translateX(-50%)', width: point.spot ? 76 : 72, textAlign: 'center', zIndex: point.spot ? 2 : 1 }}>
-      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '4px 7px', minWidth: point.spot ? 72 : 62, borderRadius: 8, color: '#fff', background: point.color, boxShadow: point.spot ? '0 0 12px rgba(245,220,53,.28)' : 'none', fontSize: 10, lineHeight: 1.25 }}>
-        <strong>{point.label}</strong><strong style={{ fontSize: 11 }}>{format(point.value)}</strong>
+  return <div aria-label="Spot position relative to APIPLATFORM support and resistance levels" style={{ position: 'relative', height: 52, margin: '0 10px 3px', minWidth: 600 }}>
+    <div style={{ position: 'absolute', left: '6%', right: '6%', top: 36, height: 4, borderRadius: 4, background: 'linear-gradient(90deg,#2584e8 0%,#27c77c 32%,#f4dc35 55%,#f38a3e 76%,#e84c62 100%)' }} />
+    {points.map((point) => <div key={point.key} style={{ position: 'absolute', left: `${position(point.value)}%`, top: 0, transform: 'translateX(-50%)', width: 76, textAlign: 'center', zIndex: point.spot ? 2 : 1 }}>
+      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '2px 4px', minWidth: point.spot ? 66 : 58, borderRadius: 5, color: '#fff', background: point.color, boxSizing: 'border-box', fontSize: 9, lineHeight: 1.15 }}>
+        <strong>{point.label}</strong><strong style={{ fontSize: 10 }}>{format(point.value)}</strong>
       </div>
-      <span style={{ display: 'block', width: point.spot ? 13 : 11, height: point.spot ? 13 : 11, margin: '8px auto 0', borderRadius: '50%', background: point.color, border: '2px solid #f5f7fa', boxSizing: 'content-box' }} />
+      <span style={{ position: 'absolute', left: '50%', top: 31, transform: 'translate(-50%, 0)', display: 'block', width: point.spot ? 10 : 8, height: point.spot ? 10 : 8, borderRadius: '50%', background: point.color, border: '2px solid #f5f7fa', boxSizing: 'content-box' }} />
     </div>)}
   </div>;
 }
