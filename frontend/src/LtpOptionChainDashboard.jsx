@@ -109,7 +109,7 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
   </svg></div>;
 }
 
-function OptionRow({ row, spot, quotes, instruments, maxima }) {
+function OptionRow({ row, spot, quotes, instruments, maxima, totals }) {
   const strike = n(row.strike);
   const call = instruments.get(String(strike) + ':CE');
   const put = instruments.get(String(strike) + ':PE');
@@ -126,19 +126,22 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
   const putChg = n(row.putOIchg);
   const callChgPct = n(row.callOIchgPercent ?? row.callOIChangePercent ?? row.callOIChangePercentage)
     ?? (callOi ? callChg / callOi * 100 : null);
-  const putChgPct = n(row.putOIchgPercent ?? row.putOIChangePercent ?? row.putOIChangePercentage)
-    ?? (putOi ? putChg / putOi * 100 : null);
+  const putChgPct = n(row.putOIchgPercent ?? row.putOIChangePercent ?? row.putOIChangePercentage);
+  const callOiShare = totals.callOi ? callOi / totals.callOi * 100 : null;
+  const putOiShare = totals.putOi ? putOi / totals.putOi * 100 : null;
+  const callVolShare = totals.callVol ? callVol / totals.callVol * 100 : null;
+  const putVolShare = totals.putVol ? putVol / totals.putVol * 100 : null;
   const isAtm = spot !== null && strike !== null && Math.abs(spot - strike) < 0.01;
   const reversal = (value, quote) => <><span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span><small className="ltp-option-price">LTP {fmt(quote && quote.last_price)}</small></>;
   return <tr className={isAtm ? 'ltp-atm-row' : ''}>
     <td className={callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : ''}><strong>{fmt(callChg, 0)}</strong><small>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small></td>
-    <td className={callOi === maxima.callOi ? 'ltp-max-cell' : ''}>{fmt(callOi, 0)}</td>
-    <td className={callVol === maxima.callVol ? 'ltp-max-cell' : ''}>{fmt(callVol, 0)}</td>
+    <td className={callOi === maxima.callOi ? 'ltp-max-cell' : ''}><strong>{fmt(callOi, 0)}</strong><small>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small></td>
+    <td className={callVol === maxima.callVol ? 'ltp-max-cell' : ''}><strong>{fmt(callVol, 0)}</strong><small>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small></td>
     <td>{reversal(row.calReversal, cq)}</td>
     <td className="ltp-strike-cell"><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</td>
     <td>{reversal(row.putReversal, pq)}</td>
-    <td className={putVol === maxima.putVol ? 'ltp-max-cell' : ''}>{fmt(putVol, 0)}</td>
-    <td className={putOi === maxima.putOi ? 'ltp-max-cell' : ''}>{fmt(putOi, 0)}</td>
+    <td className={putVol === maxima.putVol ? 'ltp-max-cell' : ''}><strong>{fmt(putVol, 0)}</strong><small>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small></td>
+    <td className={putOi === maxima.putOi ? 'ltp-max-cell' : ''}><strong>{fmt(putOi, 0)}</strong><small>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small></td>
     <td className={putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : ''}><strong>{fmt(putChg, 0)}</strong><small>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small></td>
   </tr>;
 }
@@ -328,6 +331,12 @@ export default function LtpOptionChainDashboard() {
   const change = selectedQuote && selectedQuote.ohlc && n(selectedQuote.ohlc.close) && n(selectedQuote.last_price)
     ? (n(selectedQuote.last_price) - n(selectedQuote.ohlc.close)) / n(selectedQuote.ohlc.close) * 100 : null;
   const total = (field) => visibleRows.reduce((sum, row) => sum + (n(row[field]) || 0), 0);
+  const chainTotals = {
+    callOi: total('callOI'),
+    putOi: total('putOI'),
+    callVol: total('callVol'),
+    putVol: total('putVol'),
+  };
 
   return <section className="ltp-option-chain">
     <section className="ltp-option-toolbar">
@@ -381,7 +390,7 @@ export default function LtpOptionChainDashboard() {
             const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
             const showSpot = underlying !== null && strike !== null && (underlying >= strike && (nextStrike === null || underlying < nextStrike));
             return <React.Fragment key={row._id || row.strike}>
-              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} />
+              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} totals={chainTotals} />
               {showSpot && <tr className="ltp-spot-marker-row"><td colSpan="4"><span>CALL SIDE</span></td><td className="ltp-spot-marker-cell"><strong>SPOT</strong><b>{fmt(underlying)}</b></td><td colSpan="4"><span>PUT SIDE</span></td></tr>}
             </React.Fragment>;
           })}
