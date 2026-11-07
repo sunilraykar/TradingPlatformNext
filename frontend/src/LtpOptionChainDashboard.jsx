@@ -154,7 +154,7 @@ export default function LtpOptionChainDashboard() {
   const [quotes, setQuotes] = useState({});
   const [candles, setCandles] = useState([]);
   const [feedConnected, setFeedConnected] = useState(false);
-  const busy = useRef(false);
+  const chainRequestId = useRef(0);
 
   const data = result && result.data ? result.data : {};
   const rows = Array.isArray(data.OptionChain) ? data.OptionChain : [];
@@ -200,13 +200,14 @@ export default function LtpOptionChainDashboard() {
   }, [expiry]);
 
   const loadChain = useCallback(async (showLoading = true) => {
-    if (busy.current || !expiry) return;
-    busy.current = true;
+    if (!expiry) return;
+    const requestId = ++chainRequestId.current;
     if (showLoading) setLoading(true);
     setError('');
     try {
       const query = new URLSearchParams({ symbol, expiry, lotSize: String(lotSize) });
       const payload = await request('/apiplatform/option-chain/fetch?' + query.toString());
+      if (requestId !== chainRequestId.current) return;
       setResult(payload);
       const mapped = payload.kite_instruments || [];
       setInstruments(mapped);
@@ -223,12 +224,11 @@ export default function LtpOptionChainDashboard() {
         }).catch(() => null);
       }
     } catch (e) {
-      setError(e.message || 'Unable to fetch option-chain data.');
+      if (requestId === chainRequestId.current) setError(e.message || 'Unable to fetch option-chain data.');
     } finally {
-      busy.current = false;
-      if (showLoading) setLoading(false);
+      if (requestId === chainRequestId.current && showLoading) setLoading(false);
     }
-  }, [symbol, expiry, lotSize, priceMode]);
+  }, [symbol, expiry, lotSize]);
 
   const refreshQuotes = useCallback(async () => {
     const tokens = instruments.map((item) => item.instrument_token);
@@ -319,7 +319,21 @@ export default function LtpOptionChainDashboard() {
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
       <div className="ltp-controls">
-        <label><span>SYMBOL</span><select value={symbol} onChange={(e) => setSymbol(e.target.value)}>{symbols.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label><span>SYMBOL</span><select value={symbol} onChange={(e) => {
+          const nextSymbol = e.target.value;
+          if (nextSymbol === symbol) return;
+          chainRequestId.current += 1;
+          setLoading(false);
+          setError('');
+          setResult(null);
+          setInstruments([]);
+          setSpotToken(null);
+          setFutureToken(null);
+          setQuotes({});
+          setCandles([]);
+          setExpiry('');
+          setSymbol(nextSymbol);
+        }}>{symbols.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         <label><span>EXPIRY</span><select value={expiry} onChange={(e) => { const selected = expiries.find((item) => item.expiry === e.target.value); setExpiry(e.target.value); if (selected && selected.lot_size) setLotSize(selected.lot_size); }}>{expiries.length ? expiries.map((item) => <option key={item.expiry} value={item.expiry}>{item.expiry}</option>) : <option value={expiry}>{expiry}</option>}</select></label>
         <label><span>PRICE</span><select value={priceMode} onChange={(e) => setPriceMode(e.target.value)}><option value="SPOT">SPOT</option><option value="FUTURE">FUTURE</option></select></label>
         <label className="ltp-lot-size"><span>LOT SIZE</span><input type="number" min="1" value={lotSize} onChange={(e) => setLotSize(Number(e.target.value) || 1)} /></label>
