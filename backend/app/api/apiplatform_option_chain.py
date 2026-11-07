@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -236,7 +236,7 @@ def option_chain_intraday_candles(
     expiry: str | None = Query(default=None, max_length=10),
     price_mode: str = Query(default="SPOT", pattern="^(SPOT|FUTURE)$"),
 ) -> dict[str, Any]:
-    """Return today's fixed five-minute Kite candles; no historical date navigation."""
+    """Return recent five-minute Kite candles, falling back to the latest trading session on weekends/holidays."""
     key = _symbol(symbol)
     index_spec = _INDEX_INSTRUMENTS.get(key)
     if not index_spec:
@@ -268,7 +268,11 @@ def option_chain_intraday_candles(
             return {"symbol": key, "candles": [], "message": "The selected Kite instrument is not available in the instrument master."}
 
         now = datetime.now(IST)
-        start = datetime.combine(now.date(), time(9, 15), tzinfo=IST)
+        # A same-day-only request returns an empty list on weekends, exchange holidays,
+        # or before the first candle. Look back seven calendar days so the chart can
+        # display the latest completed trading session while the market is closed.
+        start_date = now.date() - timedelta(days=7)
+        start = datetime.combine(start_date, time(9, 15), tzinfo=IST)
         candles = get_kite_provider().historical_data(
             int(row["instrument_token"]), start, now, "5minute"
         )
@@ -278,7 +282,14 @@ def option_chain_intraday_candles(
             "low": item.get("low"), "close": item.get("close"),
             "volume": item.get("volume"),
         } for item in candles]
-        return {"symbol": key, "instrument_token": int(row["instrument_token"]), "candles": normalized}
+        return {
+            "symbol": key,
+            "instrument_token": int(row["instrument_token"]),
+            "candles": normalized,
+            "requested_from": start.isoformat(),
+            "requested_to": now.isoformat(),
+            "session_fallback": now.weekday() >= 5 or not normalized,
+        }
     except HTTPException:
         raise
     except (KiteProviderError, SQLAlchemyError) as exc:
