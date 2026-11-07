@@ -521,16 +521,30 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
   useEffect(() => {
     let cancelled = false;
     let busy = false;
+    let expiryBySymbol = null;
     const loadApiplatformLevels = async () => {
       if (busy) return;
       busy = true;
       try {
+        if (!expiryBySymbol) {
+          const metadataResults = await Promise.allSettled(DEFAULT_INDICES.map(async (symbol) => {
+            const metadata = await api('/apiplatform/option-chain/metadata?symbol=' + encodeURIComponent(symbol));
+            const expiryInfo = (metadata.expiries || [])[0];
+            return expiryInfo?.expiry ? {
+              expiry: expiryInfo.expiry,
+              lotSize: expiryInfo.lot_size || metadata.default_lot_size || 1,
+            } : null;
+          }));
+          expiryBySymbol = Object.fromEntries(DEFAULT_INDICES.map((symbol, index) => [
+            symbol,
+            metadataResults[index].status === 'fulfilled' ? metadataResults[index].value : null,
+          ]));
+        }
         const results = await Promise.allSettled(DEFAULT_INDICES.map(async (symbol) => {
-          const metadata = await api('/apiplatform/option-chain/metadata?symbol=' + encodeURIComponent(symbol));
-          const expiryInfo = (metadata.expiries || [])[0];
+          const expiryInfo = expiryBySymbol[symbol];
           if (!expiryInfo?.expiry) return { symbol, levels: [] };
           const payload = await api('/apiplatform/option-chain/fetch?' + new URLSearchParams({
-            symbol, expiry: expiryInfo.expiry, lotSize: String(expiryInfo.lot_size || metadata.default_lot_size || 1),
+            symbol, expiry: expiryInfo.expiry, lotSize: String(expiryInfo.lotSize),
           }).toString());
           const data = payload?.data || {};
           const rs = Array.isArray(data.RS_Status) ? (data.RS_Status[0] || {}) : {};
