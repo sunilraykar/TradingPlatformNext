@@ -1222,3 +1222,6 @@
 .ltp-swing-table th:first-child,
 .ltp-swing-table td.symbol { text-align: left !important; }
 .ltp-swing-table td.symbol { padding-left: 18px; }
+
+.ltp-swing-symbol-link{display:inline;padding:0;border:0;background:transparent;color:#65aaff;font:inherit;font-weight:800;text-align:left;cursor:pointer;text-decoration:none}
+.ltp-swing-symbol-link:hover,.ltp-swing-symbol-link:focus-visible{color:#9bc9ff;text-decoration:underline;outline:none}
