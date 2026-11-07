@@ -121,7 +121,7 @@ export default function LightweightOptionChart({ candles = [], livePrice, levels
     <div className="ltp-lightweight-canvas" ref={containerRef} aria-label="TradingView Lightweight candlestick chart with T1, T2, S1 and S2 levels" />
     <div className="ltp-lightweight-level-key">
       <span className="t1">T1 · Risky Resistance</span><span className="t2">T2 · Moderate Resistance</span>
-      <span className="s1">S1 · Risky Support</span><span className="s2">S2 · Moderate Support</span>
+      <span className="s1">S1 · Risky Support</span><span className="s2">S2 · Moderate Support</span><a href="https://www.tradingview.com/" target="_blank" rel="noreferrer">Charting by TradingView</a>
     </div>
   </div>;
 }
