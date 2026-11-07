@@ -360,6 +360,7 @@ export default function LtpOptionChainDashboard() {
   const total = (field) => visibleRows.reduce((sum, row) => sum + (n(row[field]) || 0), 0);
 
   return <section className="ltp-option-chain">
+    <div className="ltp-overview-row">
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
       <div className="ltp-controls">
@@ -398,6 +399,7 @@ export default function LtpOptionChainDashboard() {
       <div><span>MODERATE SUPPORT</span><strong>{fmt(model.moderateSupport)}</strong></div>
       <div><span>SUPPORT SL</span><strong>{fmt(model.supportSL)}</strong></div>
     </section>
+    </div>
 
     <section className="ltp-workspace">
       <article className="ltp-option-panel">
