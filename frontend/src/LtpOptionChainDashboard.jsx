@@ -133,17 +133,25 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
   const callVolShare = maxima.callVol ? callVol / maxima.callVol * 100 : null;
   const putVolShare = maxima.putVol ? putVol / maxima.putVol * 100 : null;
   const isAtm = spot !== null && strike !== null && Math.abs(spot - strike) < 0.01;
+  const rankClass = (key, value, absolute = false) => {
+    const ranked = maxima.top[key] || [];
+    const rankValue = absolute ? Math.abs(value) : value;
+    if (!rankValue || !ranked.length) return '';
+    if (rankValue === ranked[0]) return ' ltp-rank-' + key + '-first';
+    if (rankValue === ranked[1]) return ' ltp-rank-' + key + '-second';
+    return '';
+  };
   const reversal = (value, quote) => <><span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span><small className="ltp-option-price">LTP {fmt(quote && quote.last_price)}</small></>;
   return <tr className={isAtm ? 'ltp-atm-row' : ''}>
-    <td className={callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : ''}><strong>{fmt(callChg, 0)}</strong><small>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small></td>
-    <td className={callOi === maxima.callOi ? 'ltp-max-cell' : ''}><strong>{fmt(callOi, 0)}</strong><small>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small></td>
-    <td className={callVol === maxima.callVol ? 'ltp-max-cell' : ''}><strong>{fmt(callVol, 0)}</strong><small>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small></td>
+    <td className={(callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : '') + rankClass('callOiChg', callChg, true)}><strong>{fmt(callChg, 0)}</strong><small>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small></td>
+    <td className={rankClass('callOi', callOi)}><strong>{fmt(callOi, 0)}</strong><small>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small></td>
+    <td className={rankClass('callVol', callVol)}><strong>{fmt(callVol, 0)}</strong><small>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small></td>
     <td>{reversal(row.calReversal, cq)}</td>
     <td className="ltp-strike-cell"><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</td>
     <td>{reversal(row.putReversal, pq)}</td>
-    <td className={putVol === maxima.putVol ? 'ltp-max-cell' : ''}><strong>{fmt(putVol, 0)}</strong><small>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small></td>
-    <td className={putOi === maxima.putOi ? 'ltp-max-cell' : ''}><strong>{fmt(putOi, 0)}</strong><small>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small></td>
-    <td className={putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : ''}><strong>{fmt(putChg, 0)}</strong><small>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small></td>
+    <td className={rankClass('putVol', putVol)}><strong>{fmt(putVol, 0)}</strong><small>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small></td>
+    <td className={rankClass('putOi', putOi)}><strong>{fmt(putOi, 0)}</strong><small>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small></td>
+    <td className={(putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : '') + rankClass('putOiChg', putChg, true)}><strong>{fmt(putChg, 0)}</strong><small>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small></td>
   </tr>;
 }
 
@@ -189,14 +197,26 @@ export default function LtpOptionChainDashboard() {
     return ordered.slice(Math.max(0, center - 11), Math.min(ordered.length, center + 12));
   }, [rows, underlying]);
 
-  const maxima = useMemo(() => ({
-    callOiChg: Math.max(0, ...rows.map((r) => Math.abs(n(r.callOIchg) || 0))),
-    callOi: Math.max(0, ...rows.map((r) => n(r.callOI) || 0)),
-    callVol: Math.max(0, ...rows.map((r) => n(r.callVol) || 0)),
-    putVol: Math.max(0, ...rows.map((r) => n(r.putVol) || 0)),
-    putOi: Math.max(0, ...rows.map((r) => n(r.putOI) || 0)),
-    putOiChg: Math.max(0, ...rows.map((r) => Math.abs(n(r.putOIchg) || 0))),
-  }), [rows]);
+  const maxima = useMemo(() => {
+    const rankValues = (field, absolute = false) => [...new Set(rows
+      .map((r) => n(r[field]) || 0)
+      .filter((value) => value !== 0)
+      .map((value) => absolute ? Math.abs(value) : value))]
+      .sort((a, b) => b - a).slice(0, 2);
+    return {
+      callOiChg: Math.max(0, ...rows.map((r) => Math.abs(n(r.callOIchg) || 0))),
+      callOi: Math.max(0, ...rows.map((r) => n(r.callOI) || 0)),
+      callVol: Math.max(0, ...rows.map((r) => n(r.callVol) || 0)),
+      putVol: Math.max(0, ...rows.map((r) => n(r.putVol) || 0)),
+      putOi: Math.max(0, ...rows.map((r) => n(r.putOI) || 0)),
+      putOiChg: Math.max(0, ...rows.map((r) => Math.abs(n(r.putOIchg) || 0))),
+      top: {
+        callOiChg: rankValues('callOIchg', true), callOi: rankValues('callOI'),
+        callVol: rankValues('callVol'), putVol: rankValues('putVol'),
+        putOi: rankValues('putOI'), putOiChg: rankValues('putOIchg', true),
+      },
+    };
+  }, [rows]);
 
   const loadMetadata = useCallback(async (selected) => {
     const requestId = ++metadataRequestId.current;
