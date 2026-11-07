@@ -665,3 +665,113 @@
   .ltp-intelligence-groups{grid-template-columns:1fr}
   .ltp-intelligence-group{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* Expanded institutional-style intraday chart: large plot, right-side price scale,
+   direct level tags and no separate legend. */
+.ltp-workspace{
+  grid-template-columns:minmax(0,.82fr) minmax(0,1.18fr)!important;
+  gap:10px!important;
+  align-items:stretch;
+}
+.ltp-option-panel,.ltp-chart-panel{min-width:0}
+.ltp-chart-panel{
+  display:flex;
+  flex-direction:column;
+  min-height:calc(100vh - 285px);
+  overflow:hidden;
+  border:1px solid #40536a;
+  border-radius:8px;
+  background:linear-gradient(180deg,#1b2a3b 0%,#101d2d 100%);
+  box-shadow:0 8px 24px #0003;
+}
+.ltp-chart-panel>.ltp-panel-heading{
+  min-height:48px;
+  justify-content:space-between!important;
+  padding:8px 16px!important;
+  border-bottom:1px solid #40536a;
+  background:linear-gradient(90deg,#26394e,#1c2b3d);
+}
+.ltp-chart-panel>.ltp-panel-heading>div{
+  align-items:flex-start;
+}
+.ltp-chart-panel>.ltp-panel-heading span{
+  color:#9db6d0!important;
+  font-size:9px!important;
+  letter-spacing:1px;
+}
+.ltp-chart-panel>.ltp-panel-heading h2{
+  color:#fff!important;
+  font-size:17px!important;
+  font-weight:900!important;
+}
+.ltp-chart-panel>.ltp-panel-heading>small{
+  position:static;
+  color:#d5e4f5!important;
+  font-size:11px!important;
+}
+.ltp-chart-quote{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  min-height:62px;
+  padding:8px 16px;
+  background:#172638;
+  border-bottom:1px solid #354a60;
+}
+.ltp-chart-quote strong{
+  color:#fff!important;
+  font-size:27px!important;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+.ltp-chart-quote span{
+  color:#63e6a0!important;
+  font-size:11px!important;
+  font-weight:850!important;
+}
+.ltp-candle-chart{
+  flex:1 1 auto;
+  min-height:500px;
+  padding:8px 8px 4px;
+  background:linear-gradient(180deg,#101e2e,#142438);
+}
+.ltp-candle-chart svg{
+  display:block;
+  width:100%;
+  height:clamp(500px,calc(100vh - 330px),760px);
+  min-height:500px;
+  overflow:visible;
+}
+.ltp-chart-grid{stroke:#31465d;stroke-width:1;opacity:.78}
+.ltp-chart-axis{
+  fill:#dce8f5!important;
+  font-size:15px!important;
+  font-weight:800!important;
+}
+.ltp-level-line{stroke-width:2.2;stroke-dasharray:7 5}
+.ltp-level-line.resistance,.ltp-level-line.resistance-risk{stroke:#ff6874}
+.ltp-level-line.support,.ltp-level-line.support-risk{stroke:#35dc8a}
+.ltp-level-tag{stroke-width:1.2}
+.ltp-level-tag.resistance,.ltp-level-tag.resistance-risk{fill:#c92f43;stroke:#ff8791}
+.ltp-level-tag.support,.ltp-level-tag.support-risk{fill:#087c4b;stroke:#58efa7}
+.ltp-level-tag.max-pain{fill:#c27a13;stroke:#ffd078}
+.ltp-level-tag-text{fill:#fff;font-size:13px;font-weight:900}
+.ltp-live-price line{stroke:#ffe04a;stroke-width:2.8}
+.ltp-live-price rect{fill:#ffe04a;stroke:#fff0a1;stroke-width:1}
+.ltp-live-price text{fill:#17202a;font-size:13px;font-weight:950}
+.ltp-chart-zone.resistance-zone{fill:#f34e5a18;stroke:#ff687466}
+.ltp-chart-zone.support-zone{fill:#22cf8018;stroke:#35dc8a66}
+.ltp-chart-legend{display:none!important}
+.ltp-chart-footer{display:flex;justify-content:space-between;gap:8px;padding:7px 12px}
+@media(max-width:1150px){
+  .ltp-workspace{grid-template-columns:minmax(0,1fr)!important}
+  .ltp-chart-panel{min-height:520px}
+  .ltp-candle-chart svg{height:560px}
+}
+@media(max-width:700px){
+  .ltp-chart-quote strong{font-size:21px!important}
+  .ltp-candle-chart{min-height:420px}
+  .ltp-candle-chart svg{height:460px;min-height:460px}
+}
