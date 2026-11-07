@@ -2088,7 +2088,7 @@ export default function App() {
         <div className="brand-copy"><strong>TradingPlatformNext</strong><span>MARKET INTELLIGENCE</span></div>
       <nav className="application-tabs" aria-label="Application section">
         <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
-        <button type="button" className={applicationTab === 'option-chain' ? 'active' : ''} onClick={() => setApplicationTab('option-chain')}>Option Chain</button>
+        <button type="button" className={applicationTab === 'option-chain' ? 'active' : ''} onClick={() => setApplicationTab('option-chain')}>Market Intelligence</button>
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
         <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>
         <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
