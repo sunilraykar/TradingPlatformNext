@@ -186,7 +186,7 @@ export default function LtpOptionChainDashboard() {
     ordered.forEach((item, index) => {
       if (Math.abs((n(item.strike) || 0) - underlying) < Math.abs((n(ordered[center].strike) || 0) - underlying)) center = index;
     });
-    return ordered.slice(Math.max(0, center - 10), Math.min(ordered.length, center + 11));
+    return ordered.slice(Math.max(0, center - 11), Math.min(ordered.length, center + 12));
   }, [rows, underlying]);
 
   const maxima = useMemo(() => ({
