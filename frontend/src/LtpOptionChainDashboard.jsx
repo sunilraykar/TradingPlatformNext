@@ -115,16 +115,23 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
   const put = instruments.get(String(strike) + ':PE');
   const cq = call ? quotes[String(call.instrument_token)] : null;
   const pq = put ? quotes[String(put.instrument_token)] : null;
-  const callOi = n(cq && cq.oi) ?? n(row.callOI);
-  const putOi = n(pq && pq.oi) ?? n(row.putOI);
-  const callVol = n(cq && cq.volume) ?? n(row.callVol);
-  const putVol = n(pq && pq.volume) ?? n(row.putVol);
-  const callChg = cq && cq.oi !== null && cq.oi !== undefined ? callOi - (n(row.callOI) - (n(row.callOIchg) || 0)) : n(row.callOIchg);
-  const putChg = pq && pq.oi !== null && pq.oi !== undefined ? putOi - (n(row.putOI) - (n(row.putOIchg) || 0)) : n(row.putOIchg);
+  // APIPLATFORM is the authoritative source for chain OI, volume and OI change.
+  // Kite WebSocket OI/volume are in a different unit/session basis and must not
+  // overwrite the provider values. Kite is used here only for live option LTP.
+  const callOi = n(row.callOI);
+  const putOi = n(row.putOI);
+  const callVol = n(row.callVol);
+  const putVol = n(row.putVol);
+  const callChg = n(row.callOIchg);
+  const putChg = n(row.putOIchg);
+  const callChgPct = n(row.callOIchgPercent ?? row.callOIChangePercent ?? row.callOIChangePercentage)
+    ?? (callOi ? callChg / callOi * 100 : null);
+  const putChgPct = n(row.putOIchgPercent ?? row.putOIChangePercent ?? row.putOIChangePercentage)
+    ?? (putOi ? putChg / putOi * 100 : null);
   const isAtm = spot !== null && strike !== null && Math.abs(spot - strike) < 0.01;
   const reversal = (value, quote) => <><span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span><small className="ltp-option-price">LTP {fmt(quote && quote.last_price)}</small></>;
   return <tr className={isAtm ? 'ltp-atm-row' : ''}>
-    <td className={callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : ''}><strong>{fmt(callChg, 0)}</strong><small>{callOi ? fmt(callChg / callOi * 100, 2) + '%' : ''}</small></td>
+    <td className={callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : ''}><strong>{fmt(callChg, 0)}</strong><small>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small></td>
     <td className={callOi === maxima.callOi ? 'ltp-max-cell' : ''}>{fmt(callOi, 0)}</td>
     <td className={callVol === maxima.callVol ? 'ltp-max-cell' : ''}>{fmt(callVol, 0)}</td>
     <td>{reversal(row.calReversal, cq)}</td>
@@ -132,7 +139,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
     <td>{reversal(row.putReversal, pq)}</td>
     <td className={putVol === maxima.putVol ? 'ltp-max-cell' : ''}>{fmt(putVol, 0)}</td>
     <td className={putOi === maxima.putOi ? 'ltp-max-cell' : ''}>{fmt(putOi, 0)}</td>
-    <td className={putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : ''}><strong>{fmt(putChg, 0)}</strong><small>{putOi ? fmt(putChg / putOi * 100, 2) + '%' : ''}</small></td>
+    <td className={putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : ''}><strong>{fmt(putChg, 0)}</strong><small>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small></td>
   </tr>;
 }
 
@@ -170,12 +177,12 @@ export default function LtpOptionChainDashboard() {
 
   const visibleRows = useMemo(() => {
     const ordered = rows.slice().sort((a, b) => (n(a.strike) || 0) - (n(b.strike) || 0));
-    if (ordered.length <= 19 || underlying === null) return ordered;
+    if (ordered.length <= 21 || underlying === null) return ordered;
     let center = 0;
     ordered.forEach((item, index) => {
       if (Math.abs((n(item.strike) || 0) - underlying) < Math.abs((n(ordered[center].strike) || 0) - underlying)) center = index;
     });
-    return ordered.slice(Math.max(0, center - 9), Math.min(ordered.length, center + 10));
+    return ordered.slice(Math.max(0, center - 10), Math.min(ordered.length, center + 11));
   }, [rows, underlying]);
 
   const maxima = useMemo(() => ({
@@ -380,7 +387,24 @@ export default function LtpOptionChainDashboard() {
           })}
             {!visibleRows.length && <tr><td colSpan="9" className="ltp-empty-cell">{loading ? 'Loading option-chain data…' : 'No option-chain records returned for this expiry.'}</td></tr>}
           </tbody>
-          {visibleRows.length > 0 && <tfoot><tr><td colSpan="2">CALL OI {compact(total('callOI'))}</td><td colSpan="2">CALL VOL {compact(total('callVol'))}</td><td className="ltp-strike-head">TOTAL</td><td colSpan="2">PUT VOL {compact(total('putVol'))}</td><td colSpan="2">PUT OI {compact(total('putOI'))}</td></tr></tfoot>}
+          {visibleRows.length > 0 && <tfoot>
+            <tr>
+              <td>CALL OI CHG<br />{fmt(total('callOIchg'), 0)}</td>
+              <td>CALL OI<br />{compact(total('callOI'))}</td>
+              <td>CALL VOL<br />{compact(total('callVol'))}</td>
+              <td>CALL REVERSAL</td>
+              <td className="ltp-strike-head">TOTAL</td>
+              <td>PUT REVERSAL</td>
+              <td>PUT VOL<br />{compact(total('putVol'))}</td>
+              <td>PUT OI<br />{compact(total('putOI'))}</td>
+              <td>PUT OI CHG<br />{fmt(total('putOIchg'), 0)}</td>
+            </tr>
+            <tr className="ltp-total-summary-row">
+              <td colSpan="4">PE − CE OI CHANGE<br /><strong>{fmt(total('putOIchg') - total('callOIchg'), 0)}</strong></td>
+              <td className="ltp-strike-head">VISIBLE STRIKES<br />{visibleRows.length}</td>
+              <td colSpan="4">TOTAL OI<br /><strong>{compact(total('callOI') + total('putOI'))}</strong></td>
+            </tr>
+          </tfoot>}
         </table></div>
         <div className="ltp-table-legend"><span><i className="atm" /> ATM strike</span><span><i className="max" /> Highest OI / volume</span><span className="positive">● Positive</span><span className="negative">● Negative</span></div>
       </article>
