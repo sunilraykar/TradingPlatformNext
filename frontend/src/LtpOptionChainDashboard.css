@@ -223,3 +223,20 @@
   .ltp-workspace{grid-template-columns:minmax(0,1fr)}
   .ltp-option-table td{font-size:12px}
 }
+
+
+/* Center-align every option-chain column for consistent scanability. */
+.ltp-option-table th,
+.ltp-option-table td{
+  text-align:center!important;
+  vertical-align:middle;
+}
+.ltp-option-table td small{
+  text-align:center;
+}
+.ltp-option-table td .ltp-reversal{
+  margin-inline:auto;
+}
+.ltp-option-table tfoot td{
+  text-align:center!important;
+}
