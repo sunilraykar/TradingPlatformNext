@@ -913,3 +913,37 @@
   .ltp-option-chain .ltp-chart-axis{font-size:16px!important}
   .ltp-option-chain .ltp-level-label{font-size:14px!important}
 }
+
+
+/* Market scenario now sits beneath the chart and above its existing footer/intelligence. */
+.ltp-chart-panel .ltp-chart-scenario{
+  display:flex!important;
+  flex-wrap:wrap;
+  justify-content:center!important;
+  align-items:center!important;
+  gap:6px 12px!important;
+  min-height:42px!important;
+  margin:5px 7px 6px!important;
+  padding:7px 10px!important;
+  border:1px solid #8e7830;
+  border-radius:5px;
+  background:linear-gradient(90deg,#f4d94f,#ffe979)!important;
+  color:#202a35!important;
+  text-align:center;
+}
+.ltp-chart-panel .ltp-chart-scenario span{
+  color:#51400a!important;
+  font-size:11px!important;
+  font-weight:900!important;
+  letter-spacing:.55px;
+}
+.ltp-chart-panel .ltp-chart-scenario strong{
+  color:#17212d!important;
+  font-size:15px!important;
+  font-weight:950!important;
+}
+.ltp-chart-panel .ltp-chart-scenario small{
+  color:#3b3215!important;
+  font-size:12px!important;
+  font-weight:850!important;
+}
