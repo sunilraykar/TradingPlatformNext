@@ -775,3 +775,89 @@
   .ltp-candle-chart{min-height:420px}
   .ltp-candle-chart svg{height:460px;min-height:460px}
 }
+
+
+/* Correct desktop composition: option chain 65%, chart 35%. */
+.ltp-workspace{
+  display:grid!important;
+  grid-template-columns:minmax(0,1.857fr) minmax(0,1fr)!important;
+  gap:8px!important;
+  align-items:stretch!important;
+}
+.ltp-option-panel,.ltp-chart-panel{min-width:0!important;width:100%;max-width:none}
+.ltp-chart-panel{
+  min-height:0!important;
+  height:100%;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.ltp-chart-panel>.ltp-panel-heading{
+  min-height:38px!important;
+  padding:5px 9px!important;
+}
+.ltp-chart-panel>.ltp-panel-heading>div{align-items:flex-start!important}
+.ltp-chart-panel>.ltp-panel-heading h2{font-size:14px!important}
+.ltp-chart-quote{
+  min-height:48px!important;
+  padding:5px 10px!important;
+}
+.ltp-chart-quote strong{font-size:21px!important}
+.ltp-candle-chart{
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0!important;
+  padding:4px 3px!important;
+  overflow:hidden;
+}
+.ltp-candle-chart svg{
+  display:block;
+  width:100%!important;
+  height:clamp(440px,calc(100vh - 430px),620px)!important;
+  min-height:440px!important;
+  overflow:visible;
+}
+.ltp-chart-axis{
+  fill:#f7fbff!important;
+  font-size:15px!important;
+  font-weight:900!important;
+  paint-order:stroke;
+  stroke:#142438;
+  stroke-width:2px;
+  stroke-linejoin:round;
+}
+.ltp-chart-grid{stroke:#52677e!important;stroke-width:1.1!important;opacity:.65!important}
+.ltp-level-tag-text{font-size:12px!important;font-weight:950!important}
+.ltp-live-price text{font-size:12px!important;font-weight:950!important}
+.ltp-chart-footer{
+  flex:0 0 auto;
+  display:flex!important;
+  flex-wrap:wrap;
+  justify-content:space-between;
+  gap:3px 8px;
+  padding:4px 7px!important;
+  font-size:8px!important;
+}
+.ltp-intelligence-groups{
+  grid-template-columns:1fr 1fr!important;
+  gap:4px!important;
+  margin:4px!important;
+}
+.ltp-intelligence-group{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:3px!important;
+  padding:4px!important;
+}
+.ltp-intelligence-group h3{font-size:9px!important;padding:2px!important}
+.ltp-intelligence-group>div{padding:3px 2px!important}
+.ltp-intelligence-group>div>span{font-size:7px!important}
+.ltp-intelligence-group>div>strong{font-size:9px!important}
+.ltp-intelligence-group>div>small{font-size:8px!important}
+@media(max-width:900px){
+  .ltp-workspace{grid-template-columns:minmax(0,1fr)!important}
+  .ltp-chart-panel{min-height:0!important}
+  .ltp-candle-chart svg{height:520px!important;min-height:520px!important}
+}
+@media(max-width:600px){
+  .ltp-intelligence-groups{grid-template-columns:1fr!important}
+}
