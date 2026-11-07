@@ -157,7 +157,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
 }
 
 
-function SwingTradePanel() {
+function SwingTradePanel({ onSymbolSelect }) {
   const [side, setSide] = useState('bullish');
   const [payload, setPayload] = useState({ bullish: [], bearish: [], counts: {} });
   const [loading, setLoading] = useState(true);
@@ -208,7 +208,7 @@ function SwingTradePanel() {
         <tbody>{rows.map((row) => {
           const status = String(row[statusField] || '—').toUpperCase();
           return <tr key={row.symbol}>
-            <td className="symbol">{row.symbol}</td><td>{number(row.lotSize)}</td>
+            <td className="symbol"><button type="button" className="ltp-swing-symbol-link" onClick={() => onSymbolSelect?.(row.symbol)} title={`Open ${row.symbol} option chain`}>{row.symbol}</button></td><td>{number(row.lotSize)}</td>
             <td><span className={'ltp-swing-status ' + (status === 'STRONG' ? 'strong' : status === 'WTB' ? 'wtb' : status === 'WTT' ? 'wtt' : '')}>{status}</span></td>
             <td className="cmp">{number(row['Price-S'])}</td><td>{row.S_OI_Reversal ?? '—'}</td><td>{row.R_OI_Reversal ?? '—'}</td><td>{number(row[oiField])}</td><td><span className="ltp-swing-stars">{number(row[starField])}</span></td>
           </tr>;
@@ -242,6 +242,24 @@ export default function LtpOptionChainDashboard() {
   const [activeView, setActiveView] = useState('option-chain');
   const chainRequestId = useRef(0);
   const metadataRequestId = useRef(0);
+
+  const openSymbolOptionChain = (nextSymbol) => {
+    if (!nextSymbol) return;
+    if (nextSymbol !== symbol) {
+      chainRequestId.current += 1;
+      setLoading(false);
+      setError('');
+      setResult(null);
+      setInstruments([]);
+      setSpotToken(null);
+      setFutureToken(null);
+      setQuotes({});
+      setCandles([]);
+      setExpiry('');
+      setSymbol(nextSymbol);
+    }
+    setActiveView('option-chain');
+  };
 
   const data = result && result.data ? result.data : {};
   const rows = Array.isArray(data.OptionChain) ? data.OptionChain : [];
@@ -433,21 +451,7 @@ export default function LtpOptionChainDashboard() {
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
       <div className="ltp-controls">
-        <label><span>SYMBOL</span><select value={symbol} onChange={(e) => {
-          const nextSymbol = e.target.value;
-          if (nextSymbol === symbol) return;
-          chainRequestId.current += 1;
-          setLoading(false);
-          setError('');
-          setResult(null);
-          setInstruments([]);
-          setSpotToken(null);
-          setFutureToken(null);
-          setQuotes({});
-          setCandles([]);
-          setExpiry('');
-          setSymbol(nextSymbol);
-        }}>{symbols.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label><span>SYMBOL</span><select value={symbol} onChange={(e) => openSymbolOptionChain(e.target.value)}>{symbols.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
         <label><span>EXPIRY</span><select value={expiry} onChange={(e) => { const selected = expiries.find((item) => item.expiry === e.target.value); setExpiry(e.target.value); if (selected && selected.lot_size) setLotSize(selected.lot_size); }}>{expiries.length ? expiries.map((item) => <option key={item.expiry} value={item.expiry}>{item.expiry}</option>) : <option value={expiry}>{expiry}</option>}</select></label>
         <label><span>PRICE</span><select value={priceMode} onChange={(e) => setPriceMode(e.target.value)}><option value="SPOT">SPOT</option><option value="FUTURE">FUTURE</option></select></label>
         <label className="ltp-lot-size"><span>LOT SIZE</span><input type="number" min="1" value={lotSize} onChange={(e) => setLotSize(Number(e.target.value) || 1)} /></label>
@@ -461,7 +465,7 @@ export default function LtpOptionChainDashboard() {
 
     </div>
 
-    {activeView === "swing-trade" ? <SwingTradePanel /> : <section className="ltp-workspace">
+    {activeView === "swing-trade" ? <SwingTradePanel onSymbolSelect={openSymbolOptionChain} /> : <section className="ltp-workspace">
       <article className="ltp-option-panel">
         <div className="ltp-chain-count"><span>{visibleRows.length} strikes shown · {rows.length} returned</span></div>
         <div className="ltp-table-scroll"><table className="ltp-option-table">
