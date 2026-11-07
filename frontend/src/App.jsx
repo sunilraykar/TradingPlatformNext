@@ -543,12 +543,11 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
         const results = await Promise.allSettled(DEFAULT_INDICES.map(async (symbol) => {
           const expiryInfo = expiryBySymbol[symbol];
           if (!expiryInfo?.expiry) return { symbol, levels: [] };
-          const payload = await api('/apiplatform/option-chain/fetch?' + new URLSearchParams({
+          const payload = await api('/apiplatform/option-chain/levels?' + new URLSearchParams({
             symbol, expiry: expiryInfo.expiry, lotSize: String(expiryInfo.lotSize),
           }).toString());
-          const data = payload?.data || {};
-          const rs = Array.isArray(data.RS_Status) ? (data.RS_Status[0] || {}) : {};
-          const model = data.symbolMarketDirection?.reversalModel || {};
+          const rs = Array.isArray(payload?.RS_Status) ? (payload.RS_Status[0] || {}) : {};
+          const model = payload?.symbolMarketDirection?.reversalModel || {};
           const definitions = [
             { key: 't1', label: 'T1', value: rs.rreversal, color: '#ff6474' },
             { key: 't2', label: 'T2', value: rs.rreversalNext, color: '#ffad42' },
