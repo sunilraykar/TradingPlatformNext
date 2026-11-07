@@ -572,7 +572,7 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
       }
     };
     loadApiplatformLevels();
-    const timer = window.setInterval(loadApiplatformLevels, 15000);
+    const timer = window.setInterval(loadApiplatformLevels, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, []);
 
