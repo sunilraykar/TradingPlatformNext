@@ -1124,3 +1124,8 @@
     padding: 5px 4px;
   }
 }
+
+
+/* Compact the Lightweight chart's T1/T2/S1/S2 reference labels. */
+.ltp-lightweight-level-key{font-size:8px!important;gap:4px 9px!important;padding:4px 3px 1px!important}
+.ltp-lightweight-level-key a{font-size:8px!important}
