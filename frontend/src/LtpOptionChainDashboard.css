@@ -105,3 +105,6 @@
   .ltp-candle-chart{min-height:340px}
   .ltp-candle-chart svg{min-height:340px}
 }
+
+/* Requested 65:35 option-chain to chart split. */
+.ltp-workspace{grid-template-columns:minmax(0,1.857fr) minmax(350px,1fr)}
