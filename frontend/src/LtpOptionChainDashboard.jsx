@@ -361,6 +361,10 @@ export default function LtpOptionChainDashboard() {
 
   return <section className="ltp-option-chain">
     <div className="ltp-overview-row">
+    <nav className="ltp-section-tabs" aria-label="Market Intelligence view">
+      <button type="button" className="active" aria-current="page">Option Chain</button>
+      <button type="button" disabled title="Swing Trade view will be configured later">Swing Trade</button>
+    </nav>
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
       <div className="ltp-controls">
