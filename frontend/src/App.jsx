@@ -147,7 +147,7 @@ function linePoints(series, width = 720, height = 220) {
   }).join(' ');
 }
 
-function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, selectedContract = null, tradeAction = null, tradeFeedback = null, showHeading = false, compact = false, headingEyebrow = 'INTRADAY PRICE ACTION' }) {
+function PriceVwapChart({ rows, levels = [], entryStartTime = '10:00', entryEndTime = '15:25', selectedTime = null, summary = null, enterValue = null, selectedContract = null, tradeAction = null, tradeFeedback = null, showHeading = false, compact = false, headingEyebrow = 'INTRADAY PRICE ACTION' }) {
   const [hoveredRow, setHoveredRow] = useState(null);
   const parseMinutes = (value) => {
     const raw = String(value || '').trim();
@@ -162,7 +162,8 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
     .map((row) => ({ time: row.time, minutes: parseMinutes(row.time), price: row.price, vwap: row.vwap, pcr: row.pcr, buffer: row.buffer, strengthDiff: row.strengthDiff, callStrength: row.callStrength, putStrength: row.putStrength, enter: row.enter, optionSignal: row.optionSignal, vwapSignal: row.vwapSignal }))
     .filter((row) => row.minutes !== null && row.minutes >= sessionStart && row.minutes <= sessionEnd && (row.price !== null || row.vwap !== null))
     .sort((a, b) => a.minutes - b.minutes);
-  const values = usable.flatMap((row) => [row.price, row.vwap]).filter((value) => value !== null && Number.isFinite(value));
+  const chartLevels = (Array.isArray(levels) ? levels : []).map((level) => ({ ...level, value: numericValue(level.value) })).filter((level) => level.value !== null);
+  const values = [...usable.flatMap((row) => [row.price, row.vwap]), ...chartLevels.map((level) => level.value)].filter((value) => value !== null && Number.isFinite(value));
   if (usable.length < 2 || !values.length) {
     return <div className="chart-empty">Waiting for market data. Updates begin at 9:30 AM.</div>;
   }
@@ -171,6 +172,7 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
   const span = max - min || 1;
   const x = (minutes) => 12 + ((minutes - sessionStart) / (sessionEnd - sessionStart)) * 696;
   const y = (value) => 202 - ((value - min) / span) * 168;
+  const formatPrice = (value) => Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 });
   const pathFor = (key) => usable.map((row) => row[key] === null ? null : `${x(row.minutes)},${y(row[key])}`).filter(Boolean).join(' ');
   const latest = usable[usable.length - 1];
   const displayed = (selectedTime && usable.find((row) => String(row.time).trim() === String(selectedTime).trim())) || latest;
@@ -228,6 +230,10 @@ function PriceVwapChart({ rows, entryStartTime = '10:00', entryEndTime = '15:25'
         <line x1="12" x2="708" y1="34" y2="34" className="zero-line" />
         <line x1="12" x2="708" y1="118" y2="118" className="zero-line" />
         <line x1="12" x2="708" y1="202" y2="202" className="zero-line" />
+        {chartLevels.map((level) => <g key={level.key || level.label}>
+          <line x1="12" x2="708" y1={y(level.value)} y2={y(level.value)} stroke={level.color || '#fbbf24'} strokeWidth="1.6" strokeDasharray="6 4" opacity="0.95" />
+          <text x="704" y={Math.max(11, Math.min(198, y(level.value) - 4))} textAnchor="end" fill={level.color || '#fbbf24'} fontSize="10" fontWeight="700" paintOrder="stroke" stroke="#101a2a" strokeWidth="3">{level.label} {formatPrice(level.value)}</text>
+        </g>)}
         {[{ time: entryStartTime, label: 'Entry start', color: '#38bdf8' }, { time: entryEndTime, label: 'Entry cutoff', color: '#fbbf24' }].map((marker) => {
           const minutes = parseMinutes(marker.time);
           if (minutes === null || minutes < sessionStart || minutes > sessionEnd) return null;
@@ -478,6 +484,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
 
 function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
   const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
+  const [apiplatformLevels, setApiplatformLevels] = useState({});
   const inFlight = useRef(false);
   useEffect(() => {
     let cancelled = false;
@@ -511,6 +518,51 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [mins, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
 
+  useEffect(() => {
+    let cancelled = false;
+    let busy = false;
+    const loadApiplatformLevels = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const results = await Promise.allSettled(DEFAULT_INDICES.map(async (symbol) => {
+          const metadata = await api('/apiplatform/option-chain/metadata?symbol=' + encodeURIComponent(symbol));
+          const expiryInfo = (metadata.expiries || [])[0];
+          if (!expiryInfo?.expiry) return { symbol, levels: [] };
+          const payload = await api('/apiplatform/option-chain/fetch?' + new URLSearchParams({
+            symbol, expiry: expiryInfo.expiry, lotSize: String(expiryInfo.lot_size || metadata.default_lot_size || 1),
+          }).toString());
+          const data = payload?.data || {};
+          const rs = Array.isArray(data.RS_Status) ? (data.RS_Status[0] || {}) : {};
+          const model = data.symbolMarketDirection?.reversalModel || {};
+          const definitions = [
+            { key: 't1', label: 'T1', value: rs.rreversal, color: '#ff6474' },
+            { key: 't2', label: 'T2', value: rs.rreversalNext, color: '#ffad42' },
+            { key: 's1', label: 'S1', value: rs.sreversal, color: '#35dc8a' },
+            { key: 's2', label: 'S2', value: rs.sreversalBack, color: '#43c8e8' },
+            { key: 'max-pain-upper', label: 'Max Pain ↑', value: model.resistanceSL, color: '#ff9b45' },
+            { key: 'max-pain-lower', label: 'Max Pain ↓', value: model.supportSL, color: '#ff9b45' },
+          ];
+          return { symbol, levels: definitions.filter((level) => numericValue(level.value) !== null) };
+        }));
+        if (!cancelled) {
+          setApiplatformLevels((current) => {
+            const next = { ...current };
+            results.forEach((result, index) => {
+              if (result.status === 'fulfilled') next[DEFAULT_INDICES[index]] = result.value.levels;
+            });
+            return next;
+          });
+        }
+      } finally {
+        busy = false;
+      }
+    };
+    loadApiplatformLevels();
+    const timer = window.setInterval(loadApiplatformLevels, 15000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, []);
+
   return <section className="all-indices-dashboard" aria-label="Dashboard index charts">
     <div className="all-indices-grid">
       {DEFAULT_INDICES.map((symbol) => {
@@ -528,7 +580,7 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
         const summaryPrice = quotePrice ?? latest?.price ?? latest?.close ?? latest?.ltp;
         return <article className="panel all-indices-card" key={symbol}>
           <div className="all-indices-card-heading"><h3>{symbol}</h3><div>{latest ? <><span>PRICE</span><strong>{number(summaryPrice)}</strong><span>VWAP</span><strong>{number(latest.vwap)}</strong></> : <span>{item.loading ? 'Loading…' : item.error ? 'Data unavailable' : 'Waiting for data'}</span>}</div></div>
-          {item.error && !item.rows.length ? <div className="chart-empty">{item.error}</div> : <PriceVwapChart rows={item.rows} entryStartTime={settings.autoTrenderEntryStartTime} entryEndTime={settings.autoTrenderEntryEndTime} summary={{ price: summaryPrice, dayChangePercent, dayChangeAbsolute }} compact />}
+          {item.error && !item.rows.length ? <div className="chart-empty">{item.error}</div> : <PriceVwapChart rows={item.rows} levels={apiplatformLevels[symbol] || []} entryStartTime={settings.autoTrenderEntryStartTime} entryEndTime={settings.autoTrenderEntryEndTime} summary={{ price: summaryPrice, dayChangePercent, dayChangeAbsolute }} compact />}
         </article>;
       })}
     </div>
