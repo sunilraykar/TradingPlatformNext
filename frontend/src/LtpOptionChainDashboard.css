@@ -630,3 +630,38 @@
   .ltp-controls{flex:1 1 100%;flex-wrap:wrap}
   .ltp-market-strip>div{min-height:48px}
 }
+
+
+/* Put the resistance/support intelligence directly below the chart, grouped by side. */
+.ltp-chain-count{
+  display:flex;justify-content:flex-end;align-items:center;min-height:20px;
+  padding:0 8px 3px;color:#d7e2ef;font-size:10px;font-weight:750;
+}
+.ltp-intelligence-groups{
+  display:grid;grid-template-columns:1fr 1fr;gap:7px;
+  margin:7px 8px 8px;padding:0;background:transparent;border:0;
+}
+.ltp-intelligence-group{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;
+  min-width:0;padding:7px;border:1px solid #526276;border-radius:5px;
+  background:#293849;text-align:center;align-items:stretch;
+}
+.ltp-intelligence-group h3{
+  grid-column:1/-1;margin:0;padding:3px 4px;border-radius:3px;
+  color:#fff;font-size:10px;font-weight:900;letter-spacing:.6px;
+}
+.ltp-intelligence-group.resistance-group h3{background:#713c45}
+.ltp-intelligence-group.support-group h3{background:#245b45}
+.ltp-intelligence-group>div{
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  gap:3px;min-width:0;padding:4px 3px;background:#202c39;border-radius:3px;
+}
+.ltp-intelligence-group>div>span{color:#d3dfec;font-size:8px;font-weight:800;letter-spacing:.25px}
+.ltp-intelligence-group>div>strong{color:#fff;font-size:11px;font-weight:900;overflow-wrap:anywhere}
+.ltp-intelligence-group>div>small{color:#d3dfec;font-size:9px;font-weight:750}
+.ltp-intelligence-group .positive{color:#75f0aa!important}
+.ltp-intelligence-group .negative{color:#ff9299!important}
+@media(max-width:700px){
+  .ltp-intelligence-groups{grid-template-columns:1fr}
+  .ltp-intelligence-group{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
