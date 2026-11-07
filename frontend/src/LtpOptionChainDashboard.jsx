@@ -83,10 +83,10 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
     return Number.isNaN(date.getTime()) ? String(value).slice(11, 16) : date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata" });
   };
   const level = (name) => validLevels.find((item) => item.key === name)?.numericValue;
-  const resistanceTop = level("riskyResistance") ?? level("moderateResistance");
-  const resistanceBottom = level("resistanceSL");
-  const supportTop = level("supportSL");
-  const supportBottom = level("riskySupport");
+  const resistanceTop = level("resistanceMaxPain");
+  const resistanceBottom = level("eor");
+  const supportTop = level("eos");
+  const supportBottom = level("supportMaxPain");
   const zones = [
     resistanceTop !== undefined && resistanceBottom !== undefined ? { top: Math.max(resistanceTop, resistanceBottom), bottom: Math.min(resistanceTop, resistanceBottom), cls: "resistance-zone" } : null,
     supportTop !== undefined && supportBottom !== undefined ? { top: Math.max(supportTop, supportBottom), bottom: Math.min(supportTop, supportBottom), cls: "support-zone" } : null,
@@ -339,15 +339,17 @@ export default function LtpOptionChainDashboard() {
     return () => { active = false; window.clearInterval(timer); };
   }, [auth.authenticated, symbol, expiry, priceMode]);
 
+  // Reference-chart levels are sourced from the current RS_Status record.
+  // The reversalModel stop-loss values provide the upper/lower Max Pain lines.
+  // Do not substitute locally calculated option-chain max pain: it is a different metric.
   const chartLevels = [
-    { key: 'riskyResistance', label: 'T1', value: model.riskyResistance, tone: 'resistance-risk' },
-    { key: 'moderateResistance', label: 'T2', value: model.moderateResistance, tone: 'resistance' },
-    { key: 'resistanceSL', label: 'Max Pain', value: model.resistanceSL, tone: 'resistance-risk' },
-    { key: 'riskySupport', label: 'S1', value: model.riskySupport, tone: 'support-risk' },
-    { key: 'moderateSupport', label: 'S2', value: model.moderateSupport, tone: 'support' },
-    { key: 'supportSL', label: 'Max Pain', value: model.supportSL, tone: 'support-risk' },
-    { key: 'maxPain', label: 'Max Pain', value: pain, tone: 'max-pain' },
-  ];
+    { key: 'resistanceMaxPain', label: 'Max Pain', value: model.resistanceSL, tone: 'resistance-risk' },
+    { key: 'eorPlusOne', label: 'EOR+1', value: rs.rreversalNext, tone: 'resistance' },
+    { key: 'eor', label: 'EOR', value: rs.rreversal, tone: 'resistance' },
+    { key: 'eos', label: 'EOS', value: rs.sreversal, tone: 'support' },
+    { key: 'eosMinusOne', label: 'EOS-1', value: rs.sreversalBack, tone: 'support' },
+    { key: 'supportMaxPain', label: 'Max Pain', value: model.supportSL, tone: 'support-risk' },
+  ].sort((a, b) => (n(b.value) ?? -Infinity) - (n(a.value) ?? -Infinity));
   const marketDirection = data.symbolMarketDirection && data.symbolMarketDirection.marketDirection ? data.symbolMarketDirection.marketDirection : 'Market direction unavailable';
   const fetchedAt = data.FetchTime || (data.symbolMarketDirection && data.symbolMarketDirection.actualFetchTime) || '—';
   const selectedQuote = priceMode === 'SPOT' ? spotQuote : futureQuote;
