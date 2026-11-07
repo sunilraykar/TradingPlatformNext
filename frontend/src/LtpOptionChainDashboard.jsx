@@ -399,7 +399,7 @@ export default function LtpOptionChainDashboard() {
 
     <section className="ltp-workspace">
       <article className="ltp-option-panel">
-        <div className="ltp-panel-heading"><div><span>LIVE DERIVATIVES</span><h2>Option Chain</h2></div><small>{visibleRows.length} strikes shown · {rows.length} returned</small></div>
+        <div className="ltp-chain-count"><span>{visibleRows.length} strikes shown · {rows.length} returned</span></div>
         <div className="ltp-table-scroll"><table className="ltp-option-table">
           <thead><tr><th>CALL OI CHG</th><th>CALL OI</th><th>CALL VOLUME</th><th>CALL REVERSAL</th><th className="ltp-strike-head">STRIKE</th><th>PUT REVERSAL</th><th>PUT VOLUME</th><th>PUT OI</th><th>PUT OI CHG</th></tr></thead>
           <tbody>{visibleRows.map((row, index) => {
@@ -451,16 +451,25 @@ export default function LtpOptionChainDashboard() {
         <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />
         <div className="ltp-chart-legend"><span><i className="resistance" /> Resistance</span><span><i className="support" /> Support</span><span><i className="max-pain" /> Max Pain</span></div>
         <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
+        <section className="ltp-intelligence-groups" aria-label="Resistance and support shifting">
+          <article className="ltp-intelligence-group resistance-group">
+            <h3>RESISTANCE</h3>
+            <div className="ltp-intelligence-status"><span>STATUS</span><strong className={tone(rs.Resistance_Status)}>{rs.Resistance_Status || '—'}</strong></div>
+            <div><span>VOLUME SHIFT</span><strong>{rs.R_Vol_ShiftingStrike || '—'}</strong><small>{rs.R_Vol_Status || '—'}</small></div>
+            <div><span>OI SHIFT</span><strong>{rs.R_OI_ShiftingStrike || '—'}</strong><small>{rs.R_OI_Status || '—'}</small></div>
+            <div><span>RESISTANCE SHIFT</span><strong>{rs.R_ShiftingStrike || '—'}</strong></div>
+          </article>
+          <article className="ltp-intelligence-group support-group">
+            <h3>SUPPORT</h3>
+            <div className="ltp-intelligence-status"><span>STATUS</span><strong className={tone(rs.Support_Status)}>{rs.Support_Status || '—'}</strong></div>
+            <div><span>VOLUME SHIFT</span><strong>{rs.S_Vol_ShiftingStrike || '—'}</strong><small>{rs.S_Vol_Status || '—'}</small></div>
+            <div><span>OI SHIFT</span><strong>{rs.S_OI_ShiftingStrike || '—'}</strong><small>{rs.S_OI_Status || '—'}</small></div>
+            <div><span>SUPPORT SHIFT</span><strong>{rs.S_ShiftingStrike || '—'}</strong></div>
+          </article>
+        </section>
       </aside>
     </section>
 
-    <section className="ltp-intelligence-strip">
-      <div className="ltp-intelligence-title"><span>MARKET INTELLIGENCE</span><strong>Resistance &amp; Support Shifting</strong></div>
-      <div><span>RESISTANCE STATUS</span><strong className={tone(rs.Resistance_Status)}>{rs.Resistance_Status || '—'}</strong><small>Vol: {rs.R_Vol_Status || '—'} · OI: {rs.R_OI_Status || '—'}</small></div>
-      <div><span>SUPPORT STATUS</span><strong className={tone(rs.Support_Status)}>{rs.Support_Status || '—'}</strong><small>Vol: {rs.S_Vol_Status || '—'} · OI: {rs.S_OI_Status || '—'}</small></div>
-      <div><span>RESISTANCE SHIFT</span><strong>{rs.R_ShiftingStrike || '—'}</strong><small>Volume {rs.R_Vol_ShiftingStrike || '—'} · OI {rs.R_OI_ShiftingStrike || '—'}</small></div>
-      <div><span>SUPPORT SHIFT</span><strong>{rs.S_ShiftingStrike || '—'}</strong><small>Volume {rs.S_Vol_ShiftingStrike || '—'} · OI {rs.S_OI_ShiftingStrike || '—'}</small></div>
-    </section>
     <footer className="ltp-footer">Market data is provided by APIPLATFORM and Kite Connect. Verify all levels independently before placing trades.</footer>
   </section>;
 }
