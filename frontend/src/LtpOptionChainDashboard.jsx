@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './LtpOptionChainDashboard.css';
+import LightweightOptionChart from './LightweightOptionChart.jsx';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const DEFAULT_SYMBOLS = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX', 'BANKEX'];
@@ -172,6 +173,7 @@ export default function LtpOptionChainDashboard() {
   const [futureToken, setFutureToken] = useState(null);
   const [quotes, setQuotes] = useState({});
   const [candles, setCandles] = useState([]);
+  const [chartType, setChartType] = useState('classic');
   const [feedConnected, setFeedConnected] = useState(false);
   const chainRequestId = useRef(0);
   const metadataRequestId = useRef(0);
@@ -446,9 +448,14 @@ export default function LtpOptionChainDashboard() {
       </article>
 
       <aside className="ltp-chart-panel">
-        <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><small>5-minute candles</small></div>
+        <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><div className="ltp-chart-heading-actions"><div className="ltp-chart-toggle" role="group" aria-label="Chart type"><button type="button" className={chartType === 'classic' ? 'active' : ''} onClick={() => setChartType('classic')}>Classic</button><button type="button" className={chartType === 'tradingview' ? 'active' : ''} onClick={() => setChartType('tradingview')}>TradingView</button></div><small>5-minute candles</small></div></div>
         <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
-        <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />
+        {chartType === 'tradingview' ? <LightweightOptionChart candles={candles} livePrice={underlying} levels={[
+          { title: 'T1', value: model.riskyResistance, color: '#ff6474' },
+          { title: 'T2', value: model.moderateResistance, color: '#ffad42' },
+          { title: 'S1', value: model.riskySupport, color: '#35dc8a' },
+          { title: 'S2', value: model.moderateSupport, color: '#43c8e8' },
+        ]} /> : <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />}
         <section className="ltp-direction-banner ltp-chart-scenario"><span>MARKET SCENARIO</span><strong>{marketDirection}</strong><small>{model.scenario || ''}</small></section>
         <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
         <section className="ltp-intelligence-groups" aria-label="Resistance and support shifting">
