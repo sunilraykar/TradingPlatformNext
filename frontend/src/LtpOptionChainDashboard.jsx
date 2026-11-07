@@ -204,16 +204,16 @@ function SwingTradePanel() {
     </div>
     <div className="ltp-swing-table-wrap">
       <table className="ltp-swing-table">
-        <thead><tr><th>TIME</th><th>SYMBOL</th><th>LOT SIZE</th><th>STATUS [SHIFTING]</th><th>CMP</th><th>PUT H OI REVERSAL</th><th>CALL H OI REVERSAL</th><th>OI</th><th>STAR RATING</th></tr></thead>
+        <thead><tr><th>SYMBOL</th><th>LOT SIZE</th><th>STATUS [SHIFTING]</th><th>CMP</th><th>PUT H OI REVERSAL</th><th>CALL H OI REVERSAL</th><th>OI</th><th>STAR RATING</th></tr></thead>
         <tbody>{rows.map((row) => {
           const status = String(row[statusField] || '—').toUpperCase();
           return <tr key={row.symbol}>
-            <td className="time">{row.FetchTime || '—'}</td><td className="symbol">{row.symbol}</td><td>{number(row.lotSize)}</td>
+            <td className="symbol">{row.symbol}</td><td>{number(row.lotSize)}</td>
             <td><span className={'ltp-swing-status ' + (status === 'STRONG' ? 'strong' : status === 'WTB' ? 'wtb' : status === 'WTT' ? 'wtt' : '')}>{status}</span></td>
             <td className="cmp">{number(row['Price-S'])}</td><td>{row.S_OI_Reversal ?? '—'}</td><td>{row.R_OI_Reversal ?? '—'}</td><td>{number(row[oiField])}</td><td><span className="ltp-swing-stars">{number(row[starField])}</span></td>
           </tr>;
         })}
-        {!rows.length && <tr><td colSpan="9" className="ltp-swing-empty">{loading ? 'Loading live Swing Trade records…' : error ? 'Unable to load Swing Trade records.' : 'No records match the configured filters.'}</td></tr>}</tbody>
+        {!rows.length && <tr><td colSpan="8" className="ltp-swing-empty">{loading ? 'Loading live Swing Trade records…' : error ? 'Unable to load Swing Trade records.' : 'No records match the configured filters.'}</td></tr>}</tbody>
       </table>
     </div>
     <div className="ltp-swing-footnote">Filters: Star Rating 0–1 · Bullish status STRONG/WTT · Bearish status STRONG/WTB · Duplicate symbols retain the last qualifying API record · API order preserved.</div>
