@@ -61,7 +61,7 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
     time: item.time, open: n(item.open), high: n(item.high), low: n(item.low), close: n(item.close),
   })).filter((item) => [item.open, item.high, item.low, item.close].every((v) => v !== null)), [candles]);
 
-  const W = 900, H = 470, L = 78, R = 126, T = 22, B = 42;
+  const W = 900, H = 470, L = 190, R = 34, T = 22, B = 42;
   const validLevels = levels.map((level) => ({ ...level, numericValue: n(level.value) })).filter((level) => level.numericValue !== null);
   const values = rows.flatMap((r) => [r.high, r.low]).concat(validLevels.map((l) => l.numericValue));
   if (livePrice !== null && livePrice !== undefined) values.push(livePrice);
@@ -95,13 +95,13 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
   return <div className="ltp-candle-chart"><svg viewBox={'0 0 ' + W + ' ' + H} role="img" aria-label={priceMode + ' intraday candlestick chart with support and resistance levels'}>
     {zones.map((zone) => <rect key={zone.cls} x={L} y={y(zone.top)} width={plotW} height={Math.max(1, y(zone.bottom) - y(zone.top))} className={'ltp-chart-zone ' + zone.cls} />)}
     {ticks.map((v, i) => <g key={i}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="ltp-chart-grid" /><text x={L - 9} y={y(v) + 4} textAnchor="end" className="ltp-chart-axis">{fmt(v, 0)}</text></g>)}
-    {validLevels.map((item) => <g key={item.key || item.label}><line x1={L} x2={W - R} y1={y(item.numericValue)} y2={y(item.numericValue)} className={'ltp-level-line ' + item.tone} /><text x={W - R + 5} y={y(item.numericValue) - 4} className={'ltp-level-label ' + item.tone}>{item.label} {fmt(item.numericValue, 0)}</text></g>)}
+    {validLevels.map((item) => <g key={item.key || item.label}><line x1={L} x2={W - R} y1={y(item.numericValue)} y2={y(item.numericValue)} className={'ltp-level-line ' + item.tone} /><text x={L - 8} y={y(item.numericValue) - 4} textAnchor="end" className={'ltp-level-label ' + item.tone}>{item.label} {fmt(item.numericValue, 0)}</text></g>)}
     {rows.map((r, i) => {
       const x = L + i * step + step / 2, rising = r.close >= r.open;
       const top = y(Math.max(r.open, r.close)), bottom = y(Math.min(r.open, r.close));
       return <g key={r.time || i} className={rising ? 'ltp-candle up' : 'ltp-candle down'}><line x1={x} x2={x} y1={y(r.high)} y2={y(r.low)} /><rect x={x - body / 2} y={top} width={body} height={Math.max(1.5, bottom - top)} rx="1" /></g>;
     })}
-    {livePrice !== null && livePrice !== undefined && <g className="ltp-live-price"><line x1={L} x2={W - R} y1={y(livePrice)} y2={y(livePrice)} /><rect x={W - R + 1} y={y(livePrice) - 10} width={R - 2} height="19" rx="2" /><text x={W - R + 5} y={y(livePrice) + 3}>{fmt(livePrice, 2)}</text></g>}
+    {livePrice !== null && livePrice !== undefined && <g className="ltp-live-price"><line x1={L} x2={W - R} y1={y(livePrice)} y2={y(livePrice)} /><rect x={L - 75} y={y(livePrice) - 10} width="73" height="19" rx="2" /><text x={L - 70} y={y(livePrice) + 3}>{fmt(livePrice, 2)}</text></g>}
     {rows.length > 0 && Array.from(new Set([0, Math.floor((rows.length - 1) / 4), Math.floor((rows.length - 1) / 2), Math.floor(3 * (rows.length - 1) / 4), rows.length - 1])).map((index) => <text key={index} x={L + index * step + step / 2} y={H - 13} textAnchor="middle" className="ltp-chart-axis">{timeLabel(rows[index].time)}</text>)}
     {rows.length === 0 && <text x={L + plotW / 2} y={H - 13} textAnchor="middle" className="ltp-chart-axis">Waiting for intraday candles</text>}
     {rows.length > 0 && <text x={L} y={H - 1} className="ltp-chart-axis">{timeLabel(firstTime)}</text>}
@@ -307,12 +307,12 @@ export default function LtpOptionChainDashboard() {
   }, [auth.authenticated, symbol, expiry, priceMode]);
 
   const chartLevels = [
-    { key: 'riskyResistance', label: 'Risky Resistance', value: model.riskyResistance, tone: 'resistance-risk' },
-    { key: 'moderateResistance', label: 'Moderate Resistance', value: model.moderateResistance, tone: 'resistance' },
-    { key: 'resistanceSL', label: 'Resistance SL', value: model.resistanceSL, tone: 'resistance-risk' },
-    { key: 'riskySupport', label: 'Risky Support', value: model.riskySupport, tone: 'support-risk' },
-    { key: 'moderateSupport', label: 'Moderate Support', value: model.moderateSupport, tone: 'support' },
-    { key: 'supportSL', label: 'Support SL', value: model.supportSL, tone: 'support-risk' },
+    { key: 'riskyResistance', label: 'T1', value: model.riskyResistance, tone: 'resistance-risk' },
+    { key: 'moderateResistance', label: 'T2', value: model.moderateResistance, tone: 'resistance' },
+    { key: 'resistanceSL', label: 'Max Pain', value: model.resistanceSL, tone: 'resistance-risk' },
+    { key: 'riskySupport', label: 'S1', value: model.riskySupport, tone: 'support-risk' },
+    { key: 'moderateSupport', label: 'S2', value: model.moderateSupport, tone: 'support' },
+    { key: 'supportSL', label: 'Max Pain', value: model.supportSL, tone: 'support-risk' },
     { key: 'maxPain', label: 'Max Pain', value: pain, tone: 'max-pain' },
   ];
   const marketDirection = data.symbolMarketDirection && data.symbolMarketDirection.marketDirection ? data.symbolMarketDirection.marketDirection : 'Market direction unavailable';
