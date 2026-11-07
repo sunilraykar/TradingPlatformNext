@@ -57,43 +57,55 @@ function maxPain(rows) {
 }
 
 function CandleChart({ candles, livePrice, levels, priceMode }) {
-  const rows = useMemo(() => {
-    const usable = (candles || []).map((item) => ({
-      time: item.time, open: n(item.open), high: n(item.high), low: n(item.low), close: n(item.close),
-    })).filter((item) => [item.open, item.high, item.low, item.close].every((v) => v !== null));
-    if (usable.length && livePrice !== null) {
-      const last = usable[usable.length - 1];
-      last.close = livePrice;
-      last.high = Math.max(last.high, livePrice);
-      last.low = Math.min(last.low, livePrice);
-    }
-    return usable;
-  }, [candles, livePrice]);
-  if (!rows.length) return <div className="ltp-chart-empty"><strong>Intraday chart unavailable</strong><small>Connect Kite and check today's instrument candles.</small></div>;
+  const rows = useMemo(() => (candles || []).map((item) => ({
+    time: item.time, open: n(item.open), high: n(item.high), low: n(item.low), close: n(item.close),
+  })).filter((item) => [item.open, item.high, item.low, item.close].every((v) => v !== null)), [candles]);
 
-  const W = 820, H = 350, L = 54, R = 18, T = 18, B = 32;
-  const values = rows.flatMap((r) => [r.high, r.low]).concat(levels.map((l) => n(l.value)).filter((v) => v !== null));
-  const lo = Math.min.apply(null, values), hi = Math.max.apply(null, values);
-  const pad = Math.max((hi - lo) * 0.12, 1), min = lo - pad, max = hi + pad;
-  const y = (v) => T + ((max - v) / (max - min)) * (H - T - B);
-  const step = (W - L - R) / Math.max(rows.length, 1);
-  const body = Math.max(3, Math.min(12, step * 0.58));
-  const ticks = [0, 1, 2, 3, 4].map((i) => min + (max - min) * i / 4);
+  const W = 900, H = 470, L = 78, R = 126, T = 22, B = 42;
+  const validLevels = levels.map((level) => ({ ...level, numericValue: n(level.value) })).filter((level) => level.numericValue !== null);
+  const values = rows.flatMap((r) => [r.high, r.low]).concat(validLevels.map((l) => l.numericValue));
+  if (livePrice !== null && livePrice !== undefined) values.push(livePrice);
+  if (!values.length) return <div className="ltp-chart-empty"><strong>Intraday chart unavailable</strong><small>No 5-minute candles are available for this instrument and session. The chart will populate when Kite historical data is available.</small></div>;
 
-  return <div className="ltp-candle-chart"><svg viewBox={'0 0 ' + W + ' ' + H} role="img" aria-label={priceMode + ' live intraday candlestick chart'}>
-    {ticks.map((v, i) => <g key={i}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="ltp-chart-grid" /><text x={L - 8} y={y(v) + 4} textAnchor="end" className="ltp-chart-axis">{fmt(v, 0)}</text></g>)}
-    {levels.map((level) => {
-      const value = n(level.value);
-      if (value === null || value < min || value > max) return null;
-      return <g key={level.label}><line x1={L} x2={W - R} y1={y(value)} y2={y(value)} className={'ltp-level-line ' + level.tone} /><text x={W - R - 3} y={y(value) - 5} textAnchor="end" className={'ltp-level-label ' + level.tone}>{level.label} {fmt(value, 0)}</text></g>;
-    })}
+  const lo = Math.min(...values), hi = Math.max(...values);
+  const pad = Math.max((hi - lo) * 0.1, Math.abs(hi) * 0.0008, 1);
+  const min = lo - pad, max = hi + pad;
+  const plotW = W - L - R, plotH = H - T - B;
+  const y = (v) => T + ((max - v) / (max - min)) * plotH;
+  const step = plotW / Math.max(rows.length, 1);
+  const body = Math.max(2, Math.min(10, step * 0.62));
+  const ticks = Array.from({ length: 6 }, (_, i) => min + (max - min) * i / 5);
+  const firstTime = rows[0]?.time;
+  const lastTime = rows[rows.length - 1]?.time;
+  const timeLabel = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? String(value).slice(11, 16) : date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata" });
+  };
+  const level = (name) => validLevels.find((item) => item.key === name)?.numericValue;
+  const resistanceTop = level("riskyResistance");
+  const resistanceBottom = level("resistanceSL");
+  const supportTop = level("supportSL");
+  const supportBottom = level("riskySupport");
+  const zones = [
+    resistanceTop !== undefined && resistanceBottom !== undefined ? { top: Math.max(resistanceTop, resistanceBottom), bottom: Math.min(resistanceTop, resistanceBottom), cls: "resistance-zone" } : null,
+    supportTop !== undefined && supportBottom !== undefined ? { top: Math.max(supportTop, supportBottom), bottom: Math.min(supportTop, supportBottom), cls: "support-zone" } : null,
+  ].filter(Boolean);
+
+  return <div className="ltp-candle-chart"><svg viewBox={'0 0 ' + W + ' ' + H} role="img" aria-label={priceMode + ' intraday candlestick chart with support and resistance levels'}>
+    {zones.map((zone) => <rect key={zone.cls} x={L} y={y(zone.top)} width={plotW} height={Math.max(1, y(zone.bottom) - y(zone.top))} className={'ltp-chart-zone ' + zone.cls} />)}
+    {ticks.map((v, i) => <g key={i}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="ltp-chart-grid" /><text x={L - 9} y={y(v) + 4} textAnchor="end" className="ltp-chart-axis">{fmt(v, 0)}</text></g>)}
+    {validLevels.map((item) => <g key={item.key || item.label}><line x1={L} x2={W - R} y1={y(item.numericValue)} y2={y(item.numericValue)} className={'ltp-level-line ' + item.tone} /><text x={W - R + 5} y={y(item.numericValue) - 4} className={'ltp-level-label ' + item.tone}>{item.label} {fmt(item.numericValue, 0)}</text></g>)}
     {rows.map((r, i) => {
       const x = L + i * step + step / 2, rising = r.close >= r.open;
       const top = y(Math.max(r.open, r.close)), bottom = y(Math.min(r.open, r.close));
       return <g key={r.time || i} className={rising ? 'ltp-candle up' : 'ltp-candle down'}><line x1={x} x2={x} y1={y(r.high)} y2={y(r.low)} /><rect x={x - body / 2} y={top} width={body} height={Math.max(1.5, bottom - top)} rx="1" /></g>;
     })}
-    <text x={L} y={H - 7} className="ltp-chart-axis">{rows[0].time ? String(rows[0].time).slice(11, 16) : '09:15'}</text>
-    <text x={W - R} y={H - 7} textAnchor="end" className="ltp-chart-axis">Now</text>
+    {livePrice !== null && livePrice !== undefined && <g className="ltp-live-price"><line x1={L} x2={W - R} y1={y(livePrice)} y2={y(livePrice)} /><rect x={W - R + 1} y={y(livePrice) - 10} width={R - 2} height="19" rx="2" /><text x={W - R + 5} y={y(livePrice) + 3}>{fmt(livePrice, 2)}</text></g>}
+    {rows.length > 0 && Array.from(new Set([0, Math.floor((rows.length - 1) / 4), Math.floor((rows.length - 1) / 2), Math.floor(3 * (rows.length - 1) / 4), rows.length - 1])).map((index) => <text key={index} x={L + index * step + step / 2} y={H - 13} textAnchor="middle" className="ltp-chart-axis">{timeLabel(rows[index].time)}</text>)}
+    {rows.length === 0 && <text x={L + plotW / 2} y={H - 13} textAnchor="middle" className="ltp-chart-axis">Waiting for intraday candles</text>}
+    {rows.length > 0 && <text x={L} y={H - 1} className="ltp-chart-axis">{timeLabel(firstTime)}</text>}
+    {rows.length > 0 && <text x={W - R} y={H - 1} textAnchor="end" className="ltp-chart-axis">{timeLabel(lastTime)}</text>}
   </svg></div>;
 }
 
@@ -284,11 +296,13 @@ export default function LtpOptionChainDashboard() {
   }, [auth.authenticated, symbol, expiry, priceMode]);
 
   const chartLevels = [
-    { label: 'Resistance', value: model.moderateResistance, tone: 'resistance' },
-    { label: 'Risk R', value: model.resistanceSL, tone: 'resistance-risk' },
-    { label: 'Support', value: model.moderateSupport, tone: 'support' },
-    { label: 'Risk S', value: model.supportSL, tone: 'support-risk' },
-    { label: 'Max Pain', value: pain, tone: 'max-pain' },
+    { key: 'riskyResistance', label: 'Risky Resistance', value: model.riskyResistance, tone: 'resistance-risk' },
+    { key: 'moderateResistance', label: 'Moderate Resistance', value: model.moderateResistance, tone: 'resistance' },
+    { key: 'resistanceSL', label: 'Resistance SL', value: model.resistanceSL, tone: 'resistance-risk' },
+    { key: 'riskySupport', label: 'Risky Support', value: model.riskySupport, tone: 'support-risk' },
+    { key: 'moderateSupport', label: 'Moderate Support', value: model.moderateSupport, tone: 'support' },
+    { key: 'supportSL', label: 'Support SL', value: model.supportSL, tone: 'support-risk' },
+    { key: 'maxPain', label: 'Max Pain', value: pain, tone: 'max-pain' },
   ];
   const marketDirection = data.symbolMarketDirection && data.symbolMarketDirection.marketDirection ? data.symbolMarketDirection.marketDirection : 'Market direction unavailable';
   const fetchedAt = data.FetchTime || (data.symbolMarketDirection && data.symbolMarketDirection.actualFetchTime) || '—';
@@ -330,7 +344,15 @@ export default function LtpOptionChainDashboard() {
         <div className="ltp-panel-heading"><div><span>LIVE DERIVATIVES</span><h2>Option Chain</h2></div><small>{visibleRows.length} strikes shown · {rows.length} returned</small></div>
         <div className="ltp-table-scroll"><table className="ltp-option-table">
           <thead><tr><th>CALL OI CHG</th><th>CALL OI</th><th>CALL VOLUME</th><th>CALL REVERSAL</th><th className="ltp-strike-head">STRIKE</th><th>PUT REVERSAL</th><th>PUT VOLUME</th><th>PUT OI</th><th>PUT OI CHG</th></tr></thead>
-          <tbody>{visibleRows.map((row) => <OptionRow key={row._id || row.strike} row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} />)}
+          <tbody>{visibleRows.map((row, index) => {
+            const strike = n(row.strike);
+            const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
+            const showSpot = underlying !== null && strike !== null && (underlying >= strike && (nextStrike === null || underlying < nextStrike));
+            return <React.Fragment key={row._id || row.strike}>
+              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} />
+              {showSpot && <tr className="ltp-spot-marker-row"><td colSpan="4"><span>CALL SIDE</span></td><td className="ltp-spot-marker-cell"><strong>SPOT</strong><b>{fmt(underlying)}</b></td><td colSpan="4"><span>PUT SIDE</span></td></tr>}
+            </React.Fragment>;
+          })}
             {!visibleRows.length && <tr><td colSpan="9" className="ltp-empty-cell">{loading ? 'Loading option-chain data…' : 'No option-chain records returned for this expiry.'}</td></tr>}
           </tbody>
           {visibleRows.length > 0 && <tfoot><tr><td colSpan="2">CALL OI {compact(total('callOI'))}</td><td colSpan="2">CALL VOL {compact(total('callVol'))}</td><td className="ltp-strike-head">TOTAL</td><td colSpan="2">PUT VOL {compact(total('putVol'))}</td><td colSpan="2">PUT OI {compact(total('putOI'))}</td></tr></tfoot>}
@@ -341,7 +363,7 @@ export default function LtpOptionChainDashboard() {
       <aside className="ltp-chart-panel">
         <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><small>5-minute candles</small></div>
         <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
-        <CandleChart candles={candles.length ? candles : [parseOhlc(priceMode === 'SPOT' ? rs.spot_ohlc_data : rs.fno_ohlc_data)].filter(Boolean).map((item) => ({ time: item.timestamp, open: item.O, high: item.H, low: item.L, close: item.C }))} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />
+        <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />
         <div className="ltp-chart-legend"><span><i className="resistance" /> Resistance</span><span><i className="support" /> Support</span><span><i className="max-pain" /> Max Pain</span></div>
         <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
       </aside>
