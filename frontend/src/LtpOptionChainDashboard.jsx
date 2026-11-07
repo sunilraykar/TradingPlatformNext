@@ -61,7 +61,7 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
     time: item.time, open: n(item.open), high: n(item.high), low: n(item.low), close: n(item.close),
   })).filter((item) => [item.open, item.high, item.low, item.close].every((v) => v !== null)), [candles]);
 
-  const W = 1100, H = 650, L = 28, R = 118, T = 28, B = 52;
+  const W = 760, H = 650, L = 82, R = 128, T = 28, B = 52;
   const validLevels = levels.map((level) => ({ ...level, numericValue: n(level.value) })).filter((level) => level.numericValue !== null);
   const values = rows.flatMap((r) => [r.high, r.low]).concat(validLevels.map((l) => l.numericValue));
   if (livePrice !== null && livePrice !== undefined) values.push(livePrice);
@@ -94,14 +94,14 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
 
   return <div className="ltp-candle-chart"><svg viewBox={'0 0 ' + W + ' ' + H} role="img" aria-label={priceMode + ' intraday candlestick chart with support and resistance levels'}>
     {zones.map((zone) => <rect key={zone.cls} x={L} y={y(zone.top)} width={plotW} height={Math.max(1, y(zone.bottom) - y(zone.top))} className={'ltp-chart-zone ' + zone.cls} />)}
-    {ticks.map((v, i) => <g key={i}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="ltp-chart-grid" /><text x={W - R + 12} y={y(v) + 5} textAnchor="start" className="ltp-chart-axis">{fmt(v, 0)}</text></g>)}
-    {validLevels.map((item) => <g key={item.key || item.label}><line x1={L} x2={W - R} y1={y(item.numericValue)} y2={y(item.numericValue)} className={'ltp-level-line ' + item.tone} /><rect x={W - R + 3} y={y(item.numericValue) - 13} width="112" height="25" rx="6" className={'ltp-level-tag ' + item.tone} /><text x={W - R + 59} y={y(item.numericValue) + 4} textAnchor="middle" className="ltp-level-tag-text">{item.label} {fmt(item.numericValue, 0)}</text></g>)}
+    {ticks.map((v, i) => <g key={i}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} className="ltp-chart-grid" /><text x={L - 12} y={y(v) + 5} textAnchor="end" className="ltp-chart-axis">{fmt(v, 0)}</text></g>)}
+    {validLevels.map((item) => <g key={item.key || item.label}><line x1={L} x2={W - R} y1={y(item.numericValue)} y2={y(item.numericValue)} className={'ltp-level-line ' + item.tone} /><rect x={W - R + 4} y={y(item.numericValue) - 13} width="120" height="25" rx="6" className={'ltp-level-tag ' + item.tone} /><text x={W - R + 64} y={y(item.numericValue) + 4} textAnchor="middle" className="ltp-level-tag-text">{item.label} {fmt(item.numericValue, 0)}</text></g>)}
     {rows.map((r, i) => {
       const x = L + i * step + step / 2, rising = r.close >= r.open;
       const top = y(Math.max(r.open, r.close)), bottom = y(Math.min(r.open, r.close));
       return <g key={r.time || i} className={rising ? 'ltp-candle up' : 'ltp-candle down'}><line x1={x} x2={x} y1={y(r.high)} y2={y(r.low)} /><rect x={x - body / 2} y={top} width={body} height={Math.max(1.5, bottom - top)} rx="1" /></g>;
     })}
-    {livePrice !== null && livePrice !== undefined && <g className="ltp-live-price"><line x1={L} x2={W - R} y1={y(livePrice)} y2={y(livePrice)} /><rect x={W - R + 3} y={y(livePrice) - 13} width="112" height="25" rx="6" /><text x={W - R + 59} y={y(livePrice) + 4} textAnchor="middle">SPOT {fmt(livePrice, 2)}</text></g>}
+    {livePrice !== null && livePrice !== undefined && <g className="ltp-live-price"><line x1={L} x2={W - R} y1={y(livePrice)} y2={y(livePrice)} /><rect x={W - R + 4} y={y(livePrice) - 13} width="120" height="25" rx="6" /><text x={W - R + 64} y={y(livePrice) + 4} textAnchor="middle">SPOT {fmt(livePrice, 2)}</text></g>}
     {rows.length > 0 && Array.from(new Set([0, Math.floor((rows.length - 1) / 4), Math.floor((rows.length - 1) / 2), Math.floor(3 * (rows.length - 1) / 4), rows.length - 1])).map((index) => <text key={index} x={L + index * step + step / 2} y={H - 18} textAnchor="middle" className="ltp-chart-axis">{timeLabel(rows[index].time)}</text>)}
     {rows.length === 0 && <text x={L + plotW / 2} y={H - 13} textAnchor="middle" className="ltp-chart-axis">Waiting for intraday candles</text>}
     {rows.length > 0 && <text x={L} y={H - 3} className="ltp-chart-axis">{timeLabel(firstTime)}</text>}
