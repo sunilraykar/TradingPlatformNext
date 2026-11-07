@@ -390,7 +390,17 @@ export default function LtpOptionChainDashboard() {
             const showSpot = underlying !== null && strike !== null && (underlying >= strike && (nextStrike === null || underlying < nextStrike));
             return <React.Fragment key={row._id || row.strike}>
               <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} totals={chainTotals} />
-              {showSpot && <tr className="ltp-spot-marker-row"><td colSpan="4"><span>CALL SIDE</span></td><td className="ltp-spot-marker-cell"><strong>SPOT</strong><b>{fmt(underlying)}</b></td><td colSpan="4"><span>PUT SIDE</span></td></tr>}
+              {showSpot && <tr className="ltp-spot-marker-row">
+                <td colSpan="4"><div className="ltp-rs-indicators ltp-rs-call">
+                  <span className="ltp-rs-chip"><b>{rs.R_OI_Status || '—'}</b><strong>{fmt(rs.R_OI_ShiftingStrike_per, 2)}%</strong><small>OI · {rs.R_OI_Strike || '—'}{rs.R_OI_Shifting ? ' → ' + (rs.R_OI_ShiftingStrike || '—') : ''}</small></span>
+                  <span className="ltp-rs-chip"><b>{rs.R_Vol_Status || '—'}</b><strong>{fmt(rs.R_Vol_ShiftingStrike_per, 2)}%</strong><small>VOL · {rs.R_Vol_Strike || '—'}{rs.R_Vol_Shifting ? ' → ' + (rs.R_Vol_ShiftingStrike || '—') : ''}</small></span>
+                </div></td>
+                <td className="ltp-spot-marker-cell"><strong>SPOT</strong><b>{fmt(underlying)}</b></td>
+                <td colSpan="4"><div className="ltp-rs-indicators ltp-rs-put">
+                  <span className="ltp-rs-chip"><b>{rs.S_Vol_Status || '—'}</b><strong>{fmt(rs.S_Vol_ShiftingStrike_per, 2)}%</strong><small>VOL · {rs.S_Vol_Strike || '—'}{rs.S_Vol_Shifting ? ' → ' + (rs.S_Vol_ShiftingStrike || '—') : ''}</small></span>
+                  <span className="ltp-rs-chip"><b>{rs.S_OI_Status || '—'}</b><strong>{fmt(rs.S_OI_ShiftingStrike_per, 2)}%</strong><small>OI · {rs.S_OI_Strike || '—'}{rs.S_OI_Shifting ? ' → ' + (rs.S_OI_ShiftingStrike || '—') : ''}</small></span>
+                </div></td>
+              </tr>}
             </React.Fragment>;
           })}
             {!visibleRows.length && <tr><td colSpan="9" className="ltp-empty-cell">{loading ? 'Loading option-chain data…' : 'No option-chain records returned for this expiry.'}</td></tr>}
