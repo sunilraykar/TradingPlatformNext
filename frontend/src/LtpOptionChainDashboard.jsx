@@ -387,8 +387,6 @@ export default function LtpOptionChainDashboard() {
     {!auth.authenticated && <section className="ltp-auth-banner"><div><strong>APIPLATFORM connection required</strong><small>Uses the credentials already configured in backend/.env. Tokens remain on the backend.</small></div><button type="button" onClick={login} disabled={loggingIn}>{loggingIn ? 'Connecting…' : 'Connect APIPLATFORM'}</button></section>}
     {error && <div className="ltp-error"><strong>Data request issue</strong><span>{error}</span></div>}
 
-    <section className="ltp-direction-banner"><span>MARKET SCENARIO</span><strong>{marketDirection}</strong><small>{model.scenario || ''}</small></section>
-
     <section className="ltp-market-strip">
       <div className="ltp-market-price"><span>{priceMode} PRICE</span><strong>{fmt(underlying)}</strong><small className={change > 0 ? 'positive' : change < 0 ? 'negative' : ''}>{change === null ? 'Kite WebSocket quote' : (change > 0 ? '+' : '') + fmt(change) + '%'}</small></div>
       <div><span>RISKY RESISTANCE</span><strong>{model.riskyResistance || '—'}</strong></div>
@@ -451,6 +449,7 @@ export default function LtpOptionChainDashboard() {
         <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><small>5-minute candles</small></div>
         <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
         <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />
+        <section className="ltp-direction-banner ltp-chart-scenario"><span>MARKET SCENARIO</span><strong>{marketDirection}</strong><small>{model.scenario || ''}</small></section>
         <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
         <section className="ltp-intelligence-groups" aria-label="Resistance and support shifting">
           <article className="ltp-intelligence-group resistance-group">
