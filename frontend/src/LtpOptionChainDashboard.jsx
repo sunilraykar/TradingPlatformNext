@@ -83,7 +83,7 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
     return Number.isNaN(date.getTime()) ? String(value).slice(11, 16) : date.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Kolkata" });
   };
   const level = (name) => validLevels.find((item) => item.key === name)?.numericValue;
-  const resistanceTop = level("riskyResistance");
+  const resistanceTop = level("riskyResistance") ?? level("moderateResistance");
   const resistanceBottom = level("resistanceSL");
   const supportTop = level("supportSL");
   const supportBottom = level("riskySupport");
