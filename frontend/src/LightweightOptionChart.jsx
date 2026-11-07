@@ -22,6 +22,7 @@ export default function LightweightOptionChart({ candles = [], livePrice, levels
   const candleSeriesRef = useRef(null);
   const priceLinesRef = useRef([]);
   const scaleValuesRef = useRef([]);
+  const fittedContentRef = useRef(false);
   const normalizedCandles = useMemo(() => {
     const byTime = new Map();
     candles.forEach((item) => {
@@ -145,7 +146,10 @@ export default function LightweightOptionChart({ candles = [], livePrice, levels
     if (!series || !chart) return;
     series.setData(normalizedCandles);
     if (normalizedCandles.length) {
-      chart.timeScale().fitContent();
+      if (!fittedContentRef.current) {
+        chart.timeScale().fitContent();
+        fittedContentRef.current = true;
+      }
       chart.priceScale('right').applyOptions({ autoScale: true });
     }
   }, [normalizedCandles]);
