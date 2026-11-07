@@ -977,6 +977,10 @@
   min-width: 0;
 }
 .ltp-overview-row .ltp-option-toolbar {
+  grid-column: 2;
+  justify-self: end;
+  width: max-content;
+  max-width: 100%;
   min-width: 0;
   height: 100%;
   margin: 0;
