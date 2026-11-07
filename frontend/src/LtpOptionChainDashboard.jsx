@@ -390,15 +390,6 @@ export default function LtpOptionChainDashboard() {
     {!auth.authenticated && <section className="ltp-auth-banner"><div><strong>APIPLATFORM connection required</strong><small>Uses the credentials already configured in backend/.env. Tokens remain on the backend.</small></div><button type="button" onClick={login} disabled={loggingIn}>{loggingIn ? 'Connecting…' : 'Connect APIPLATFORM'}</button></section>}
     {error && <div className="ltp-error"><strong>Data request issue</strong><span>{error}</span></div>}
 
-    <section className="ltp-market-strip">
-      <div className="ltp-market-price"><span>{priceMode} PRICE</span><strong>{fmt(underlying)}</strong><small className={change > 0 ? 'positive' : change < 0 ? 'negative' : ''}>{change === null ? 'Kite WebSocket quote' : (change > 0 ? '+' : '') + fmt(change) + '%'}</small></div>
-      <div><span>RISKY RESISTANCE</span><strong>{model.riskyResistance || '—'}</strong></div>
-      <div><span>MODERATE RESISTANCE</span><strong>{fmt(model.moderateResistance)}</strong></div>
-      <div><span>RESISTANCE SL</span><strong>{fmt(model.resistanceSL)}</strong></div>
-      <div><span>RISKY SUPPORT</span><strong>{fmt(model.riskySupport)}</strong></div>
-      <div><span>MODERATE SUPPORT</span><strong>{fmt(model.moderateSupport)}</strong></div>
-      <div><span>SUPPORT SL</span><strong>{fmt(model.supportSL)}</strong></div>
-    </section>
     </div>
 
     <section className="ltp-workspace">
