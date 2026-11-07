@@ -452,7 +452,7 @@ export default function LtpOptionChainDashboard() {
       <aside className="ltp-chart-panel">
         <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><div className="ltp-chart-heading-actions"><div className="ltp-chart-toggle" role="group" aria-label="Chart type"><button type="button" className={chartType === 'classic' ? 'active' : ''} onClick={() => setChartType('classic')}>Classic</button><button type="button" className={chartType === 'tradingview' ? 'active' : ''} onClick={() => setChartType('tradingview')}>TradingView</button></div><small>5-minute candles</small></div></div>
         <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
-        {chartType === 'tradingview' ? <LightweightOptionChart candles={candles} livePrice={underlying} levels={[
+        {chartType === 'tradingview' ? <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
           { title: 'T1', value: model.riskyResistance, color: '#ff6474' },
           { title: 'T2', value: model.moderateResistance, color: '#ffad42' },
           { title: 'S1', value: model.riskySupport, color: '#35dc8a' },
