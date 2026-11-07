@@ -453,10 +453,14 @@ export default function LtpOptionChainDashboard() {
         <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><div className="ltp-chart-heading-actions"><div className="ltp-chart-toggle" role="group" aria-label="Chart type"><button type="button" className={chartType === 'classic' ? 'active' : ''} onClick={() => setChartType('classic')}>Classic</button><button type="button" className={chartType === 'tradingview' ? 'active' : ''} onClick={() => setChartType('tradingview')}>TradingView</button></div><small>5-minute candles</small></div></div>
         <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
         {chartType === 'tradingview' ? <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
-          { title: 'T1', value: model.riskyResistance, color: '#ff6474' },
+          // APIPLATFORM reversalModel field mapping:
+          // T1 is the numeric resistance target (riskyResistance is a text signal such as "Break Out").
+          // T2 is moderate resistance; S1/S2 are risky/moderate support.
+          { title: 'T1', value: model.resistanceTarget, color: '#ff6474' },
           { title: 'T2', value: model.moderateResistance, color: '#ffad42' },
           { title: 'S1', value: model.riskySupport, color: '#35dc8a' },
           { title: 'S2', value: model.moderateSupport, color: '#43c8e8' },
+          { title: 'Support Target', value: model.supportTarget, color: '#8be0b0', lineStyle: 1 },
         ]} /> : <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />}
         <section className="ltp-direction-banner ltp-chart-scenario"><span>MARKET SCENARIO</span><strong>{marketDirection}</strong><small>{model.scenario || ''}</small></section>
         <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
