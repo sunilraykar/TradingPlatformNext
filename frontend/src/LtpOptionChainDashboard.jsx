@@ -453,12 +453,15 @@ export default function LtpOptionChainDashboard() {
         <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><div className="ltp-chart-heading-actions"><div className="ltp-chart-toggle" role="group" aria-label="Chart type"><button type="button" className={chartType === 'classic' ? 'active' : ''} onClick={() => setChartType('classic')}>Classic</button><button type="button" className={chartType === 'tradingview' ? 'active' : ''} onClick={() => setChartType('tradingview')}>TradingView</button></div><small>5-minute candles</small></div></div>
         <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
         {chartType === 'tradingview' ? <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
-          // Match the reference chart's four price levels exactly.
-          // RS_Status uses EOR+1 / EOR for targets and EOS / EOS-1 for supports.
-          { title: 'T1', value: rs.rreversalNext, color: '#ff6474' },
-          { title: 'T2', value: rs.rreversal, color: '#ffad42' },
+          // Keep target numbering in ascending target order: T1 is the nearer target,
+          // T2 is the farther/higher target. Supports retain the reference mapping.
+          { title: 'T2', value: rs.rreversalNext, color: '#ff6474' },
+          { title: 'T1', value: rs.rreversal, color: '#ffad42' },
           { title: 'S1', value: rs.sreversal, color: '#35dc8a' },
           { title: 'S2', value: rs.sreversalBack, color: '#43c8e8' },
+          // Max Pain boundaries are separate APIPLATFORM reversalModel values.
+          { title: 'Max Pain', value: model.resistanceSL, color: '#ff9b45', lineStyle: 2 },
+          { title: 'Max Pain', value: model.supportSL, color: '#ff9b45', lineStyle: 2 },
         ]} /> : <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />}
         <section className="ltp-direction-banner ltp-chart-scenario"><span>MARKET SCENARIO</span><strong>{marketDirection}</strong><small>{model.scenario || ''}</small></section>
         <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
