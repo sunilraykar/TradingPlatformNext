@@ -328,3 +328,18 @@
 /* Hide the secondary strike-shift detail under each SPOT strength chip. */
 .ltp-rs-chip small{display:none!important}
 .ltp-rs-chip{grid-template-columns:auto auto;min-width:88px;padding:3px 8px}
+
+
+/* Distinct first/second-place highlights for each numeric option-chain column. */
+.ltp-option-table td.ltp-rank-callOiChg-first{background:#f5a0a8!important;color:#351018!important;font-weight:900}
+.ltp-option-table td.ltp-rank-callOiChg-second{background:#f9d5d9!important;color:#54232a!important;font-weight:850}
+.ltp-option-table td.ltp-rank-callOi-first{background:#8ed0f2!important;color:#102b40!important;font-weight:900}
+.ltp-option-table td.ltp-rank-callOi-second{background:#cceafa!important;color:#193b50!important;font-weight:850}
+.ltp-option-table td.ltp-rank-callVol-first{background:#fff36a!important;color:#302900!important;font-weight:900}
+.ltp-option-table td.ltp-rank-callVol-second{background:#ffe6a1!important;color:#453400!important;font-weight:850}
+.ltp-option-table td.ltp-rank-putVol-first{background:#a9e4dc!important;color:#103c36!important;font-weight:900}
+.ltp-option-table td.ltp-rank-putVol-second{background:#d2f1ec!important;color:#1b4943!important;font-weight:850}
+.ltp-option-table td.ltp-rank-putOi-first{background:#b8d6ff!important;color:#172f55!important;font-weight:900}
+.ltp-option-table td.ltp-rank-putOi-second{background:#dce9ff!important;color:#263f65!important;font-weight:850}
+.ltp-option-table td.ltp-rank-putOiChg-first{background:#b9e6a2!important;color:#1b3c12!important;font-weight:900}
+.ltp-option-table td.ltp-rank-putOiChg-second{background:#dff2d2!important;color:#2b4820!important;font-weight:850}
