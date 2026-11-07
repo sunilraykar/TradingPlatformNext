@@ -323,3 +323,8 @@
   .ltp-option-table th{padding:5px 3px}
   .ltp-option-table td{padding:3px 3px}
 }
+
+
+/* Hide the secondary strike-shift detail under each SPOT strength chip. */
+.ltp-rs-chip small{display:none!important}
+.ltp-rs-chip{grid-template-columns:auto auto;min-width:88px;padding:3px 8px}
