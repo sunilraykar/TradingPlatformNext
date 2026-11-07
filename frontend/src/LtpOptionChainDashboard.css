@@ -963,3 +963,5 @@
 .ltp-lightweight-level-key .s1{color:#55e89d}
 .ltp-lightweight-level-key .s2{color:#64d9f3}
 @media(max-width:900px){.ltp-lightweight-canvas{height:520px;min-height:520px}}
+
+.ltp-lightweight-level-key a{margin-left:auto;color:#a9c8e8;text-decoration:underline;text-underline-offset:2px;font-size:10px;font-weight:800}
