@@ -151,13 +151,13 @@ function linePoints(series, width = 720, height = 220) {
 function ApiplatformLevelBar({ levels = [], spotPrice = null }) {
   const byKey = new Map((Array.isArray(levels) ? levels : []).map((level) => [level.key, numericValue(level.value)]));
   const points = [
-    { key: 'max-pain-lower', label: 'Max Pain (S)', color: '#287be8' },
-    { key: 's2', label: 'S2', color: '#38b9d5' },
-    { key: 's1', label: 'S1', color: '#2fc878' },
-    { key: 'spot', label: 'SPOT', color: '#f5dc35', spot: true },
-    { key: 't1', label: 'T1', color: '#ed5967' },
-    { key: 't2', label: 'T2', color: '#f27b43' },
-    { key: 'max-pain-upper', label: 'Max Pain (R)', color: '#a64bd0' },
+    { key: 'max-pain-lower', label: 'Max Pain (S)', color: '#174f91' },
+    { key: 's2', label: 'S2', color: '#08758f' },
+    { key: 's1', label: 'S1', color: '#167346' },
+    { key: 'spot', label: 'SPOT', color: '#956500', spot: true },
+    { key: 't1', label: 'T1', color: '#ad3042' },
+    { key: 't2', label: 'T2', color: '#a94412' },
+    { key: 'max-pain-upper', label: 'Max Pain (R)', color: '#71309a' },
   ].map((point) => ({ ...point, value: point.spot ? spotPrice : byKey.get(point.key) }))
     .filter((point) => point.value !== null && point.value !== undefined && Number.isFinite(Number(point.value)));
   if (points.length < 2) return <div style={{ minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--muted, #8da0bb)', fontSize: 11 }}>Waiting for spot and APIPLATFORM support/resistance levels…</div>;
@@ -170,8 +170,8 @@ function ApiplatformLevelBar({ levels = [], spotPrice = null }) {
   return <div aria-label="Spot position relative to APIPLATFORM support and resistance levels" style={{ position: 'relative', height: 52, width: '100%', margin: '0', minWidth: 0 }}>
     <div style={{ position: 'absolute', left: '6%', right: '6%', top: 36, height: 4, borderRadius: 4, background: 'linear-gradient(90deg,#2584e8 0%,#27c77c 32%,#f4dc35 55%,#f38a3e 76%,#e84c62 100%)' }} />
     {points.map((point) => <div key={point.key} style={{ position: 'absolute', left: `${position(point.value)}%`, top: 0, transform: 'translateX(-50%)', width: 76, textAlign: 'center', zIndex: point.spot ? 2 : 1 }}>
-      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '2px 4px', minWidth: point.spot ? 66 : 58, borderRadius: 5, color: '#fff', background: point.color, boxSizing: 'border-box', fontSize: 9, lineHeight: 1.15 }}>
-        <strong>{point.label}</strong><strong style={{ fontSize: 10 }}>{format(point.value)}</strong>
+      <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', padding: '2px 4px', minWidth: point.spot ? 66 : 58, borderRadius: 5, color: '#ffffff', background: point.color, border: '1px solid rgba(255,255,255,.28)', boxSizing: 'border-box', fontSize: 9, lineHeight: 1.15, fontWeight: 700, textShadow: '0 1px 1px rgba(0,0,0,.35)' }}>
+        <strong>{point.label}</strong><strong style={{ fontSize: 10, fontWeight: 800 }}>{format(point.value)}</strong>
       </div>
       <span style={{ position: 'absolute', left: '50%', top: 31, transform: 'translate(-50%, 0)', display: 'block', width: point.spot ? 10 : 8, height: point.spot ? 10 : 8, borderRadius: '50%', background: point.color, border: '2px solid #f5f7fa', boxSizing: 'content-box' }} />
     </div>)}
