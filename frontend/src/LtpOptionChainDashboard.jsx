@@ -155,6 +155,7 @@ export default function LtpOptionChainDashboard() {
   const [candles, setCandles] = useState([]);
   const [feedConnected, setFeedConnected] = useState(false);
   const chainRequestId = useRef(0);
+  const metadataRequestId = useRef(0);
 
   const data = result && result.data ? result.data : {};
   const rows = Array.isArray(data.OptionChain) ? data.OptionChain : [];
@@ -185,16 +186,22 @@ export default function LtpOptionChainDashboard() {
   }), [visibleRows]);
 
   const loadMetadata = useCallback(async (selected) => {
+    const requestId = ++metadataRequestId.current;
     try {
       const meta = await request('/apiplatform/option-chain/metadata?symbol=' + encodeURIComponent(selected));
+      if (requestId !== metadataRequestId.current) return;
       setExpiries(meta.expiries || []);
       if (meta.expiries && meta.expiries.length) {
         const preferred = meta.expiries.find((item) => item.expiry === expiry) || meta.expiries[0];
         setExpiry(preferred.expiry);
         setLotSize(preferred.lot_size || meta.default_lot_size || 65);
+      } else {
+        setExpiry('');
       }
     } catch (e) {
+      if (requestId !== metadataRequestId.current) return;
       setExpiries([]);
+      setExpiry('');
       setError(e.message || 'Unable to load expiry information.');
     }
   }, [expiry]);
