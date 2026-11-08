@@ -328,13 +328,15 @@ def market_data_runtime() -> dict:
     if subscribed_tokens:
         try:
             engine = get_engine()
+            token_params = {f"token_{index}": token for index, token in enumerate(subscribed_tokens)}
+            token_placeholders = ", ".join(f":{key}" for key in token_params)
             with engine.connect() as connection:
-                rows = connection.execute(text("""
+                rows = connection.execute(text(f"""
                     SELECT instrument_token, exchange, tradingsymbol, name,
                            instrument_type, expiry, strike
                     FROM instruments
-                    WHERE source = 'KITE' AND instrument_token IN :tokens
-                """).bindparams(tokens=tuple(subscribed_tokens))).mappings().all()
+                    WHERE source = 'KITE' AND instrument_token IN ({token_placeholders})
+                """), token_params).mappings().all()
             instrument_details = {
                 int(row["instrument_token"]): {
                     "exchange": row.get("exchange"),
