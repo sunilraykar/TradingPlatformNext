@@ -110,7 +110,7 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
   </svg></div>;
 }
 
-function OptionRow({ row, spot, quotes, instruments, maxima }) {
+function OptionRow({ row, spot, quotes, instruments, maxima, showLtp }) {
   const strike = n(row.strike);
   const call = instruments.get(String(strike) + ':CE');
   const put = instruments.get(String(strike) + ':PE');
@@ -142,7 +142,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
     if (rankValue === ranked[1]) return ' ltp-rank-' + key + '-second';
     return '';
   };
-  const reversal = (value, quote) => <><span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span><small className="ltp-option-price">LTP {fmt(quote && quote.last_price)}</small></>;
+  const reversal = (value, quote) => <><span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span>{showLtp && <small className="ltp-option-price">LTP {fmt(quote && quote.last_price)}</small>}</>;
   return <tr className={isAtm ? 'ltp-atm-row' : ''}>
     <td className={(callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : '') + rankClass('callOiChg', callChg, true)}><strong>{fmt(callChg, 0)}</strong><small>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small></td>
     <td className={rankClass('callOi', callOi)}><strong>{fmt(callOi, 0)}</strong><small>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small></td>
@@ -238,6 +238,7 @@ export default function LtpOptionChainDashboard() {
   const [quotes, setQuotes] = useState({});
   const [candles, setCandles] = useState([]);
   const [chartType, setChartType] = useState('tradingview');
+  const [showOptionLtp, setShowOptionLtp] = useState(true);
   const [feedConnected, setFeedConnected] = useState(false);
   const [activeView, setActiveView] = useState('option-chain');
   const chainRequestId = useRef(0);
@@ -455,6 +456,7 @@ export default function LtpOptionChainDashboard() {
         <label><span>EXPIRY</span><select value={expiry} onChange={(e) => { const selected = expiries.find((item) => item.expiry === e.target.value); setExpiry(e.target.value); if (selected && selected.lot_size) setLotSize(selected.lot_size); }}>{expiries.length ? expiries.map((item) => <option key={item.expiry} value={item.expiry}>{item.expiry}</option>) : <option value={expiry}>{expiry}</option>}</select></label>
         <label><span>PRICE</span><select value={priceMode} onChange={(e) => setPriceMode(e.target.value)}><option value="SPOT">SPOT</option><option value="FUTURE">FUTURE</option></select></label>
         <label className="ltp-lot-size"><span>LOT SIZE</span><input type="number" min="1" value={lotSize} onChange={(e) => setLotSize(Number(e.target.value) || 1)} /></label>
+        <button type="button" className={'ltp-ltp-toggle ' + (showOptionLtp ? 'active' : '')} aria-pressed={showOptionLtp} onClick={() => setShowOptionLtp((value) => !value)}>{showOptionLtp ? 'Hide LTP' : 'Show LTP'}</button>
         <button type="button" className="ltp-refresh" onClick={() => loadChain()} disabled={loading || !auth.authenticated}>{loading ? 'Loading…' : '↻ Refresh'}</button>
       </div>
       <div className={'ltp-feed-status ' + (feedConnected ? 'connected' : '')}><i />{feedConnected ? 'KITE LIVE' : 'KITE FEED'}</div>
@@ -475,7 +477,7 @@ export default function LtpOptionChainDashboard() {
             const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
             const showSpot = underlying !== null && strike !== null && (underlying >= strike && (nextStrike === null || underlying < nextStrike));
             return <React.Fragment key={row._id || row.strike}>
-              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} />
+              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} showLtp={showOptionLtp} />
               {showSpot && <tr className="ltp-spot-marker-row">
                 <td colSpan="4"><div className="ltp-rs-indicators ltp-rs-call">
                   <span className="ltp-rs-chip"><b>{rs.R_OI_Status || '—'}</b><strong>{fmt(rs.R_OI_ShiftingStrike_per, 2)}%</strong><small>OI · {rs.R_OI_Strike || '—'}{rs.R_OI_Shifting ? ' → ' + (rs.R_OI_ShiftingStrike || '—') : ''}</small></span>
