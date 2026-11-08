@@ -123,7 +123,16 @@ def _submit_intent(key: str) -> dict[str, Any]:
                      error="Submission outcome is ambiguous; order tag not yet visible. Automatic retry is disabled.")
         return _get_intent(key) or intent
 
-    _save_status(key, "SUBMITTING")
+    # Compare-and-set the PREPARED intent so concurrent quote/auto-exit
+    # callbacks cannot submit the same broker order twice.
+    with get_engine().begin() as conn:
+        claimed = conn.execute(text("""
+            UPDATE autotrender_kite_orders
+            SET status='SUBMITTING', last_error=NULL, updated_at=CURRENT_TIMESTAMP(6)
+            WHERE idempotency_key=:key AND status='PREPARED'
+        """), {"key": key})
+    if claimed.rowcount != 1:
+        return _submit_intent(key)
     try:
         order_id = provider.place_order(
             exchange=intent["exchange"],
