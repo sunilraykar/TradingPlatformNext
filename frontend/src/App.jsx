@@ -809,8 +809,8 @@ function LiveDataCacheViewer() {
       <div className="panel"><span>Open / total trades</span><h3>{cache.open_trade_count ?? 0} / {cache.trade_count ?? 0}</h3></div>
     </div>
     <div className="panel cache-entry"><h3>Subscriptions</h3>
-      {(runtime?.subscriptions || []).length ? <div className="table-scroll"><table><thead><tr><th>Token</th><th>Mode</th><th>Trade symbols</th><th>LTP</th><th>Received at</th><th>Details</th></tr></thead><tbody>
-        {runtime.subscriptions.map((item) => <tr key={item.instrument_token}><td>{item.instrument_token}</td><td>{item.mode}</td><td>{(item.trade_symbols || []).join(', ') || '—'}</td><td>{number(item.quote?.last_price ?? item.quote?.ltp ?? item.quote?.price)}</td><td>{item.quote?.received_at || 'Waiting for quote'}</td><td><details><summary>Inspect</summary><pre>{JSON.stringify(item.quote || {}, null, 2)}</pre></details></td></tr>)}
+      {(runtime?.subscriptions || []).length ? <div className="table-scroll"><table><thead><tr><th>Token</th><th>Mode</th><th>Instrument / Trade Symbol</th><th>LTP</th><th>Received at</th><th>Details</th></tr></thead><tbody>
+        {runtime.subscriptions.map((item) => <tr key={item.instrument_token}><td>{item.instrument_token}</td><td>{item.mode}</td><td><strong>{item.instrument_symbol || (item.trade_symbols || []).join(', ') || '—'}</strong>{item.instrument?.exchange && <div className="settings-intro">{item.instrument.exchange}{item.instrument.instrument_type ? ' · ' + item.instrument.instrument_type : ''}</div>}{item.trade_symbols?.length > 0 && <div className="settings-intro">Open trade: {item.trade_symbols.join(', ')}</div>}</td><td>{number(item.quote?.last_price ?? item.quote?.ltp ?? item.quote?.price)}</td><td>{item.quote?.received_at || 'Waiting for quote'}</td><td><details><summary>Inspect</summary><pre>{JSON.stringify(item.quote || {}, null, 2)}</pre></details></td></tr>)}
       </tbody></table></div> : <p>No instruments are currently subscribed.</p>}
     </div>
     <div className="panel cache-entry"><h3>Quote cache records</h3>
