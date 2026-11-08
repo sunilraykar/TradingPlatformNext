@@ -238,7 +238,7 @@ export default function LtpOptionChainDashboard() {
   const [quotes, setQuotes] = useState({});
   const [candles, setCandles] = useState([]);
   const [chartType, setChartType] = useState('tradingview');
-  const [showOptionLtp, setShowOptionLtp] = useState(true);
+  const [showOptionLtp, setShowOptionLtp] = useState(false);
   const [feedConnected, setFeedConnected] = useState(false);
   const [activeView, setActiveView] = useState('option-chain');
   const chainRequestId = useRef(0);
