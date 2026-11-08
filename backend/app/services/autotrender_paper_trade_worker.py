@@ -486,7 +486,7 @@ def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_
 
 
 def create_manual_paper_trade(index: str, direction: str, signal_timestamp: datetime) -> dict[str, Any]:
-    """Create the same managed PAPER option trade as the worker, on an explicit user action."""
+    """Create an explicit AutoTrender entry using the saved PAPER/REAL execution mode."""
     settings = _read_settings()
     normalized_index = str(index or "").strip().upper()
     if normalized_index not in INDEX_CATEGORIES:
@@ -499,6 +499,7 @@ def create_manual_paper_trade(index: str, direction: str, signal_timestamp: date
         {},
         signal_timestamp.astimezone(IST),
         float(settings.get("targetFallbackPercent", 1.0)),
+        str(settings.get("executionMode", "PAPER")),
     )
 
 
