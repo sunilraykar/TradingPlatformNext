@@ -163,6 +163,30 @@ def fetch_apiplatform_option_chain(
                 """), {"exchange": index_spec[0], "symbol": index_spec[1]}).mappings().first()
                 if spot_row:
                     spot_token = int(spot_row["instrument_token"])
+            else:
+                # Individual equity symbols (e.g. RELIANCE, TCS) also need their
+                # cash-market instrument subscribed, not just their option contracts.
+                spot_row = connection.execute(text("""
+                    SELECT instrument_token
+                    FROM instruments
+                    WHERE source = 'KITE' AND is_active = TRUE
+                      AND exchange = 'NSE' AND tradingsymbol = :symbol
+                      AND instrument_type = 'EQ'
+                    ORDER BY instrument_version DESC
+                    LIMIT 1
+                """), {"symbol": key}).mappings().first()
+                if not spot_row:
+                    spot_row = connection.execute(text("""
+                        SELECT instrument_token
+                        FROM instruments
+                        WHERE source = 'KITE' AND is_active = TRUE
+                          AND exchange = 'BSE' AND tradingsymbol = :symbol
+                          AND instrument_type = 'EQ'
+                        ORDER BY instrument_version DESC
+                        LIMIT 1
+                    """), {"symbol": key}).mappings().first()
+                if spot_row:
+                    spot_token = int(spot_row["instrument_token"])
 
             future_row = connection.execute(text("""
                 SELECT instrument_token
