@@ -238,7 +238,7 @@ def _apply_entry_fill(intent: dict[str, Any]) -> None:
         "average_entry_price": average,
         "target": payload.get("target"),
         "broker_order_id": intent.get("broker_order_id"),
-        "broker_status": "COMPLETE",
+        "broker_status": str(intent.get("status") or "COMPLETE"),
         "entry_filled_quantity": filled,
         "notes": payload.get("notes"),
     })
@@ -288,7 +288,7 @@ def run_cycle() -> dict[str, Any]:
     with get_engine().connect() as conn:
         rows = conn.execute(text(
             "SELECT " + _ORDER_COLUMNS + " FROM autotrender_kite_orders "
-            "WHERE status IN ('SUBMITTING','OPEN','PENDING','PARTIAL','COMPLETE','CANCELLED','REJECTED')"
+            "WHERE status IN ('SUBMITTING','SUBMISSION_UNKNOWN','OPEN','PENDING','PARTIAL','COMPLETE','CANCELLED','REJECTED')"
         )).mappings().all()
     processed = 0
     for row in rows:
@@ -319,6 +319,7 @@ def run_cycle() -> dict[str, Any]:
             processed += 1
         elif item["role"] == "EXIT" and status == "COMPLETE":
             _apply_exit_fill(item)
+            _save_status(item["idempotency_key"], "EXIT_FILLED")
             processed += 1
         elif item["role"] == "EXIT" and status in {"CANCELLED", "REJECTED"} and filled > 0:
             _apply_exit_fill(item)
