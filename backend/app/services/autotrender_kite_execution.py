@@ -185,6 +185,15 @@ def submit_entry(payload: dict[str, Any]) -> dict[str, Any]:
     existing = _get_intent(key)
     if existing:
         return existing
+    with get_engine().connect() as conn:
+        pending = conn.execute(text("""
+            SELECT idempotency_key FROM autotrender_kite_orders
+            WHERE underlying=:underlying AND role='ENTRY'
+              AND status IN ('PREPARED','SUBMITTING','SUBMISSION_UNKNOWN','OPEN','PENDING','PARTIAL')
+            LIMIT 1
+        """), {"underlying": str(payload["underlying"])}).first()
+    if pending:
+        raise RuntimeError("A previous AutoTrender Kite entry order is still unresolved for this index")
     return _create_intent(
         key=key, role="ENTRY", underlying=str(payload["underlying"]),
         trade_id=None, exchange=str(payload["exchange"]).upper(),
