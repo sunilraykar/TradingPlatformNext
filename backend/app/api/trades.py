@@ -216,6 +216,8 @@ def create_manual_autotrender_trade(payload: AutoTrenderManualEntry) -> dict[str
         from app.services.autotrender_paper_trade_worker import create_manual_paper_trade
         timestamp = datetime.fromisoformat(payload.signal_timestamp.strip())
         trade = create_manual_paper_trade(payload.index, payload.signal, timestamp)
+        if str(trade.get("execution_mode") or "").upper() == "LIVE" or trade.get("role") == "ENTRY":
+            return {"order": trade, "message": "Manual AutoTrender Kite entry order submitted; trade appears after confirmed fill"}
         return {"trade": trade, "message": "Manual AutoTrender PAPER trade created"}
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
