@@ -1259,3 +1259,14 @@
   background:#145b46;
   color:#eafff5;
 }
+
+
+/* Match Call/Put reversal typography exactly to the central strike price. */
+.ltp-option-chain .ltp-option-table td .ltp-reversal{
+  font-family:inherit!important;
+  font-size:17px!important;
+  font-weight:850!important;
+  line-height:1.1!important;
+  letter-spacing:normal!important;
+  padding:4px 7px!important;
+}
