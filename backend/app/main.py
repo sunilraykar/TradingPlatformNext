@@ -30,6 +30,7 @@ from app.providers.kite.registry import (
 from app.services import (
     auto_exit_profitable_trades,
     autotrender_cache_snapshot,
+    autotrender_kite_execution,
     autotrender_paper_trade_worker,
     kite_trade_notifications,
     live_market_data,
@@ -111,6 +112,7 @@ async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
     ensure_notification_schema()
+    autotrender_kite_execution.ensure_schema()
     system_alerts.install_system_alert_handler()
     ensure_portfolio_snapshot_schema()
     # Restore a valid persisted APIPLATFORM JWT without starting another login.
@@ -134,6 +136,7 @@ async def lifespan(application: FastAPI):
     auto_exit_task = asyncio.create_task(auto_exit_profitable_trades.run_auto_exit_scheduler())
     paper_market_close_task = asyncio.create_task(paper_option_market_close.run_market_close_scheduler())
     autotrender_worker_task = asyncio.create_task(autotrender_paper_trade_worker.run_scheduler())
+    autotrender_kite_execution_task = asyncio.create_task(autotrender_kite_execution.run_scheduler())
     autotrender_snapshot_task = asyncio.create_task(
         autotrender_cache_snapshot.run_daily_snapshot_scheduler(application.state.autotrender_auth)
     )
@@ -150,7 +153,7 @@ async def lifespan(application: FastAPI):
         live_quotes.remove_listener(trade_terminal.apply_quote_to_open_trades)
         tasks = (
             reset_task, trade_task, instrument_task, auto_exit_task, paper_market_close_task,
-            autotrender_worker_task, autotrender_snapshot_task, telegram_dispatch_task,
+            autotrender_worker_task, autotrender_kite_execution_task, autotrender_snapshot_task, telegram_dispatch_task,
             notification_schedule_task, kite_trade_notification_task, portfolio_snapshot_task, apiplatform_symbol_master_task,
         )
         for task in tasks:
