@@ -10,21 +10,17 @@ import asyncio
 import hashlib
 import json
 import logging
-from datetime import datetime
 from typing import Any
 
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
-from app.providers.kite.client import KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import trade_terminal
 
 logger = logging.getLogger(__name__)
 
-_ACTIVE_ORDER_STATES = {"PREPARED", "SUBMITTING", "SUBMISSION_UNKNOWN", "OPEN", "PENDING", "PARTIAL"}
-_TERMINAL_ORDER_STATES = {"COMPLETE", "CANCELLED", "REJECTED"}
 _ORDER_COLUMNS = """
     idempotency_key, order_tag, role, underlying, trade_id, broker_order_id,
     status, exchange, tradingsymbol, transaction_type, quantity, filled_quantity,
@@ -140,7 +136,7 @@ def _submit_intent(key: str) -> dict[str, Any]:
             tag=intent["order_tag"],
         )
         _save_status(key, "OPEN", order_id=str(order_id))
-    except (KiteProviderError, Exception) as exc:
+    except Exception as exc:
         # A timeout can happen after the broker accepted the order. Search the
         # tag before deciding whether the outcome is unknown.
         try:
