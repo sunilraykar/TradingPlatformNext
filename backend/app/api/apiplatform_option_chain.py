@@ -289,33 +289,49 @@ def option_chain_intraday_candles(
     """Return recent five-minute Kite candles, falling back to the latest trading session on weekends/holidays."""
     key = _symbol(symbol)
     index_spec = _INDEX_INSTRUMENTS.get(key)
-    if not index_spec:
-        return {"symbol": key, "candles": [], "message": "Intraday chart is available for supported index underlyings."}
 
     try:
         with get_engine().connect() as connection:
             if price_mode == "SPOT":
-                row = connection.execute(text("""
-                    SELECT instrument_token, tradingsymbol
-                    FROM instruments
-                    WHERE source = 'KITE' AND is_active = TRUE
-                      AND exchange = :exchange AND tradingsymbol = :symbol
-                    LIMIT 1
-                """), {"exchange": index_spec[0], "symbol": index_spec[1]}).mappings().first()
+                if index_spec:
+                    row = connection.execute(text("""
+                        SELECT instrument_token, tradingsymbol
+                        FROM instruments
+                        WHERE source = 'KITE' AND is_active = TRUE
+                          AND exchange = :exchange AND tradingsymbol = :symbol
+                        LIMIT 1
+                    """), {"exchange": index_spec[0], "symbol": index_spec[1]}).mappings().first()
+                else:
+                    # APIPLATFORM swing-trade symbols are equities. Resolve the
+                    # underlying cash instrument so stock charts use NSE/BSE candles.
+                    row = connection.execute(text("""
+                        SELECT instrument_token, exchange, tradingsymbol
+                        FROM instruments
+                        WHERE source = 'KITE' AND is_active = TRUE
+                          AND exchange IN ('NSE', 'BSE')
+                          AND tradingsymbol = :symbol
+                          AND instrument_type = 'EQ'
+                        ORDER BY CASE exchange WHEN 'NSE' THEN 0 ELSE 1 END
+                        LIMIT 1
+                    """), {"symbol": key}).mappings().first()
             else:
                 if not expiry:
                     raise HTTPException(status_code=422, detail="Select an expiry for the futures chart.")
                 row = connection.execute(text("""
-                    SELECT instrument_token, tradingsymbol
+                    SELECT instrument_token, exchange, tradingsymbol
                     FROM instruments
                     WHERE source = 'KITE' AND is_active = TRUE
                       AND exchange = :exchange AND instrument_type = 'FUT'
                       AND expiry = :expiry AND tradingsymbol LIKE :prefix
+                    ORDER BY instrument_token
                     LIMIT 1
                 """), {"exchange": "BFO" if key in {"SENSEX", "BANKEX"} else "NFO",
                       "expiry": _expiry(expiry), "prefix": f"{key}%"}).mappings().first()
         if not row:
-            return {"symbol": key, "candles": [], "message": "The selected Kite instrument is not available in the instrument master."}
+            return {
+                "symbol": key, "candles": [],
+                "message": "The selected spot/futures instrument is not available in the Kite instrument master.",
+            }
 
         now = datetime.now(IST)
         # A same-day-only request returns an empty list on weekends, exchange holidays,
@@ -335,6 +351,8 @@ def option_chain_intraday_candles(
         return {
             "symbol": key,
             "instrument_token": int(row["instrument_token"]),
+            "tradingsymbol": row.get("tradingsymbol"),
+            "exchange": row.get("exchange") or (index_spec[0] if index_spec else None),
             "candles": normalized,
             "requested_from": start.isoformat(),
             "requested_to": now.isoformat(),
