@@ -181,6 +181,9 @@ def submit_entry(payload: dict[str, Any]) -> dict[str, Any]:
     existing = _get_intent(key)
     if existing:
         return existing
+    # Validate the authenticated broker session before creating an intent. This
+    # avoids leaving a false SUBMISSION_UNKNOWN record when Kite is simply logged out.
+    get_kite_provider().profile()
     with get_engine().connect() as conn:
         pending = conn.execute(text("""
             SELECT idempotency_key FROM autotrender_kite_orders
@@ -214,6 +217,7 @@ def submit_exit(trade: dict[str, Any], reason: str, risk_updates: dict[str, Any]
         """), {"trade_id": trade_id}).scalar() or 0
     if latest and str(latest[1]).upper() != "EXIT_PARTIAL_UNRESOLVED":
         return _get_intent(str(latest[0])) or {"status": str(latest[1])}
+    get_kite_provider().profile()
     key = "AUTOTRENDER:EXIT:" + trade_id + ":" + str(int(attempt_count) + 1)
     if str(trade.get("direction") or "BUY").upper() != "BUY":
         raise ValueError("AutoTrender live exit currently requires a long option position")
