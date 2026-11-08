@@ -137,6 +137,7 @@ def _read_settings() -> dict[str, Any]:
         "autoTrenderWorkerIntervalSeconds",
         "autoTrenderMaxSignalAgeSeconds",
         "targetFallbackPercent",
+        "executionMode",
     )
     defaults: dict[str, Any] = {
         "autoTrenderDashboardIndices": {
@@ -153,6 +154,7 @@ def _read_settings() -> dict[str, Any]:
         "autoTrenderEntryEndTime": "15:25",
         "autoTrenderMaxSignalAgeSeconds": DEFAULT_MAX_SIGNAL_AGE_SECONDS,
         "targetFallbackPercent": 1.0,
+        "executionMode": "PAPER",
         "autoTrenderWorkerIntervalSeconds": DEFAULT_POLL_SECONDS,
     }
     try:
@@ -361,8 +363,8 @@ def _quote_timestamp_is_fresh(value: Any, now: datetime | None = None) -> bool:
     return 0 <= age <= 120
 
 
-def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float) -> dict[str, Any]:
-    """Create a PAPER trade using the same canonical contract selector as AutoTrender UI."""
+def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float, execution_mode: str = "PAPER") -> dict[str, Any]:
+    """Create a trade using the configured Trading Mode and canonical contract selector."""
     normalized_index = str(index or "").strip().upper()
     normalized_direction = str(direction or "").strip().upper()
     if normalized_direction not in {"BUY", "SELL"}:
@@ -443,14 +445,18 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
     if quantity <= 0:
         raise ValueError("invalid_option_lot_size")
     target = round(premium * (1 + max(0.01, target_fallback_percent) / 100), 2)
+    mode_setting = str(execution_mode or "PAPER").strip().upper()
+    mode = {"PAPER": "PAPER", "REAL": "LIVE", "LIVE": "LIVE"}.get(mode_setting)
+    if mode is None:
+        raise ValueError("invalid_execution_mode_setting")
     idempotency_key = "AUTOTRENDER:" + normalized_index + ":" + signal_timestamp.isoformat()
-    active = [trade for trade in trade_terminal.list_trades(mode="PAPER", underlying=normalized_index)
+    active = [trade for trade in trade_terminal.list_trades(mode=mode, underlying=normalized_index)
               if str(trade.get("status", "OPEN")).upper() not in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}
               and str(trade.get("source", "")).upper().replace("_", "") == "AUTOTRENDER"]
     if active:
         raise ValueError("active_autotrender_trade_exists_for_underlying")
     return trade_terminal.create_trade({
-        "idempotency_key": idempotency_key, "execution_mode": "PAPER", "source": "AUTOTRENDER",
+        "idempotency_key": idempotency_key, "execution_mode": mode, "source": "AUTOTRENDER",
         "strategy": "AutoTrender " + normalized_direction + " " + option_type, "underlying": normalized_index,
         "instrument_symbol": tradingsymbol, "exchange": exchange,
         "instrument_token": instrument_token,
@@ -460,7 +466,7 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
             + "; strike=" + str(strike) + "; contract_selector=shared_ui_selector",
     })
 
-def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float) -> dict[str, Any]:
+def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float, execution_mode: str = "PAPER") -> dict[str, Any]:
     """Serialize active-trade check + creation across worker processes using a MySQL lock."""
     lock_name = "autotrend-paper:" + index
     with get_engine().connect() as connection:
@@ -469,7 +475,7 @@ def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_
             raise ValueError("paper_entry_lock_unavailable")
         try:
             return _create_paper_trade_under_lock(
-                index, direction, row, signal_timestamp, target_fallback_percent
+                index, direction, row, signal_timestamp, target_fallback_percent, execution_mode
             )
         finally:
             connection.execute(text("SELECT RELEASE_LOCK(:name)"), {"name": lock_name})
@@ -581,10 +587,11 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             if evaluation.eligible:
                 try:
                     trade = _create_paper_trade(index, evaluation.direction or "", row, signal_timestamp,
-                                                float(settings.get("targetFallbackPercent", 1.0)))
+                                                float(settings.get("targetFallbackPercent", 1.0)),
+                                                str(settings.get("executionMode", "PAPER")))
                     _LAST_SIGNAL_BY_INDEX[index] = signal_id
-                    state = "paper_trade_created"
-                    reason = "paper_trade_created"
+                    state = "trade_created"
+                    reason = "trade_created"
                     trade_id = trade.get("trade_id")
                 except (ValueError, RuntimeError, KiteProviderError, SQLAlchemyError) as exc:
                     state = "entry_blocked"
