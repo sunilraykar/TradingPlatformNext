@@ -270,6 +270,7 @@ def _apply_exit_fill(intent: dict[str, Any]) -> None:
         _save_status(str(intent["idempotency_key"]), "EXIT_PARTIAL_UNRESOLVED",
                      error="Exit order filled only partially; remaining broker position requires reconciliation.")
         trade_terminal.update_trade(trade_id, {
+            "quantity": max(1, original - filled),
             "broker_exit_order_id": intent.get("broker_order_id"),
             "broker_exit_filled_quantity": filled,
             "broker_exit_average_price": average,
