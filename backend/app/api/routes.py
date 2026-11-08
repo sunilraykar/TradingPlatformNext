@@ -322,14 +322,44 @@ def market_data_runtime() -> dict:
     trades = trade_terminal.list_trades()
     active = [trade for trade in trades if str(trade.get("status", "OPEN")).upper() not in {"CLOSED", "CANCELLED", "REJECTED", "EXPIRED"}]
     subscriptions = []
-    for item in market.get("subscriptions", []):
+    subscription_items = market.get("subscriptions", [])
+    subscribed_tokens = [int(item["instrument_token"]) for item in subscription_items]
+    instrument_details: dict[int, dict[str, Any]] = {}
+    if subscribed_tokens:
+        try:
+            engine = get_engine()
+            with engine.connect() as connection:
+                rows = connection.execute(text("""
+                    SELECT instrument_token, exchange, tradingsymbol, name,
+                           instrument_type, expiry, strike
+                    FROM instruments
+                    WHERE source = 'KITE' AND instrument_token IN :tokens
+                """).bindparams(tokens=tuple(subscribed_tokens))).mappings().all()
+            instrument_details = {
+                int(row["instrument_token"]): {
+                    "exchange": row.get("exchange"),
+                    "tradingsymbol": row.get("tradingsymbol"),
+                    "name": row.get("name"),
+                    "instrument_type": row.get("instrument_type"),
+                    "expiry": str(row["expiry"]) if row.get("expiry") is not None else None,
+                    "strike": float(row["strike"]) if row.get("strike") is not None else None,
+                }
+                for row in rows
+            }
+        except (SQLAlchemyError, RuntimeError, TypeError, ValueError):
+            # Keep diagnostics available even if the instrument master cannot be queried.
+            logging.getLogger(__name__).exception("Could not resolve Kite subscription symbols from instrument master")
+    for item in subscription_items:
         token = int(item["instrument_token"])
         matching = [trade for trade in active if int(trade.get("instrument_token") or 0) == token]
+        instrument = instrument_details.get(token, {})
         subscriptions.append({
             **item,
             "quote": quotes.get(token),
+            "instrument": instrument or None,
+            "instrument_symbol": instrument.get("tradingsymbol"),
+            "trade_symbols": [trade.get("instrument_symbol") for trade in matching if trade.get("instrument_symbol")],
             "open_trade_count": len(matching),
-            "trade_symbols": [trade.get("instrument_symbol") for trade in matching],
         })
     return {
         "market_data": market,
