@@ -1,7 +1,7 @@
-"""Configurable end-of-session auto-exit for profitable PAPER option trades.
+"""Configurable end-of-session auto-exit for profitable option trades.
 
-This worker deliberately does not place live Kite orders. Live execution remains
-read-only until broker order placement/reconciliation is implemented.
+PAPER positions retain simulated closes. AutoTrender LIVE positions submit a
+Kite market exit and remain open in Trade Terminal until the broker fill arrives.
 """
 from __future__ import annotations
 
