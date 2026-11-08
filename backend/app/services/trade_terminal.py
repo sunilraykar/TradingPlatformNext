@@ -321,7 +321,10 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     if mode not in {"PAPER", "LIVE"}:
         raise ValueError("execution_mode must be PAPER or LIVE")
     if mode == "LIVE":
-        raise ValueError("Live trade creation is read-only until broker reconciliation is implemented; no orders are placed.")
+        if not payload.get("broker_order_id") or str(payload.get("broker_status") or "").upper() != "COMPLETE":
+            raise ValueError("LIVE trades can only be created from a confirmed Kite entry fill")
+        if int(payload.get("entry_filled_quantity") or 0) != int(payload.get("quantity") or 0):
+            raise ValueError("LIVE trade quantity must match the confirmed Kite fill quantity")
     symbol = str(payload.get("instrument_symbol") or "").strip()
     if not symbol:
         raise ValueError("instrument_symbol is required")
@@ -546,7 +549,8 @@ def _distance_value(value: Any, unit: Any, reference: float) -> float:
 
 def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str) -> None:
     """Apply the trade's entry-time target/stop strategy to a fresh PAPER quote."""
-    if str(trade.get("execution_mode") or "PAPER").upper() != "PAPER":
+    execution_mode = str(trade.get("execution_mode") or "PAPER").upper()
+    if execution_mode not in {"PAPER", "LIVE"}:
         return
     try:
         entry = float(trade.get("average_entry_price") or trade.get("entry_price") or 0)
@@ -665,7 +669,16 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
         if favorable != float(trade.get("favorable_price") or entry):
             updates["favorable_price"] = favorable
         if updates:
-            update_trade(str(trade["trade_id"]), updates, event_type="TARGET_STOP_STRATEGY")
+            if execution_mode == "LIVE":
+                if str(updates.get("status") or "").upper() == "CLOSED":
+                    # A live risk trigger is only an instruction to submit a broker
+                    # exit. The canonical trade remains OPEN until Kite confirms fills.
+                    from app.services.autotrender_kite_execution import submit_exit
+                    submit_exit(trade, str(updates.get("auto_exit_reason") or updates.get("exit_reason") or "RISK_EXIT"), updates)
+                else:
+                    update_trade(str(trade["trade_id"]), updates, event_type="BROKER_RISK_STATE")
+            else:
+                update_trade(str(trade["trade_id"]), updates, event_type="TARGET_STOP_STRATEGY")
     except (TypeError, ValueError, OverflowError):
         logger.exception("Could not evaluate target/stop strategy for trade %s", trade.get("trade_id"))
 
@@ -697,10 +710,8 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
             changed.append(updated)
     for trade in changed:
         publish({"type": "trade_quote", "trade_id": trade["trade_id"], "trade": trade})
-        # Live broker positions must be closed only after confirmed broker fills.
-        # PAPER trades use the selected entry-time strategy for target/stop management.
-        if str(trade.get("execution_mode") or "PAPER").upper() != "PAPER":
-            continue
+        # Both modes use the same entry-time risk strategy. PAPER closes are
+        # simulated; LIVE closes are routed to Kite and await confirmed fills.
         try:
             current = get_trade(str(trade["trade_id"]))
             if current and _is_active(current):
