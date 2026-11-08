@@ -128,11 +128,16 @@ def run_auto_exit_cycle(now: datetime | None = None) -> dict[str, Any]:
         return {"enabled": False, "reason": "setting_disabled_or_unavailable", "closed": [], "skipped": []}
 
     closed: list[str] = []
+    exit_orders_submitted: list[str] = []
     skipped: list[dict[str, str]] = []
     for trade in trade_terminal.list_trades(status_filter="OPEN"):
         trade_id = str(trade.get("trade_id") or "")
-        # Broker positions are intentionally excluded: this worker does not place Kite orders.
-        if str(trade.get("execution_mode") or "").upper() != "PAPER":
+        mode = str(trade.get("execution_mode") or "").upper()
+        is_autotrender_live = (
+            mode == "LIVE"
+            and str(trade.get("source") or "").upper().replace("_", "") == "AUTOTRENDER"
+        )
+        if mode != "PAPER" and not is_autotrender_live:
             continue
         if not _quote_is_fresh(trade, now):
             skipped.append({"trade_id": trade_id, "reason": "stale_or_missing_quote"})
@@ -169,6 +174,26 @@ def run_auto_exit_cycle(now: datetime | None = None) -> dict[str, Any]:
             skipped.append({"trade_id": trade_id, "reason": "net_pnl_not_positive"})
             continue
 
+        # LIVE AutoTrender positions require a broker exit order. PAPER positions
+        # retain their existing simulated close behavior.
+        if is_autotrender_live:
+            try:
+                from app.services.autotrender_kite_execution import submit_exit
+                submit_exit(
+                    trade,
+                    "NET_PROFITABLE_AT_MARKET_CLOSE",
+                    {
+                        "auto_exit": True,
+                        "auto_exit_at": now.isoformat(),
+                        "auto_exit_reason": "NET_PROFITABLE_AT_MARKET_CLOSE",
+                    },
+                )
+                exit_orders_submitted.append(trade_id)
+            except (KeyError, RuntimeError, ValueError):
+                logger.exception("Auto Exit could not submit Kite exit for trade %s", trade_id)
+                skipped.append({"trade_id": trade_id, "reason": "kite_exit_submission_failed"})
+            continue
+
         # update_trade serializes lifecycle changes and persists a versioned close event.
         try:
             current = trade_terminal.get_trade(trade_id)
@@ -195,7 +220,7 @@ def run_auto_exit_cycle(now: datetime | None = None) -> dict[str, Any]:
         except (KeyError, RuntimeError, ValueError):
             logger.exception("Auto Exit failed to close trade %s", trade_id)
             skipped.append({"trade_id": trade_id, "reason": "lifecycle_close_failed"})
-    result = {"enabled": True, "closed": closed, "skipped": skipped}
+    result = {"enabled": True, "closed": closed, "exit_orders_submitted": exit_orders_submitted, "skipped": skipped}
     logger.info("Auto Exit cycle result: %s", result)
     return result
 
