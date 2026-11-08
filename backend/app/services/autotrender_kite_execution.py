@@ -136,7 +136,7 @@ def _submit_intent(key: str) -> dict[str, Any]:
             quantity=int(intent["quantity"]),
             product="MIS",
             order_type="MARKET",
-            validity="DAY",
+            validity="IOC",
             tag=intent["order_tag"],
         )
         _save_status(key, "OPEN", order_id=str(order_id))
@@ -206,10 +206,19 @@ def submit_exit(trade: dict[str, Any], reason: str, risk_updates: dict[str, Any]
     """Submit one broker exit after target/stop logic signals a close."""
     ensure_schema()
     trade_id = str(trade["trade_id"])
-    key = "AUTOTRENDER:EXIT:" + trade_id
-    existing = _get_intent(key)
-    if existing:
-        return existing
+    with get_engine().connect() as conn:
+        latest = conn.execute(text("""
+            SELECT idempotency_key, status FROM autotrender_kite_orders
+            WHERE trade_id=:trade_id AND role='EXIT'
+            ORDER BY created_at DESC LIMIT 1
+        """), {"trade_id": trade_id}).first()
+        attempt_count = conn.execute(text("""
+            SELECT COUNT(*) FROM autotrender_kite_orders
+            WHERE trade_id=:trade_id AND role='EXIT'
+        """), {"trade_id": trade_id}).scalar() or 0
+    if latest and str(latest[1]).upper() != "EXIT_PARTIAL_UNRESOLVED":
+        return _get_intent(str(latest[0])) or {"status": str(latest[1])}
+    key = "AUTOTRENDER:EXIT:" + trade_id + ":" + str(int(attempt_count) + 1)
     if str(trade.get("direction") or "BUY").upper() != "BUY":
         raise ValueError("AutoTrender live exit currently requires a long option position")
     # Persist strategy milestones before sending the exit; never mark the position
@@ -258,13 +267,13 @@ def _apply_entry_fill(intent: dict[str, Any]) -> None:
         """), {"trade_id": trade["trade_id"], "key": intent["idempotency_key"]})
 
 
-def _apply_exit_fill(intent: dict[str, Any]) -> None:
+def _apply_exit_fill(intent: dict[str, Any]) -> bool:
     trade_id = str(intent.get("trade_id") or "")
     trade = trade_terminal.get_trade(trade_id)
     filled = int(intent.get("filled_quantity") or 0)
     average = float(intent.get("average_price") or 0)
     if not trade or filled <= 0 or average <= 0:
-        return
+        return False
     original = int(trade.get("quantity") or 0)
     if filled < original:
         _save_status(str(intent["idempotency_key"]), "EXIT_PARTIAL_UNRESOLVED",
@@ -276,7 +285,7 @@ def _apply_exit_fill(intent: dict[str, Any]) -> None:
             "broker_exit_average_price": average,
             "broker_exit_state": "PARTIAL_REQUIRES_RECONCILIATION",
         }, event_type="BROKER_EXIT_PARTIAL")
-        return
+        return False
     details = intent.get("payload") or {}
     trade_terminal.update_trade(trade_id, {
         "status": "CLOSED",
@@ -288,6 +297,7 @@ def _apply_exit_fill(intent: dict[str, Any]) -> None:
         "exit_reason": details.get("reason") or "AutoTrender target/stop",
         "exit_method": "KITE_MARKET_ORDER",
     }, event_type="BROKER_EXIT_FILLED")
+    return True
 
 
 def run_cycle() -> dict[str, Any]:
@@ -327,13 +337,24 @@ def run_cycle() -> dict[str, Any]:
         if item["role"] == "ENTRY" and status in {"COMPLETE", "CANCELLED", "REJECTED"} and filled > 0:
             _apply_entry_fill(item)
             processed += 1
+        elif item["role"] == "ENTRY" and status in {"CANCELLED", "REJECTED"} and filled == 0:
+            _save_status(item["idempotency_key"], "ENTRY_REJECTED",
+                         error=str(broker_order.get("status_message") or status))
         elif item["role"] == "EXIT" and status == "COMPLETE":
-            _apply_exit_fill(item)
-            _save_status(item["idempotency_key"], "EXIT_FILLED")
+            if _apply_exit_fill(item):
+                _save_status(item["idempotency_key"], "EXIT_FILLED")
             processed += 1
         elif item["role"] == "EXIT" and status in {"CANCELLED", "REJECTED"} and filled > 0:
             _apply_exit_fill(item)
             processed += 1
+        elif item["role"] == "EXIT" and status in {"CANCELLED", "REJECTED"} and filled == 0:
+            _save_status(item["idempotency_key"], "EXIT_REJECTED",
+                         error=str(broker_order.get("status_message") or status))
+            if item.get("trade_id"):
+                trade_terminal.update_trade(str(item["trade_id"]), {
+                    "broker_exit_state": "REJECTED",
+                    "broker_exit_error": str(broker_order.get("status_message") or status),
+                }, event_type="BROKER_EXIT_REJECTED")
     return {"processed": processed, "orders_seen": len(orders)}
 
 
