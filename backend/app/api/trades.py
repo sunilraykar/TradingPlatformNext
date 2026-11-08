@@ -208,6 +208,30 @@ def _enforce_autotrender_entry_window(source: str, signal_timestamp: str | None)
         raise HTTPException(status_code=422, detail="AutoTrender signal is stale; a fresh signal is required")
 
 
+@router.get("/autotrender/orders")
+def list_autotrender_kite_orders(limit: int = Query(default=50, ge=1, le=200)) -> dict[str, Any]:
+    """Return durable AutoTrender Kite order intents and broker reconciliation state."""
+    from app.services import autotrender_kite_execution
+
+    autotrender_kite_execution.ensure_schema()
+    with get_engine().connect() as connection:
+        rows = connection.execute(text("""
+            SELECT idempotency_key, role, underlying, trade_id, broker_order_id,
+                   status, exchange, tradingsymbol, transaction_type, quantity,
+                   filled_quantity, average_price, last_error, created_at, updated_at
+            FROM autotrender_kite_orders
+            ORDER BY created_at DESC
+            LIMIT :limit
+        """), {"limit": limit}).mappings().all()
+    return {"orders": [
+        {**dict(row),
+         "average_price": float(row["average_price"]) if row["average_price"] is not None else None,
+         "created_at": row["created_at"].isoformat() if row["created_at"] else None,
+         "updated_at": row["updated_at"].isoformat() if row["updated_at"] else None}
+        for row in rows
+    ]}
+
+
 @router.post("/autotrender/manual-entry")
 def create_manual_autotrender_trade(payload: AutoTrenderManualEntry) -> dict[str, Any]:
     """Manually enter the currently selected AutoTrender option into the canonical terminal."""
