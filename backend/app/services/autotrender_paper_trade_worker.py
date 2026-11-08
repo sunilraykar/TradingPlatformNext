@@ -1,7 +1,7 @@
-"""Configurable AutoTrender worker for fresh PAPER option entries.
+"""Configurable AutoTrender worker for fresh PAPER and REAL option entries.
 
-Creates only PAPER trades through the canonical Trade Terminal. It never places
-broker orders; the existing exit workers remain responsible for exits.
+PAPER trades use the canonical simulator. REAL entries are submitted to Kite
+through the durable order-intent and broker-reconciliation service.
 """
 from __future__ import annotations
 
@@ -455,7 +455,7 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
               and str(trade.get("source", "")).upper().replace("_", "") == "AUTOTRENDER"]
     if active:
         raise ValueError("active_autotrender_trade_exists_for_underlying")
-    return trade_terminal.create_trade({
+    trade_payload = {
         "idempotency_key": idempotency_key, "execution_mode": mode, "source": "AUTOTRENDER",
         "strategy": "AutoTrender " + normalized_direction + " " + option_type, "underlying": normalized_index,
         "instrument_symbol": tradingsymbol, "exchange": exchange,
@@ -464,7 +464,11 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
         "notes": "AutoTrender signal=" + normalized_direction + "; signal_timestamp=" + signal_timestamp.isoformat()
             + "; spot=" + str(spot) + "; option=" + option_type + "; expiry=" + expiry
             + "; strike=" + str(strike) + "; contract_selector=shared_ui_selector",
-    })
+    }
+    if mode == "LIVE":
+        from app.services.autotrender_kite_execution import submit_entry
+        return submit_entry(trade_payload)
+    return trade_terminal.create_trade(trade_payload)
 
 def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float, execution_mode: str = "PAPER") -> dict[str, Any]:
     """Serialize active-trade check + creation across worker processes using a MySQL lock."""
@@ -590,8 +594,12 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                                                 float(settings.get("targetFallbackPercent", 1.0)),
                                                 str(settings.get("executionMode", "PAPER")))
                     _LAST_SIGNAL_BY_INDEX[index] = signal_id
-                    state = "trade_created"
-                    reason = "trade_created"
+                    if str(settings.get("executionMode", "PAPER")).strip().upper() in {"REAL", "LIVE"}:
+                        state = "kite_order_submitted"
+                        reason = "kite_order_" + str(trade.get("status") or "PENDING").lower()
+                    else:
+                        state = "trade_created"
+                        reason = "trade_created"
                     trade_id = trade.get("trade_id")
                 except (ValueError, RuntimeError, KiteProviderError, SQLAlchemyError) as exc:
                     state = "entry_blocked"
