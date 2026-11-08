@@ -321,7 +321,7 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
     if mode not in {"PAPER", "LIVE"}:
         raise ValueError("execution_mode must be PAPER or LIVE")
     if mode == "LIVE":
-        if not payload.get("broker_order_id") or str(payload.get("broker_status") or "").upper() != "COMPLETE":
+        if not payload.get("broker_order_id") or str(payload.get("broker_status") or "").upper() not in {"COMPLETE", "CANCELLED"}:
             raise ValueError("LIVE trades can only be created from a confirmed Kite entry fill")
         if int(payload.get("entry_filled_quantity") or 0) != int(payload.get("quantity") or 0):
             raise ValueError("LIVE trade quantity must match the confirmed Kite fill quantity")
@@ -711,7 +711,12 @@ def apply_quote_to_open_trades(quote: dict[str, Any]) -> int:
     for trade in changed:
         publish({"type": "trade_quote", "trade_id": trade["trade_id"], "trade": trade})
         # Both modes use the same entry-time risk strategy. PAPER closes are
-        # simulated; LIVE closes are routed to Kite and await confirmed fills.
+        # simulated; AutoTrender LIVE closes are routed to Kite and await fills.
+        if (
+            str(trade.get("execution_mode") or "PAPER").upper() == "LIVE"
+            and str(trade.get("source") or "").upper().replace("_", "") != "AUTOTRENDER"
+        ):
+            continue
         try:
             current = get_trade(str(trade["trade_id"]))
             if current and _is_active(current):
