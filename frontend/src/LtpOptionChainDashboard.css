@@ -1225,3 +1225,37 @@
 
 .ltp-swing-symbol-link{display:inline;padding:0;border:0;background:transparent;color:#65aaff;font:inherit;font-weight:800;text-align:left;cursor:pointer;text-decoration:none}
 .ltp-swing-symbol-link:hover,.ltp-swing-symbol-link:focus-visible{color:#9bc9ff;text-decoration:underline;outline:none}
+
+
+/* Option-chain reversal values are the primary signal; LTP remains secondary. */
+.ltp-option-chain .ltp-option-table .ltp-reversal{
+  font-size:16px!important;
+  line-height:1.25!important;
+  padding:4px 7px!important;
+  max-width:130px;
+}
+.ltp-option-chain .ltp-option-table .ltp-option-price{
+  display:block;
+  margin-top:3px;
+  font-size:10px!important;
+  line-height:1.15!important;
+  font-weight:700!important;
+  opacity:.88;
+}
+.ltp-option-chain .ltp-ltp-toggle{
+  height:30px;
+  padding:0 10px;
+  border:1px solid #60758c;
+  border-radius:4px;
+  background:#34465a;
+  color:#e8f0fa;
+  font-size:11px;
+  font-weight:800;
+  white-space:nowrap;
+  cursor:pointer;
+}
+.ltp-option-chain .ltp-ltp-toggle.active{
+  border-color:#24bd83;
+  background:#145b46;
+  color:#eafff5;
+}
