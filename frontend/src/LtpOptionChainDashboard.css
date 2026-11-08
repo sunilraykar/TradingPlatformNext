@@ -1227,9 +1227,9 @@
 .ltp-swing-symbol-link:hover,.ltp-swing-symbol-link:focus-visible{color:#9bc9ff;text-decoration:underline;outline:none}
 
 
-/* Option-chain reversal values are the primary signal; LTP remains secondary. */
- .ltp-option-chain .ltp-option-table .ltp-reversal{
-  font-size:17px!important;
+/* Keep call-side and put-side reversal values consistent at 12px. */
+.ltp-option-chain .ltp-option-table .ltp-reversal{
+  font-size:12px!important;
   line-height:1.25!important;
   padding:4px 7px!important;
   max-width:130px;
