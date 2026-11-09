@@ -1,7 +1,7 @@
 import pytest
 from fastapi import HTTPException
 
-from app.api.apiplatform_option_chain import _expiry, _symbol
+from app.api.apiplatform_option_chain import _expiry, _select_atm_instruments, _symbol
 
 
 def test_option_chain_symbol_is_normalized():
@@ -28,9 +28,6 @@ def test_option_chain_expiry_rejects_invalid_date():
     assert error.value.status_code == 422
 
 
-from app.api.apiplatform_option_chain import _select_atm_instruments
-
-
 def _contracts():
     return [
         {"instrument_token": strike * 10 + suffix, "strike": float(strike), "side": side}
@@ -43,7 +40,9 @@ def test_select_atm_instruments_keeps_three_strikes_each_side_and_both_sides():
     selected, atm = _select_atm_instruments(_contracts(), 560, strikes_each_side=3)
 
     assert atm == 600.0
-    assert sorted({item["strike"] for item in selected}) == [300.0, 400.0, 500.0, 600.0, 700.0, 800.0, 900.0]
+    assert sorted({item["strike"] for item in selected}) == [
+        300.0, 400.0, 500.0, 600.0, 700.0, 800.0, 900.0,
+    ]
     assert len(selected) == 14
     assert {item["side"] for item in selected} == {"CE", "PE"}
 
