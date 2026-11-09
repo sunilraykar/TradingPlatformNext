@@ -13,6 +13,8 @@ _lock = RLock()
 _ticker: KiteTickerAdapter | None = None
 _state = "stopped"
 _subscriptions: dict[int, str] = {}
+_base_subscriptions: dict[int, str] = {}
+_subscription_groups: dict[str, tuple[set[int], str]] = {}
 
 
 def _on_state(value: str, source: KiteTickerAdapter | None = None) -> None:
@@ -105,6 +107,39 @@ def stop() -> None:
             _state = "error"
 
 
+def _effective_subscriptions() -> dict[int, str]:
+    effective = dict(_base_subscriptions)
+    for tokens, mode in _subscription_groups.values():
+        for token in tokens:
+            current = effective.get(token)
+            # Preserve the richest mode requested by any active consumer.
+            priority = {"ltp": 1, "quote": 2, "full": 3}
+            if current is None or priority[mode] > priority[current]:
+                effective[token] = mode
+    return effective
+
+
+def _apply_subscription_changes(previous: dict[int, str], ticker: KiteTickerAdapter | None) -> None:
+    if ticker is None:
+        return
+    removed = [token for token in previous if token not in _subscriptions]
+    if removed:
+        try:
+            ticker.unsubscribe(removed)
+        except Exception:
+            logger.exception("Could not unsubscribe obsolete Kite instruments")
+    for mode in ("ltp", "quote", "full"):
+        changed = [
+            token for token, wanted_mode in _subscriptions.items()
+            if wanted_mode == mode and previous.get(token) != mode
+        ]
+        if changed:
+            try:
+                ticker.subscribe(changed, mode=mode)
+            except Exception:
+                logger.exception("Could not apply changed Kite %s subscriptions", mode)
+
+
 def subscribe(instrument_tokens: list[int], mode: str = "quote") -> dict[str, Any]:
     if mode not in {"ltp", "quote", "full"}:
         raise ValueError("mode must be ltp, quote, or full")
@@ -112,33 +147,62 @@ def subscribe(instrument_tokens: list[int], mode: str = "quote") -> dict[str, An
     if not unique_tokens or any(token <= 0 for token in unique_tokens):
         raise ValueError("instrument_tokens must contain positive integer tokens")
     with _lock:
+        previous = dict(_subscriptions)
         for token in unique_tokens:
-            _subscriptions[token] = mode
+            _base_subscriptions[token] = mode
+        _subscriptions.clear()
+        _subscriptions.update(_effective_subscriptions())
         ticker = _ticker
         connected = _state == "connected"
     if ticker is None:
         try:
             start()
         except Exception:
-            # Desired subscriptions remain registered; startup/reconnect can retry.
             logger.exception("Kite ticker start failed; desired subscriptions retained in memory")
     elif connected:
-        try:
-            ticker.subscribe(unique_tokens, mode=mode)
-        except Exception:
-            # Keep the desired set; the next successful on_connect reapplies it.
-            logger.exception("Kite subscription deferred; desired tokens retained in memory")
+        _apply_subscription_changes(previous, ticker)
     return status()
 
 
 def unsubscribe(instrument_tokens: list[int]) -> dict[str, Any]:
     unique_tokens = list(dict.fromkeys(int(token) for token in instrument_tokens))
     with _lock:
+        previous = dict(_subscriptions)
         for token in unique_tokens:
-            _subscriptions.pop(token, None)
+            _base_subscriptions.pop(token, None)
+        _subscriptions.clear()
+        _subscriptions.update(_effective_subscriptions())
         ticker = _ticker
-    if ticker is not None and unique_tokens:
-        ticker.unsubscribe(unique_tokens)
+        connected = _state == "connected"
+    if connected:
+        _apply_subscription_changes(previous, ticker)
+    return status()
+
+
+def replace_subscription_group(group: str, instrument_tokens: list[int], mode: str = "quote") -> dict[str, Any]:
+    """Atomically replace one consumer's desired tokens without disturbing other consumers."""
+    if not group or mode not in {"ltp", "quote", "full"}:
+        raise ValueError("group must be non-empty and mode must be ltp, quote, or full")
+    unique_tokens = set(dict.fromkeys(int(token) for token in instrument_tokens))
+    if any(token <= 0 for token in unique_tokens):
+        raise ValueError("instrument_tokens must contain positive integer tokens")
+    with _lock:
+        previous = dict(_subscriptions)
+        if unique_tokens:
+            _subscription_groups[group] = (unique_tokens, mode)
+        else:
+            _subscription_groups.pop(group, None)
+        _subscriptions.clear()
+        _subscriptions.update(_effective_subscriptions())
+        ticker = _ticker
+        connected = _state == "connected"
+    if ticker is None and _subscriptions:
+        try:
+            start()
+        except Exception:
+            logger.exception("Kite ticker start failed; grouped subscriptions retained in memory")
+    elif connected:
+        _apply_subscription_changes(previous, ticker)
     return status()
 
 
@@ -220,4 +284,6 @@ def reset() -> None:
     stop()
     with _lock:
         _subscriptions.clear()
+        _base_subscriptions.clear()
+        _subscription_groups.clear()
     live_quotes.clear()
