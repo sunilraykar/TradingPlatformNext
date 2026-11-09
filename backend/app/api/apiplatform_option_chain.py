@@ -232,8 +232,8 @@ def fetch_apiplatform_option_chain(
                 "lot_size": int(row["lot_size"] or lot_size),
             })
 
-        # Prefer the latest underlying WebSocket tick; fall back to the current
-        # APIPLATFORM spot value on the first fetch before Kite has delivered a tick.
+        # Use the current APIPLATFORM spot value first, then the cached Kite tick
+        # when the provider payload does not include a usable spot price.
         spot_quote = live_quotes.get(spot_token) if spot_token else None
         underlying_price = payload.get("Price_S") if isinstance(payload, dict) else None
         if underlying_price in (None, "") and spot_quote:
