@@ -295,6 +295,128 @@ def option_chain_market_levels(
     }
 
 
+@router.get("/subscriptions/refresh")
+def refresh_option_chain_subscriptions(
+    symbol: str = Query(default="NIFTY", max_length=30),
+    expiry: str = Query(..., min_length=8, max_length=10),
+) -> dict[str, Any]:
+    """Re-center the Option Chain quote subscription window around the latest Kite spot price."""
+    key = _symbol(symbol)
+    expiry_date = _expiry(expiry)
+    exchange = "BFO" if key in {"SENSEX", "BANKEX"} else "NFO"
+
+    try:
+        with get_engine().connect() as connection:
+            rows = connection.execute(text("""
+                SELECT instrument_token, tradingsymbol, instrument_type, strike, lot_size
+                FROM instruments
+                WHERE source = 'KITE' AND is_active = TRUE
+                  AND exchange = :exchange
+                  AND instrument_type IN ('CE', 'PE')
+                  AND expiry = :expiry
+                  AND tradingsymbol LIKE :prefix
+                ORDER BY strike, instrument_type
+            """), {
+                "exchange": exchange, "expiry": expiry_date, "prefix": f"{key}%"
+            }).mappings().all()
+
+            index_spec = _INDEX_INSTRUMENTS.get(key)
+            if index_spec:
+                spot_row = connection.execute(text("""
+                    SELECT instrument_token
+                    FROM instruments
+                    WHERE source = 'KITE' AND is_active = TRUE
+                      AND exchange = :exchange AND tradingsymbol = :symbol
+                    ORDER BY instrument_version DESC
+                    LIMIT 1
+                """), {"exchange": index_spec[0], "symbol": index_spec[1]}).mappings().first()
+            else:
+                spot_row = connection.execute(text("""
+                    SELECT instrument_token
+                    FROM instruments
+                    WHERE source = 'KITE' AND is_active = TRUE
+                      AND exchange IN ('NSE', 'BSE')
+                      AND tradingsymbol = :symbol AND instrument_type = 'EQ'
+                    ORDER BY CASE exchange WHEN 'NSE' THEN 0 ELSE 1 END,
+                             instrument_version DESC
+                    LIMIT 1
+                """), {"symbol": key}).mappings().first()
+
+            future_row = connection.execute(text("""
+                SELECT instrument_token
+                FROM instruments
+                WHERE source = 'KITE' AND is_active = TRUE
+                  AND exchange = :exchange AND instrument_type = 'FUT'
+                  AND expiry = :expiry AND tradingsymbol LIKE :prefix
+                ORDER BY instrument_token
+                LIMIT 1
+            """), {
+                "exchange": exchange, "expiry": expiry_date, "prefix": f"{key}%"
+            }).mappings().first()
+
+        if not rows:
+            raise HTTPException(status_code=404, detail="No Kite option contracts found for this symbol and expiry.")
+
+        spot_token = int(spot_row["instrument_token"]) if spot_row else None
+        future_token = int(future_row["instrument_token"]) if future_row else None
+        spot_quote = live_quotes.get(spot_token) if spot_token else None
+        underlying_price = spot_quote.get("last_price") if spot_quote else None
+        if underlying_price in (None, ""):
+            return {
+                "updated": False,
+                "reason": "underlying_quote_unavailable",
+                "symbol": key,
+                "expiry": expiry_date.isoformat(),
+                "kite_spot_instrument_token": spot_token,
+                "kite_market_data": live_market_data.status(),
+            }
+
+        instruments = [{
+            "instrument_token": int(row["instrument_token"]),
+            "tradingsymbol": str(row["tradingsymbol"]),
+            "side": str(row["instrument_type"]).upper(),
+            "strike": float(row["strike"]),
+            "lot_size": int(row["lot_size"] or 0),
+        } for row in rows]
+        selected_instruments, atm_strike = _select_atm_instruments(instruments, underlying_price, 3)
+        if not selected_instruments:
+            return {
+                "updated": False,
+                "reason": "atm_selection_unavailable",
+                "symbol": key,
+                "expiry": expiry_date.isoformat(),
+                "underlying_price": underlying_price,
+                "kite_market_data": live_market_data.status(),
+            }
+
+        live_market_data.replace_subscription_group(
+            "apiplatform_option_chain_options",
+            [item["instrument_token"] for item in selected_instruments],
+            mode="quote",
+        )
+        underlying_tokens = [token for token in (spot_token, future_token) if token]
+        live_market_data.replace_subscription_group(
+            "apiplatform_option_chain_underlying", underlying_tokens, mode="quote"
+        )
+        return {
+            "updated": True,
+            "symbol": key,
+            "expiry": expiry_date.isoformat(),
+            "underlying_price": float(underlying_price),
+            "kite_atm_strike": atm_strike,
+            "kite_subscribed_strikes": sorted({item["strike"] for item in selected_instruments}),
+            "kite_instruments": selected_instruments,
+            "kite_spot_instrument_token": spot_token,
+            "kite_future_instrument_token": future_token,
+            "kite_market_data": live_market_data.status(),
+        }
+    except HTTPException:
+        raise
+    except SQLAlchemyError as exc:
+        logger.exception("Could not refresh APIPLATFORM option-chain subscriptions for %s", key)
+        raise HTTPException(status_code=503, detail="Kite instrument master is unavailable.") from exc
+
+
 @router.get("/live-quotes")
 def option_chain_live_quotes(
     instrument_tokens: list[int] = Query(..., min_length=1, max_length=500),
