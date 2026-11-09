@@ -126,7 +126,7 @@ def fetch_apiplatform_option_chain(
     expiry: str = Query(..., min_length=8, max_length=10),
     lot_size: int = Query(..., alias="lotSize", ge=1, le=100000),
 ) -> dict[str, Any]:
-    """Fetch APIPLATFORM intelligence and register matching Kite WebSocket contracts."""
+    """Fetch APIPLATFORM intelligence and replace this Option Chain view's Kite subscriptions."""
     key = _symbol(symbol)
     expiry_date = _expiry(expiry)
     expiry_text = expiry_date.strftime("%d-%m-%Y")
@@ -213,8 +213,12 @@ def fetch_apiplatform_option_chain(
             tokens.append(spot_token)
         if future_token:
             tokens.append(future_token)
-        if tokens:
-            live_market_data.subscribe(tokens, mode="full")
+        # The Option Chain owns one replaceable subscription group. Switching
+        # symbol/expiry removes its previous contracts while preserving tokens
+        # requested by AutoTrender, Trade Terminal, and other consumers.
+        live_market_data.replace_subscription_group(
+            "apiplatform_option_chain", tokens, mode="full"
+        )
     except SQLAlchemyError:
         logger.exception("Could not map APIPLATFORM option strikes to Kite instruments")
 
