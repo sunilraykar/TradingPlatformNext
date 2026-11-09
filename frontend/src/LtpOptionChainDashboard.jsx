@@ -339,16 +339,8 @@ export default function LtpOptionChainDashboard() {
       setInstruments(mapped);
       setSpotToken(payload.kite_spot_instrument_token || null);
       setFutureToken(payload.kite_future_instrument_token || null);
-      const tokens = mapped.map((item) => item.instrument_token);
-      if (payload.kite_spot_instrument_token) tokens.push(payload.kite_spot_instrument_token);
-      if (payload.kite_future_instrument_token) tokens.push(payload.kite_future_instrument_token);
-      if (tokens.length) {
-        await request('/kite/market-data/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instrument_tokens: Array.from(new Set(tokens)), mode: 'full' }),
-        }).catch(() => null);
-      }
+      // The backend fetch endpoint owns and replaces the Option Chain subscription
+      // group. Do not register the same contracts again as unowned subscriptions.
     } catch (e) {
       if (requestId === chainRequestId.current) setError(e.message || 'Unable to fetch option-chain data.');
     } finally {
