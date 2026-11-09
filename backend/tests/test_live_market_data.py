@@ -167,3 +167,29 @@ def test_invalidate_session_closes_socket_and_preserves_desired_subscriptions():
     assert result["state"] == "login_required"
     assert result["connected"] is False
     assert result["subscribed_tokens"] == [101, 202]
+
+
+
+def test_replace_subscription_group_replaces_only_its_own_tokens(monkeypatch):
+    live_market_data._base_subscriptions.update({100: "quote", 200: "full"})
+    live_market_data._subscriptions.update({100: "quote", 200: "full"})
+
+    live_market_data.replace_subscription_group("option-chain", [200, 300, 301], mode="full")
+    first = live_market_data.status()
+    assert first["subscribed_tokens"] == [100, 200, 300, 301]
+
+    live_market_data.replace_subscription_group("option-chain", [400], mode="full")
+    second = live_market_data.status()
+    assert second["subscribed_tokens"] == [100, 200, 400]
+
+
+def test_group_unsubscribe_preserves_tokens_used_by_other_consumers():
+    live_market_data._base_subscriptions[100] = "quote"
+    live_market_data._subscription_groups["option-chain"] = ({100, 200}, "full")
+    live_market_data._subscription_groups["trade-terminal"] = ({200, 300}, "quote")
+    live_market_data._subscriptions.update(live_market_data._effective_subscriptions())
+
+    live_market_data.replace_subscription_group("option-chain", [], mode="full")
+
+    assert live_market_data.status()["subscribed_tokens"] == [100, 200, 300]
+    assert next(item for item in live_market_data.status()["subscriptions"] if item["instrument_token"] == 200)["mode"] == "quote"
