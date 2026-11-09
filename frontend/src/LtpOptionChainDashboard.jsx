@@ -398,10 +398,34 @@ export default function LtpOptionChainDashboard() {
     return () => window.clearInterval(timer);
   }, [refreshQuotes]);
   useEffect(() => {
-    if (!auth.authenticated || !expiry) return undefined;
-    const timer = window.setInterval(() => loadChain(false), 15000);
-    return () => window.clearInterval(timer);
-  }, [auth.authenticated, loadChain, expiry]);
+    if (!auth.authenticated || !expiry || !instruments.length) return undefined;
+    let active = true;
+    let busy = false;
+    const refreshSubscriptionWindow = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const query = new URLSearchParams({ symbol, expiry });
+        const next = await request('/apiplatform/option-chain/subscriptions/refresh?' + query.toString());
+        if (!active || !next.updated || !Array.isArray(next.kite_instruments)) return;
+        setInstruments((current) => {
+          const currentTokens = current.map((item) => item.instrument_token).join(',');
+          const nextTokens = next.kite_instruments.map((item) => item.instrument_token).join(',');
+          return currentTokens === nextTokens ? current : next.kite_instruments;
+        });
+        setSpotToken(next.kite_spot_instrument_token || null);
+        setFutureToken(next.kite_future_instrument_token || null);
+      } catch (e) {
+        // Retain the last valid subscription window if a refresh fails.
+        console.warn('Option Chain ATM subscription refresh failed:', e);
+      } finally {
+        busy = false;
+      }
+    };
+    refreshSubscriptionWindow();
+    const timer = window.setInterval(refreshSubscriptionWindow, 15000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [auth.authenticated, symbol, expiry, instruments.length]);
 
   useEffect(() => {
     if (!auth.authenticated || !expiry) return undefined;
