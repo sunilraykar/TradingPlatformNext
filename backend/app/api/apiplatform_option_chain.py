@@ -235,9 +235,9 @@ def fetch_apiplatform_option_chain(
         # Prefer the latest underlying WebSocket tick; fall back to the current
         # APIPLATFORM spot value on the first fetch before Kite has delivered a tick.
         spot_quote = live_quotes.get(spot_token) if spot_token else None
-        underlying_price = (spot_quote or {}).get("last_price") if spot_quote else None
-        if underlying_price in (None, "") and isinstance(payload, dict):
-            underlying_price = payload.get("Price_S")
+        underlying_price = payload.get("Price_S") if isinstance(payload, dict) else None
+        if underlying_price in (None, "") and spot_quote:
+            underlying_price = spot_quote.get("last_price")
         selected_instruments, atm_strike = _select_atm_instruments(instruments, underlying_price, 3)
 
         # Keep option contracts and underlying instruments in separate owners.
