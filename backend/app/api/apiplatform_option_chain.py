@@ -258,7 +258,11 @@ def fetch_apiplatform_option_chain(
 
     return {
         "data": payload,
-        "kite_instruments": selected_instruments,\n        "kite_atm_strike": atm_strike,\n        "kite_subscribed_strikes": sorted({item["strike"] for item in selected_instruments}),
+        "kite_instruments": selected_instruments,
+        "kite_atm_strike": atm_strike,
+        "kite_subscribed_strikes": sorted(
+            {item["strike"] for item in selected_instruments}
+        ),
         "kite_spot_instrument_token": spot_token,
         "kite_future_instrument_token": future_token,
         "kite_market_data": live_market_data.status(),
