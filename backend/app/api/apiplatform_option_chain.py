@@ -53,6 +53,30 @@ def _expiry_label(value: Any) -> str:
     return value.strftime("%d-%m-%Y") if hasattr(value, "strftime") else str(value)
 
 
+def _select_atm_instruments(
+    instruments: list[dict[str, Any]], underlying_price: Any, strikes_each_side: int = 3,
+) -> tuple[list[dict[str, Any]], float | None]:
+    """Keep CE/PE contracts for the ATM strike and a bounded window around it."""
+    if not instruments or underlying_price in (None, ""):
+        return [], None
+    try:
+        price = float(str(underlying_price).replace(",", "").strip())
+    except (TypeError, ValueError):
+        return [], None
+    if price <= 0:
+        return [], None
+
+    strikes = sorted({float(item["strike"]) for item in instruments if item.get("strike") is not None})
+    if not strikes:
+        return [], None
+    atm_index = min(range(len(strikes)), key=lambda index: abs(strikes[index] - price))
+    atm_strike = strikes[atm_index]
+    start = max(0, atm_index - strikes_each_side)
+    end = min(len(strikes), atm_index + strikes_each_side + 1)
+    selected = set(strikes[start:end])
+    return [item for item in instruments if float(item["strike"]) in selected], atm_strike
+
+
 @router.get("/symbols")
 def option_chain_symbols() -> dict[str, Any]:
     """Return the latest stored APIPLATFORM LIVE symbol master."""
@@ -208,23 +232,33 @@ def fetch_apiplatform_option_chain(
                 "lot_size": int(row["lot_size"] or lot_size),
             })
 
-        tokens = [item["instrument_token"] for item in instruments]
-        if spot_token:
-            tokens.append(spot_token)
-        if future_token:
-            tokens.append(future_token)
-        # The Option Chain owns one replaceable subscription group. Switching
-        # symbol/expiry removes its previous contracts while preserving tokens
-        # requested by AutoTrender, Trade Terminal, and other consumers.
+        # Prefer the latest underlying WebSocket tick; fall back to the current
+        # APIPLATFORM spot value on the first fetch before Kite has delivered a tick.
+        spot_quote = live_quotes.get(spot_token) if spot_token else None
+        underlying_price = (spot_quote or {}).get("last_price") if spot_quote else None
+        if underlying_price in (None, "") and isinstance(payload, dict):
+            underlying_price = payload.get("Price_S")
+        selected_instruments, atm_strike = _select_atm_instruments(instruments, underlying_price, 3)
+
+        # Keep option contracts and underlying instruments in separate owners.
+        # Both use QUOTE mode; other consumers retain their own requested modes.
         live_market_data.replace_subscription_group(
-            "apiplatform_option_chain", tokens, mode="full"
+            "apiplatform_option_chain_options",
+            [item["instrument_token"] for item in selected_instruments],
+            mode="quote",
         )
+        underlying_tokens = [token for token in (spot_token, future_token) if token]
+        live_market_data.replace_subscription_group(
+            "apiplatform_option_chain_underlying", underlying_tokens, mode="quote"
+        )
+        # Remove the previous single-group registration when upgrading a running process.
+        live_market_data.replace_subscription_group("apiplatform_option_chain", [], mode="quote")
     except SQLAlchemyError:
         logger.exception("Could not map APIPLATFORM option strikes to Kite instruments")
 
     return {
         "data": payload,
-        "kite_instruments": instruments,
+        "kite_instruments": selected_instruments,\n        "kite_atm_strike": atm_strike,\n        "kite_subscribed_strikes": sorted({item["strike"] for item in selected_instruments}),
         "kite_spot_instrument_token": spot_token,
         "kite_future_instrument_token": future_token,
         "kite_market_data": live_market_data.status(),
