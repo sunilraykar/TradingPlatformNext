@@ -189,6 +189,10 @@ def submit_entry(payload: dict[str, Any]) -> dict[str, Any]:
     key = str(payload["idempotency_key"])
     existing = _get_intent(key)
     if existing:
+        if str(existing.get("status") or "").upper() in {"REJECTED", "ENTRY_REJECTED"}:
+            raise KiteOrderRejectedError(
+                str(existing.get("last_error") or "Kite rejected this order previously")
+            )
         return existing
     # Validate the authenticated broker session before creating an intent. This
     # avoids leaving a false SUBMISSION_UNKNOWN record when Kite is simply logged out.

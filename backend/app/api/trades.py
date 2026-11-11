@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from app.db.session import get_engine
-from app.providers.kite.client import KiteProviderError
+from app.providers.kite.client import KiteOrderRejectedError, KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import live_market_data, trade_terminal, trade_terminal_stream
 from app.services.live_quotes import live_quotes
@@ -243,6 +243,11 @@ def create_manual_autotrender_trade(payload: AutoTrenderManualEntry) -> dict[str
         if str(trade.get("execution_mode") or "").upper() == "LIVE" or trade.get("role") == "ENTRY":
             return {"order": trade, "message": "Manual AutoTrender Kite entry order submitted; trade appears after confirmed fill"}
         return {"trade": trade, "message": "Manual AutoTrender PAPER trade created"}
+    except KiteOrderRejectedError as exc:
+        # A definite Kite validation rejection is a client-visible 4xx, not a
+        # server outage. Preserve the broker's actionable rejection message.
+        status_code = exc.code if 400 <= exc.code < 500 else 400
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except RuntimeError as exc:

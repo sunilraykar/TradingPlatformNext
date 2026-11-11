@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from kiteconnect import KiteConnect
+from kiteconnect.exceptions import InputException
 
 from app.core.outbound_proxy import get_proxy_map
 
@@ -11,6 +12,14 @@ logger = logging.getLogger(__name__)
 
 class KiteProviderError(RuntimeError):
     """Provider-facing error with a safe, actionable message."""
+
+
+class KiteOrderRejectedError(KiteProviderError):
+    """A definitive broker-side order rejection; submitting it again is unsafe."""
+
+    def __init__(self, message: str, code: int = 400) -> None:
+        super().__init__(message)
+        self.code = int(code or 400)
 
 
 @dataclass(frozen=True)
@@ -131,7 +140,21 @@ class KiteProvider:
         return self._account_call("trades")
 
     def place_order(self, **params) -> str:
-        return self._account_call("place_order", variety="regular", **params)
+        """Place an order and distinguish definite broker input rejections from transport failures."""
+        if not self._client.access_token:
+            raise KiteProviderError("Kite session is not configured")
+        try:
+            return self._client.place_order(variety="regular", **params)
+        except InputException as exc:
+            detail = str(exc).strip() or "Kite rejected the order parameters"
+            logger.warning("Kite rejected order request: %s", detail)
+            raise KiteOrderRejectedError(
+                "Kite rejected the order: " + detail,
+                code=getattr(exc, "code", 400),
+            ) from exc
+        except Exception as exc:
+            logger.exception("Kite place_order request failed")
+            raise _provider_error("place_order", exc) from exc
 
     def place_gtt(self, **params) -> dict[str, Any]:
         return self._account_call("place_gtt", **params)
