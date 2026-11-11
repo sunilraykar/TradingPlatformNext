@@ -16,6 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
+from app.providers.kite.client import KiteOrderRejectedError
 from app.providers.kite.registry import get_kite_provider
 from app.services import trade_terminal
 
@@ -141,10 +142,20 @@ def _submit_intent(key: str) -> dict[str, Any]:
             quantity=int(intent["quantity"]),
             product="MIS",
             order_type="MARKET",
+            market_protection=-1,
             validity="IOC",
             tag=intent["order_tag"],
         )
         _save_status(key, "OPEN", order_id=str(order_id))
+    except KiteOrderRejectedError as exc:
+        # Kite input rejections are definitive, not ambiguous transport failures.
+        _save_status(key, "REJECTED", error=str(exc))
+        if intent.get("role") == "EXIT" and intent.get("trade_id"):
+            trade_terminal.update_trade(str(intent["trade_id"]), {
+                "broker_exit_state": "REJECTED",
+                "broker_exit_error": str(exc),
+            }, event_type="BROKER_EXIT_REJECTED")
+        raise
     except Exception as exc:
         # A timeout can happen after the broker accepted the order. Search the
         # tag before deciding whether the outcome is unknown.
