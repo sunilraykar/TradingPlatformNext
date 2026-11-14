@@ -91,7 +91,9 @@ async def _restore_kite_session() -> None:
         except KiteProviderError:
             # A gateway/network failure does not prove that the saved token is invalid.
             # Preserve it so a transient Kite outage cannot silently log the user out.
-            logger.warning("Could not validate saved Kite session because Kite API is unavailable; preserving session")
+            logger.warning(
+                "Could not validate saved Kite session because Kite API is unavailable; preserving session"
+            )
             try:
                 live_market_data.start()
             except Exception:
@@ -110,7 +112,9 @@ async def _restore_kite_session() -> None:
         except KiteAuthenticationError:
             logger.info("Configured Kite access token was rejected; login is required")
         except KiteProviderError:
-            logger.warning("Could not validate configured Kite access token because Kite API is unavailable; preserving session")
+            logger.warning(
+                "Could not validate configured Kite access token because Kite API is unavailable; preserving session"
+            )
             configure_active_kite_session(settings.kite_access_token)
             try:
                 live_market_data.start()
