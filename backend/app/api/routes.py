@@ -9,11 +9,11 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.config import get_settings
 from app.db.session import get_engine
-from app.providers.kite.client import KiteProvider, KiteProviderError
-from app.providers.kite.registry import configure_active_kite_session, get_kite_provider
+from app.providers.kite.client import KiteAuthenticationError, KiteProvider, KiteProviderError
+from app.providers.kite.registry import clear_active_kite_session, configure_active_kite_session, get_active_kite_token, get_kite_provider
 from app.services import live_market_data
 from app.services.instrument_master import import_instrument_master
-from app.services.kite_sessions import KiteSessionStoreError, save_session
+from app.services.kite_sessions import KiteSessionStoreError, reset_sessions, save_session
 from app.services.live_quotes import live_quotes
 from app.services.option_chain import get_option_chain
 
@@ -244,16 +244,56 @@ def exchange_session(payload: SessionExchangeRequest) -> dict[str, str]:
 
 
 @router.get("/kite/session/status", tags=["kite"])
-def kite_session_status() -> dict[str, str | bool]:
-    provider = get_kite_provider()
+def kite_session_status() -> dict[str, Any]:
+    """Report authentication separately from transient Kite API availability."""
+    if not get_active_kite_token():
+        return {
+            "authenticated": False,
+            "session_configured": False,
+            "api_available": False,
+            "status": "login_required",
+        }
     try:
-        profile = provider.profile()
+        profile = get_kite_provider().profile()
+    except KiteAuthenticationError:
+        return {
+            "authenticated": False,
+            "session_configured": False,
+            "api_available": True,
+            "status": "login_required",
+        }
     except KiteProviderError:
-        return {"authenticated": False, "status": "login_required"}
+        return {
+            "authenticated": None,
+            "session_configured": True,
+            "api_available": False,
+            "status": "api_unavailable",
+        }
     return {
         "authenticated": True,
+        "session_configured": True,
+        "api_available": True,
         "status": "authenticated",
         "user_id": str(profile.get("user_id", "")),
+    }
+
+
+@router.post("/kite/session/reset", tags=["kite"])
+def reset_kite_session() -> dict[str, Any]:
+    """Clear the local Kite session and close its socket without touching broker orders."""
+    # Keep desired subscriptions so the next successful login can restore them.
+    live_market_data.invalidate_session()
+    clear_active_kite_session()
+    live_quotes.clear()
+    try:
+        reset_sessions()
+    except KiteSessionStoreError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    return {
+        "status": "reset",
+        "authenticated": False,
+        "message": "Local Kite session cleared. Existing broker orders were not changed.",
+        "market_data": live_market_data.status(),
     }
 
 
