@@ -48,8 +48,12 @@ def test_session_status_reports_expired_session(monkeypatch):
 
 def test_reset_clears_local_session_and_preserves_desired_subscription_registry(monkeypatch):
     calls = []
-    monkeypatch.setattr(routes.live_market_data, "invalidate_session", lambda: calls.append("invalidate_socket"))
-    monkeypatch.setattr(routes, "clear_active_kite_session", lambda: calls.append("clear_memory_token"))
+    monkeypatch.setattr(
+        routes.live_market_data, "invalidate_session", lambda: calls.append("invalidate_socket")
+    )
+    monkeypatch.setattr(
+        routes, "clear_active_kite_session", lambda: calls.append("clear_memory_token")
+    )
     monkeypatch.setattr(routes.live_quotes, "clear", lambda: calls.append("clear_quote_cache"))
     monkeypatch.setattr(routes, "reset_sessions", lambda: calls.append("expire_persisted_session"))
 
