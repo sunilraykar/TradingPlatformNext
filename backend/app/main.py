@@ -22,7 +22,7 @@ from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.apiplatform.registry import configure_apiplatform, shutdown_apiplatform
 from app.providers.autotrender.auth import AutoTrenderAuth
-from app.providers.kite.client import KiteProvider, KiteProviderError
+from app.providers.kite.client import KiteAuthenticationError, KiteProvider, KiteProviderError
 from app.providers.kite.registry import (
     clear_active_kite_session,
     configure_active_kite_session,
@@ -81,13 +81,22 @@ async def _restore_kite_session() -> None:
             except Exception:
                 logger.exception("Kite session restored but WebSocket startup failed")
             return
-        except KiteProviderError:
-            logger.info("Saved Kite session is no longer valid; login is required")
+        except KiteAuthenticationError:
+            logger.info("Saved Kite session was rejected by Kite; login is required")
             try:
                 reset_sessions()
             except KiteSessionStoreError:
                 logger.exception("Could not mark the invalid saved Kite session as expired")
             clear_active_kite_session()
+        except KiteProviderError:
+            # A gateway/network failure does not prove that the saved token is invalid.
+            # Preserve it so a transient Kite outage cannot silently log the user out.
+            logger.warning("Could not validate saved Kite session because Kite API is unavailable; preserving session")
+            try:
+                live_market_data.start()
+            except Exception:
+                logger.exception("Saved Kite session retained but WebSocket startup failed")
+            return
     elif settings.kite_access_token:
         try:
             KiteProvider(settings.kite_api_key, settings.kite_access_token).profile()
@@ -98,8 +107,16 @@ async def _restore_kite_session() -> None:
             except Exception:
                 logger.exception("Configured Kite access token is valid but WebSocket startup failed")
             return
+        except KiteAuthenticationError:
+            logger.info("Configured Kite access token was rejected; login is required")
         except KiteProviderError:
-            logger.info("Configured Kite access token is no longer valid")
+            logger.warning("Could not validate configured Kite access token because Kite API is unavailable; preserving session")
+            configure_active_kite_session(settings.kite_access_token)
+            try:
+                live_market_data.start()
+            except Exception:
+                logger.exception("Configured Kite session retained but WebSocket startup failed")
+            return
 
     if settings.kite_auto_login_enabled and settings.app_env.lower() == "development":
         login_url = KiteProvider.login_url(settings.kite_api_key)
