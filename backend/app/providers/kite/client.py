@@ -14,6 +14,10 @@ class KiteProviderError(RuntimeError):
     """Provider-facing error with a safe, actionable message."""
 
 
+class KiteAuthenticationError(KiteProviderError):
+    """Kite explicitly rejected the active session credentials."""
+
+
 class KiteOrderRejectedError(KiteProviderError):
     """A definitive broker-side order rejection; submitting it again is unsafe."""
 
@@ -43,7 +47,8 @@ def _provider_error(operation: str, exc: Exception) -> KiteProviderError:
         invalidate_session()
         clear_active_kite_session()
     detail = str(exc).strip() or exc.__class__.__name__
-    return KiteProviderError("Kite " + operation.replace("_", " ") + " request failed: " + detail)
+    error_type = KiteAuthenticationError if _is_authentication_error(exc) else KiteProviderError
+    return error_type("Kite " + operation.replace("_", " ") + " request failed: " + detail)
 
 
 class KiteProvider:
