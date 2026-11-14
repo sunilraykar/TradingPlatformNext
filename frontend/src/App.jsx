@@ -1741,6 +1741,8 @@ export default function App() {
   const [holdingsHistory, setHoldingsHistory] = useState({ history: [], snapshot_count: 0, message: 'Loading portfolio history…' });
   const [holdingsHistoryLoading, setHoldingsHistoryLoading] = useState(false);
   const [websocketStatus, setWebsocketStatus] = useState(null);
+  const [kiteSessionStatus, setKiteSessionStatus] = useState(null);
+  const [kiteResetting, setKiteResetting] = useState(false);
   const kiteAuthInvalidRef = useRef(false);
   const reconnectPollingRef = useRef(null);
   const [kiteReconnecting, setKiteReconnecting] = useState(false);
@@ -1883,6 +1885,22 @@ export default function App() {
     return () => window.clearInterval(timer);
   }, [refresh]);
 
+  const refreshKiteSessionStatus = useCallback(async () => {
+    try {
+      const status = await api('/kite/session/status');
+      setKiteSessionStatus(status);
+      if (status.status === 'login_required') kiteAuthInvalidRef.current = true;
+      else if (status.authenticated === true) kiteAuthInvalidRef.current = false;
+    } catch (error) {
+      setKiteSessionStatus({ authenticated: null, status: 'status_unavailable', error: error.message });
+    }
+  }, []);
+  useEffect(() => {
+    refreshKiteSessionStatus();
+    const timer = window.setInterval(refreshKiteSessionStatus, 5000);
+    return () => window.clearInterval(timer);
+  }, [refreshKiteSessionStatus]);
+
   const refreshWebsocketStatus = useCallback(async () => {
     try {
       const status = await api('/kite/market-data/status');
@@ -1989,6 +2007,7 @@ export default function App() {
             reconnectPollingRef.current = null;
             loginWindow.close();
             kiteAuthInvalidRef.current = false;
+            setKiteSessionStatus(session);
             setKiteReconnecting(false);
             setKiteError('');
             await refreshWebsocketStatus();
@@ -2014,6 +2033,26 @@ export default function App() {
       setKiteError(error.message || 'Unable to start Kite login.');
     }
   }, [kiteReconnecting, loadKiteTab, refreshWebsocketStatus]);
+
+  const resetKiteSession = useCallback(async () => {
+    if (kiteResetting) return;
+    const confirmed = window.confirm('Reset the local Kite connection? This clears the saved local session and disconnects its WebSocket. Existing broker orders are not changed.');
+    if (!confirmed) return;
+    setKiteResetting(true);
+    setKiteError('');
+    try {
+      const result = await api('/kite/session/reset', { method: 'POST' });
+      kiteAuthInvalidRef.current = true;
+      setKiteSessionStatus({ authenticated: false, session_configured: false, api_available: false, status: 'login_required' });
+      setWebsocketStatus({ connected: false, state: 'login_required' });
+      setKiteData(null);
+      setKiteError(result.message || 'Kite session reset. Click Login with Kite to authenticate again.');
+    } catch (error) {
+      setKiteError(error.message || 'Unable to reset the Kite session.');
+    } finally {
+      setKiteResetting(false);
+    }
+  }, [kiteResetting]);
 
   useEffect(() => () => {
     if (reconnectPollingRef.current) window.clearInterval(reconnectPollingRef.current);
@@ -2173,7 +2212,11 @@ export default function App() {
             <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')} title="Use light theme">☀ Light</button>
             <button type="button" className={theme === 'dark' ? 'active' : ''} aria-pressed={theme === 'dark'} onClick={() => setTheme('dark')} title="Use dark theme">☾ Dark</button>
           </div>
-          {applicationTab === 'kite' && <button type="button" className={`status-pill kite-reconnect-button ${websocketStatus?.connected ? 'online' : 'offline'}`} onClick={reconnectKite} disabled={kiteReconnecting || websocketStatus?.connected}><i />{kiteReconnecting ? 'Waiting for Kite login…' : websocketStatus?.connected ? 'Kite Connected' : 'Reconnect Kite'}</button>}
+          {applicationTab === 'kite' && <>
+            <span className={`status-pill ${kiteSessionStatus?.authenticated === true ? 'online' : 'offline'}`} title={kiteSessionStatus?.status || 'Checking Kite session'}><i />{kiteSessionStatus?.authenticated === true ? 'Kite Connected' : kiteSessionStatus?.status === 'login_required' ? 'Kite Login Required' : kiteSessionStatus?.status === 'api_unavailable' ? 'Kite API Unavailable' : 'Kite Status Checking'}</span>
+            <button type="button" className="status-pill kite-reconnect-button offline" onClick={resetKiteSession} disabled={kiteResetting || kiteReconnecting}>{kiteResetting ? 'Resetting…' : 'Reset Kite'}</button>
+            <button type="button" className="status-pill kite-reconnect-button" onClick={reconnectKite} disabled={kiteReconnecting || kiteResetting || kiteSessionStatus?.authenticated === true || kiteSessionStatus?.session_configured === true}>{kiteReconnecting ? 'Waiting for Kite login…' : 'Login with Kite'}</button>
+          </>}
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
           <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={websocketStatus?.reason || ('Kite WebSocket: ' + (websocketStatus?.state || 'checking'))}><i />WS {websocketStatus?.connected ? 'Connected' : websocketStatus?.state === 'login_required' ? 'Disconnected' : (websocketStatus?.state || 'Checking')}</span>
         </div>
@@ -2250,7 +2293,7 @@ export default function App() {
             <div>{kiteTab === 'Dashboard' ? <h2>Dashboard</h2> : kiteTab === 'Holdings' ? <div className="holdings-title-line"><h2>Holdings</h2><span>{(kiteData?.rows || []).length} holdings</span></div> : <><div className="eyebrow">KITE TRADING / {kiteTab.toUpperCase()}</div><h2>{kiteData?.title || kiteTab}</h2><div className="kite-data-subtitle">{kiteData?.subtitle || 'Fetching data from Kite API…'}</div></>}</div>
             {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && <button className="button secondary" onClick={loadKiteTab} disabled={kiteLoading}>{kiteLoading ? 'Loading…' : '↻ Refresh data'}</button>}
           </div>
-          {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and backend connection.</small>{websocketStatus?.state === 'login_required' && <button type="button" className="button primary" onClick={reconnectKite} disabled={kiteReconnecting}>{kiteReconnecting ? 'Waiting for Kite login…' : 'Reconnect Kite'}</button>}</div>}
+          {kiteError && <div className="kite-error"><strong>Unable to load Kite data</strong><span>{kiteError}</span><small>Check Kite login and backend connection.</small>{kiteSessionStatus?.status === 'login_required' && <button type="button" className="button primary" onClick={reconnectKite} disabled={kiteReconnecting}>{kiteReconnecting ? 'Waiting for Kite login…' : 'Login with Kite'}</button>}</div>}
           {kiteTab === 'Dashboard' && kiteLoading && !kiteData && <div className="kite-data-empty">Loading account summary and margins…</div>}
           {kiteTab === 'Dashboard' && kiteData?.dashboard && (() => {
             const dashboard = kiteData.dashboard;
