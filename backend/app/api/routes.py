@@ -10,7 +10,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.config import get_settings
 from app.db.session import get_engine
 from app.providers.kite.client import KiteAuthenticationError, KiteProvider, KiteProviderError
-from app.providers.kite.registry import clear_active_kite_session, configure_active_kite_session, get_active_kite_token, get_kite_provider
+from app.providers.kite.registry import (
+    clear_active_kite_session,
+    configure_active_kite_session,
+    get_active_kite_token,
+    get_kite_provider,
+)
 from app.services import live_market_data
 from app.services.instrument_master import import_instrument_master
 from app.services.kite_sessions import KiteSessionStoreError, reset_sessions, save_session
