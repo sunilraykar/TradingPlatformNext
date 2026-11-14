@@ -1890,7 +1890,7 @@ export default function App() {
       const status = await api('/kite/session/status');
       setKiteSessionStatus(status);
       if (status.status === 'login_required') kiteAuthInvalidRef.current = true;
-      else if (status.authenticated === true) kiteAuthInvalidRef.current = false;
+      else if (status.session_configured === true || status.authenticated === true) kiteAuthInvalidRef.current = false;
     } catch (error) {
       setKiteSessionStatus({ authenticated: null, status: 'status_unavailable', error: error.message });
     }
@@ -2016,7 +2016,9 @@ export default function App() {
             window.clearInterval(reconnectPollingRef.current);
             reconnectPollingRef.current = null;
             setKiteReconnecting(false);
-            setKiteError('Kite login was not completed. Click Reconnect Kite to try again.');
+            setKiteError(session.status === 'api_unavailable'
+              ? 'Kite login could not be verified because the Kite API is temporarily unavailable. Your local session has not been reset.'
+              : 'Kite login was not completed. Click Login with Kite to try again.');
           }
         } catch (error) {
           if (attempts >= 90) {
