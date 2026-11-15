@@ -119,7 +119,7 @@ def test_live_creation_is_blocked(monkeypatch):
         })
         assert False, "Live creation must be blocked"
     except ValueError as exc:
-        assert "read-only" in str(exc)
+        assert "confirmed Kite entry fill" in str(exc)
 
 
 def test_lifecycle_update_increments_version_and_persists(monkeypatch):
