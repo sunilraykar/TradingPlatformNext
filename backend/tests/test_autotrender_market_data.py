@@ -1,13 +1,29 @@
 from __future__ import annotations
 
+from datetime import datetime as RealDateTime
 from unittest.mock import MagicMock
+
+import pytest
+from app.api import autotrender_market_data as market_data
 
 from fastapi.testclient import TestClient
 
 from app.main import app
 
 
-def test_fin_nifty_intraday_uses_supported_upstream_category() -> None:
+def _set_market_data_time(monkeypatch, hour=10, minute=0):
+    class FixedDateTime(RealDateTime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 11, 15, hour, minute, tzinfo=tz)
+
+    monkeypatch.setattr(market_data, "datetime", FixedDateTime)
+
+
+
+
+def test_fin_nifty_intraday_uses_supported_upstream_category(monkeypatch) -> None:
+    _set_market_data_time(monkeypatch)
     auth = MagicMock()
     auth.get.return_value.status_code = 200
     auth.get.return_value.headers = {"Content-Type": "application/json"}
@@ -29,7 +45,8 @@ def test_fin_nifty_intraday_uses_supported_upstream_category() -> None:
     )
 
 
-def test_sensex_oi_graph_uses_supported_upstream_category() -> None:
+def test_sensex_oi_graph_uses_supported_upstream_category(monkeypatch) -> None:
+    _set_market_data_time(monkeypatch)
     auth = MagicMock()
     auth.get.return_value.status_code = 200
     auth.get.return_value.headers = {"Content-Type": "application/json"}
@@ -51,10 +68,12 @@ def test_sensex_oi_graph_uses_supported_upstream_category() -> None:
     )
 
 
-def test_unsupported_autotrender_index_is_rejected() -> None:
+def test_unsupported_autotrender_index_is_rejected(monkeypatch) -> None:
+    _set_market_data_time(monkeypatch)
     response = TestClient(app).get("/api/v1/autotrender/indices/UNKNOWN/intraday")
     assert response.status_code == 404
-def test_banknifty_intraday_uses_supported_upstream_category() -> None:
+def test_banknifty_intraday_uses_supported_upstream_category(monkeypatch) -> None:
+    _set_market_data_time(monkeypatch)
     auth = MagicMock()
     auth.get.return_value.status_code = 200
     auth.get.return_value.headers = {"Content-Type": "application/json"}
@@ -72,7 +91,8 @@ def test_banknifty_intraday_uses_supported_upstream_category() -> None:
     )
 
 
-def test_nifty_oi_graph_uses_supported_upstream_category() -> None:
+def test_nifty_oi_graph_uses_supported_upstream_category(monkeypatch) -> None:
+    _set_market_data_time(monkeypatch)
     auth = MagicMock()
     auth.get.return_value.status_code = 200
     auth.get.return_value.headers = {"Content-Type": "application/json"}
@@ -89,3 +109,13 @@ def test_nifty_oi_graph_uses_supported_upstream_category() -> None:
         params={"category": "Nifty"},
     )
 
+
+
+@pytest.mark.parametrize("path", [
+    "/api/v1/autotrender/indices/NIFTY/intraday",
+    "/api/v1/autotrender/indices/NIFTY/oi-graph",
+])
+def test_market_data_is_blocked_before_930_ist(monkeypatch, path):
+    _set_market_data_time(monkeypatch, hour=9, minute=29)
+    response = TestClient(app).get(path)
+    assert response.status_code == 425
