@@ -599,8 +599,8 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                         state = "kite_order_submitted"
                         reason = "kite_order_" + str(trade.get("status") or "PENDING").lower()
                     else:
-                        state = "trade_created"
-                        reason = "trade_created"
+                        state = "paper_trade_created"
+                        reason = "paper_trade_created"
                     trade_id = trade.get("trade_id")
                 except (ValueError, RuntimeError, KiteProviderError, SQLAlchemyError) as exc:
                     state = "entry_blocked"
