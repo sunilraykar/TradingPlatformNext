@@ -144,6 +144,31 @@ def refresh_instrument_master() -> dict[str, object]:
         }
         _set_status(**result)
         logger.info("Kite instrument master refreshed: %s", result)
+
+        # The instrument master can be incomplete when the backend first starts
+        # (for example, before the scheduled 08:00 IST refresh). Re-resolve and
+        # register the permanent AutoTrender index feed after every successful
+        # replacement so newly available index tokens begin receiving ticks
+        # without requiring an application restart or an Option Chain selection.
+        try:
+            from app.services.live_market_data import subscribe_autotrender_indices
+
+            index_subscriptions = subscribe_autotrender_indices()
+            if index_subscriptions.get("missing_symbols"):
+                logger.warning(
+                    "AutoTrender index subscriptions remain incomplete after instrument refresh: %s",
+                    index_subscriptions["missing_symbols"],
+                )
+            else:
+                logger.info(
+                    "AutoTrender index subscriptions refreshed: %s",
+                    index_subscriptions.get("resolved_symbols", []),
+                )
+        except Exception:
+            # Instrument-master persistence succeeded; a subscription issue must
+            # not report the database refresh itself as failed.
+            logger.exception("Could not refresh AutoTrender index subscriptions after instrument-master update")
+
         return result
     except Exception as exc:
         _set_status(state="Failed", last_error=str(exc))
