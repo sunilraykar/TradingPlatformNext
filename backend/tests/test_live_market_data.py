@@ -134,6 +134,9 @@ def test_autotrender_indices_are_registered_as_default_subscriptions(monkeypatch
     assert result["registered"] == 6
     assert result["missing_symbols"] == []
     assert live_market_data.status()["subscribed_tokens"] == [101, 102, 103, 104, 105, 106]
+    assert live_market_data._subscription_groups["autotrender_indices"] == (
+        {101, 102, 103, 104, 105, 106}, "quote"
+    )
     assert all(item["mode"] == "quote" for item in live_market_data.status()["subscriptions"])
 
 
@@ -193,3 +196,29 @@ def test_group_unsubscribe_preserves_tokens_used_by_other_consumers():
 
     assert live_market_data.status()["subscribed_tokens"] == [100, 200, 300]
     assert next(item for item in live_market_data.status()["subscriptions"] if item["instrument_token"] == 200)["mode"] == "quote"
+
+
+def test_option_chain_switch_preserves_permanent_autotrender_indices():
+    # Permanent dashboard indices and the selected Option Chain underlying
+    # are independent consumers of the shared Kite ticker.
+    live_market_data._subscription_groups["autotrender_indices"] = (
+        {101, 102, 103, 104}, "quote"
+    )
+    live_market_data._subscription_groups["apiplatform_option_chain_underlying"] = (
+        {101, 201}, "quote"
+    )
+    live_market_data._subscriptions.update(live_market_data._effective_subscriptions())
+
+    live_market_data.replace_subscription_group(
+        "apiplatform_option_chain_underlying", [102, 202], mode="quote"
+    )
+
+    assert live_market_data.status()["subscribed_tokens"] == [
+        101, 102, 103, 104, 202
+    ]
+    live_market_data.replace_subscription_group(
+        "apiplatform_option_chain_underlying", [103, 203], mode="quote"
+    )
+    assert live_market_data.status()["subscribed_tokens"] == [
+        101, 102, 103, 104, 203
+    ]
