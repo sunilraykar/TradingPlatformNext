@@ -264,8 +264,10 @@ def subscribe_autotrender_indices() -> dict[str, Any]:
         }
 
     tokens = [int(row["instrument_token"]) for row in rows]
-    if tokens:
-        subscribe(tokens, mode="quote")
+    # Keep the dashboard's index feed in its own permanent subscription group.
+    # Option Chain replaces only its own groups when the selected symbol changes.
+    # A dedicated owner guarantees those replacements cannot remove dashboard indices.
+    replace_subscription_group("autotrender_indices", tokens, mode="quote")
     resolved = {(row["exchange"], row["tradingsymbol"]) for row in rows}
     missing = [symbol for exchange, symbol in desired if (exchange, symbol) not in resolved]
     logger.info(
