@@ -2,6 +2,28 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const WS_API = API ? API.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:') : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
+
+// Generate an RFC 4122 version 4 UUID in both secure and HTTP browser contexts.
+// crypto.getRandomValues is available in insecure contexts even when randomUUID is not.
+const createRequestKey = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0'));
+    return [
+      hex.slice(0, 4).join(''),
+      hex.slice(4, 6).join(''),
+      hex.slice(6, 8).join(''),
+      hex.slice(8, 10).join(''),
+      hex.slice(10, 16).join(''),
+    ].join('-');
+  }
+  throw new Error('A cryptographically secure random number generator is unavailable.');
+};
 async function request(path, options = {}) {
   const response = await fetch(`${API}/api/v1${path}`, {
     ...options, headers: { Accept: 'application/json', ...(options.headers || {}) },
@@ -110,7 +132,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   const [loadingInstruments, setLoadingInstruments] = useState(false);
   const [instrumentSearchError, setInstrumentSearchError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
+  const [requestKey, setRequestKey] = useState(() => createRequestKey());
   const [form, setForm] = useState({ instrument_symbol: '', exchange: 'NFO', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
 
   useEffect(() => {
@@ -282,7 +304,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       for (const key of ['entry_price', 'stop_loss', 'target']) payload[key] = payload[key] === '' ? null : Number(payload[key]);
       const result = await request('/trades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       setShowCreate(false);
-      setRequestKey(crypto.randomUUID());
+      setRequestKey(createRequestKey());
       setForm({ instrument_symbol: '', exchange: 'NFO', underlying: 'NIFTY', direction: 'BUY', quantity: '1', entry_price: '', stop_loss: '', target: '', strategy: 'Manual Paper Trade', notes: '' });
       await refresh();
       if (result.trade?.persistence_state === 'DEGRADED') setError('Trade is not durably persisted; check database connectivity.');
