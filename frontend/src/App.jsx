@@ -2225,8 +2225,8 @@ export default function App({ user = null, onSignOut }) {
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
         {user?.role !== 'VIEWER' && <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>}
         {user?.role === 'SUPER_ADMIN' && <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>}
-        {user && <span className="app-user-identity" title={user.email}>{user.email} · {String(user.role || '').replaceAll('_', ' ')}</span>}
       </nav>
+      {user && <span className="app-user-identity" title={user.email}>{user.email} · {String(user.role || '').replaceAll('_', ' ')}</span>}
         <div className="topbar-right">
           <div className="theme-switch" role="group" aria-label="Appearance">
             <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')} title="Use light theme">☀ Light</button>
