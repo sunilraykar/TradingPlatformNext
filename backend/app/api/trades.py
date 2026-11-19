@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime, time
 from typing import Any, Literal
@@ -336,8 +337,14 @@ async def trade_terminal_stream_socket(websocket: WebSocket) -> None:
             "terminal": trade_terminal.status(),
         })
         while True:
-            # Keep the connection alive; client messages are not commands.
-            await websocket.receive_text()
+            # Revalidate periodically so revocation, disablement, and expiry take effect
+            # for already-open browser sockets as well as new HTTP requests.
+            try:
+                await asyncio.wait_for(websocket.receive_text(), timeout=60)
+            except TimeoutError:
+                if get_settings().app_env.lower() != "test" and not get_websocket_user(websocket.cookies):
+                    await websocket.close(code=4401, reason="Application session expired or revoked")
+                    return
     except WebSocketDisconnect:
         trade_terminal_stream.disconnect(websocket)
     except Exception:  # noqa: BLE001 - disconnect on any socket/send failure
