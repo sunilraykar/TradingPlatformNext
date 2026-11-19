@@ -174,7 +174,7 @@ export default function AuthGate() {
         {(mode === 'login' || mode === 'bootstrap' || mode === 'forgot') && <label>Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>}
         {(mode === 'login' || mode === 'bootstrap' || mode === 'invite' || mode === 'reset') && <label>{mode === 'login' ? 'Password' : 'Password (minimum 12 characters)'}<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'login' ? 1 : 12} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>}
         {mode === 'login' && bootstrapRequired && !bootstrapConfigured && <div className="auth-error" role="alert">Initial setup is not configured. Set INITIAL_SUPER_ADMIN_EMAIL in the backend environment first.</div>}
-        {error && <div className="auth-error" role="alert">{error}</div>
+        {error && <div className="auth-error" role="alert">{error}</div>}
         {message && <div className="auth-message" role="status">{message}</div>}
         <button className="auth-primary" type="submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'bootstrap' ? 'Create administrator' : mode === 'forgot' ? 'Send reset link' : mode === 'invite' ? 'Activate account' : 'Save new password'}</button>
         <div className="auth-links">
