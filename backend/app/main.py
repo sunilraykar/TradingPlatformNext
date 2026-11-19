@@ -264,7 +264,12 @@ async def application_authentication(request: Request, call_next):
     if not user:
         return JSONResponse(status_code=401, content={"detail": "Authentication required"})
     if user["role"] == "VIEWER" and request.method not in {"GET", "HEAD"}:
-        return JSONResponse(status_code=403, content={"detail": "Viewer accounts have read-only access"})
+        viewer_session_action = (
+            path == "/api/v1/auth/logout"
+            or (request.method == "DELETE" and path.startswith("/api/v1/auth/sessions/"))
+        )
+        if not viewer_session_action:
+            return JSONResponse(status_code=403, content={"detail": "Viewer accounts have read-only access"})
     request.state.application_user = user
     return await call_next(request)
 
