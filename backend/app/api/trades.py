@@ -7,9 +7,9 @@ from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconn
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
-from app.db.session import get_engine
 from app.auth.security import get_websocket_user
 from app.core.config import get_settings
+from app.db.session import get_engine
 from app.providers.kite.client import KiteOrderRejectedError, KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import live_market_data, trade_terminal, trade_terminal_stream
