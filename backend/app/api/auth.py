@@ -184,9 +184,12 @@ def resend_verification(body: EmailRequest) -> dict:
         ).first()
         if row:
             token = _make_action_token(connection, str(row[0]), "VERIFY_EMAIL", timedelta(hours=24))
+    delivery = {}
     if token:
-        _send_action_email(email, "Verify your TradingPlatform account", _action_url("verify", token), "verify your email")
-    return {"requested": True}
+        delivery = _send_action_email(
+            email, "Verify your TradingPlatform account", _action_url("verify", token), "verify your email"
+        )
+    return {"requested": True, **delivery}
 
 
 @router.post("/verify-email")
