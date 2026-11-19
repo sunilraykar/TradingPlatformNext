@@ -5,6 +5,7 @@ import './AuthGate.css';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const AUTH = `${API}/api/v1/auth`;
+let csrfToken = '';
 
 function readCookie(name) {
   const prefix = `${name}=`;
@@ -18,16 +19,24 @@ if (typeof window !== 'undefined' && !window.__tradingPlatformFetchWrapped) {
   const originalFetch = window.fetch.bind(window);
   window.fetch = (input, init = {}) => {
     const rawUrl = typeof input === 'string' ? input : input.url;
-    let isApi = false;
-    try { isApi = new URL(rawUrl, window.location.origin).pathname.startsWith('/api/v1/'); } catch { /* non-URL request */ }
-    if (!isApi) return originalFetch(input, init);
+    let requestUrl;
+    try { requestUrl = new URL(rawUrl, window.location.origin); } catch { return originalFetch(input, init); }
+    if (!requestUrl.pathname.startsWith('/api/v1/')) return originalFetch(input, init);
     const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
     const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-      const csrf = readCookie('tp_csrf');
+      const csrf = csrfToken || readCookie('tp_csrf');
       if (csrf) headers.set('X-CSRF-Token', csrf);
     }
-    return originalFetch(input, { ...init, headers, credentials: 'include' });
+    return originalFetch(input, { ...init, headers, credentials: 'include' }).then(async (response) => {
+      if (response.ok && requestUrl.pathname.endsWith('/auth/csrf') || response.ok && requestUrl.pathname.endsWith('/auth/login')) {
+        try {
+          const payload = await response.clone().json();
+          if (payload.csrf_token) csrfToken = payload.csrf_token;
+        } catch { /* keep the current in-memory token */ }
+      }
+      return response;
+    });
   };
   window.__tradingPlatformFetchWrapped = true;
 }
