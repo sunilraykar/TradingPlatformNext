@@ -4,14 +4,14 @@ import webbrowser
 from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.account import router as account_router
-from app.api.auth import router as auth_router
+from app.api.apiplatform_auth import router as apiplatform_auth_router
 from app.api.apiplatform_option_chain import router as apiplatform_option_chain_router
 from app.api.apiplatform_swing import router as apiplatform_swing_router
-from app.api.apiplatform_auth import router as apiplatform_auth_router
+from app.api.auth import router as auth_router
 from app.api.autotrender_auth import router as autotrender_auth_router
 from app.api.autotrender_market_data import router as autotrender_market_data_router
 from app.api.kite_instruments import router as kite_instruments_router
@@ -20,8 +20,8 @@ from app.api.routes import router
 from app.api.subscription_test import router as subscription_test_router
 from app.api.telegram import router as telegram_router
 from app.api.trades import router as trades_router
-from app.core.config import get_settings
 from app.auth.security import get_session_user, verify_csrf_token
+from app.core.config import get_settings
 from app.core.logging import configure_logging
 from app.providers.apiplatform.registry import configure_apiplatform, shutdown_apiplatform
 from app.providers.autotrender.auth import AutoTrenderAuth
