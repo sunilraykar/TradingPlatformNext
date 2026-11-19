@@ -3,10 +3,12 @@ import logging
 import webbrowser
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.account import router as account_router
+from app.api.auth import router as auth_router
 from app.api.apiplatform_option_chain import router as apiplatform_option_chain_router
 from app.api.apiplatform_swing import router as apiplatform_swing_router
 from app.api.apiplatform_auth import router as apiplatform_auth_router
@@ -19,6 +21,7 @@ from app.api.subscription_test import router as subscription_test_router
 from app.api.telegram import router as telegram_router
 from app.api.trades import router as trades_router
 from app.core.config import get_settings
+from app.auth.security import get_session_user, verify_csrf_token
 from app.core.logging import configure_logging
 from app.providers.apiplatform.registry import configure_apiplatform, shutdown_apiplatform
 from app.providers.autotrender.auth import AutoTrenderAuth
@@ -191,9 +194,10 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "OPTIONS"],
-    allow_headers=["Accept", "Content-Type", "Authorization"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
+    allow_headers=["Accept", "Content-Type", "Authorization", "X-CSRF-Token"],
 )
+app.include_router(auth_router, prefix="/api/v1")
 app.include_router(router, prefix="/api/v1")
 app.include_router(account_router, prefix="/api/v1")
 app.include_router(autotrender_auth_router, prefix="/api/v1")
@@ -206,6 +210,62 @@ app.include_router(trades_router, prefix="/api/v1")
 app.include_router(telegram_router, prefix="/api/v1")
 app.include_router(notifications_router, prefix="/api/v1")
 app.include_router(kite_instruments_router, prefix="/api/v1")
+
+
+PUBLIC_AUTH_PATHS = {
+    "/api/v1/auth/csrf",
+    "/api/v1/auth/bootstrap/status",
+    "/api/v1/auth/bootstrap",
+    "/api/v1/auth/verify-email",
+    "/api/v1/auth/invitations/accept",
+    "/api/v1/auth/password/forgot",
+    "/api/v1/auth/password/reset",
+    "/api/v1/auth/login",
+}
+
+
+@app.middleware("http")
+async def application_authentication(request: Request, call_next):
+    settings = get_settings()
+    path = request.url.path
+    if settings.app_env.lower() == "test" or request.method == "OPTIONS":
+        return await call_next(request)
+    if not path.startswith("/api/v1/"):
+        return await call_next(request)
+
+    allowed_origins = {
+        item.strip().rstrip("/")
+        for item in settings.cors_allowed_origins.split(",")
+        if item.strip()
+    }
+    if settings.app_public_url:
+        allowed_origins.add(settings.app_public_url.rstrip("/"))
+    origin = request.headers.get("origin")
+    if origin and origin.rstrip("/") not in allowed_origins:
+        return JSONResponse(status_code=403, content={"detail": "Request origin is not allowed"})
+
+    if request.method not in {"GET", "HEAD"}:
+        csrf_cookie = request.cookies.get(settings.csrf_cookie_name)
+        csrf_header = request.headers.get("x-csrf-token")
+        if (
+            not csrf_cookie
+            or not csrf_header
+            or csrf_cookie != csrf_header
+            or not verify_csrf_token(csrf_header)
+        ):
+            return JSONResponse(status_code=403, content={"detail": "CSRF validation failed"})
+
+    if path in PUBLIC_AUTH_PATHS or path == "/api/v1/kite/callback":
+        return await call_next(request)
+
+    raw_session = request.cookies.get(settings.session_cookie_name)
+    user = get_session_user(raw_session)
+    if not user:
+        return JSONResponse(status_code=401, content={"detail": "Authentication required"})
+    if user["role"] == "VIEWER" and request.method not in {"GET", "HEAD"}:
+        return JSONResponse(status_code=403, content={"detail": "Viewer accounts have read-only access"})
+    request.state.application_user = user
+    return await call_next(request)
 
 
 @app.get("/health", tags=["health"])
