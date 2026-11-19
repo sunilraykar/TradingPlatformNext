@@ -6,7 +6,7 @@ from email.message import EmailMessage
 from typing import Literal
 
 from argon2 import PasswordHasher
-from argon2.exceptions import InvalidHashError, VerifyMismatchError
+from argon2.exceptions import VerificationError
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import text
@@ -241,7 +241,7 @@ def login(body: Credentials, request: Request, response: Response) -> dict:
             if row and row["status"] == "ACTIVE" and row["password_hash"]:
                 try:
                     valid = password_hasher.verify(row["password_hash"], body.password)
-                except (VerifyMismatchError, InvalidHashError):
+                except VerificationError:
                     valid = False
             if not valid:
                 failures = 1
