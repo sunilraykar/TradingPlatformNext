@@ -159,7 +159,6 @@ def bootstrap_admin(body: BootstrapRequest, request: Request, response: Response
             count = connection.execute(text("SELECT COUNT(*) FROM app_users")).scalar_one()
             if int(count):
                 raise HTTPException(status_code=409, detail="Initial administrator is already configured")
-            token = _make_action_token(connection, user_id, "VERIFY_EMAIL", timedelta(hours=24))
             connection.execute(
                 text("""
                     INSERT INTO app_users (user_id, email, password_hash, role, status)
@@ -167,12 +166,28 @@ def bootstrap_admin(body: BootstrapRequest, request: Request, response: Response
                 """),
                 {"user_id": user_id, "email": expected_email, "password_hash": password_hasher.hash(body.password)},
             )
+            token = _make_action_token(connection, user_id, "VERIFY_EMAIL", timedelta(hours=24))
             raw_url = _action_url("verify", token)
-            raw_session = None
         finally:
             connection.execute(text("SELECT RELEASE_LOCK('tradingplatform_initial_admin')"))
     delivery = _send_action_email(expected_email, "Verify your TradingPlatform account", raw_url, "verify your email")
     return {"created": True, "verification": delivery}
+
+
+@router.post("/verification/resend")
+def resend_verification(body: EmailRequest) -> dict:
+    email = body.email.lower()
+    token = None
+    with get_engine().begin() as connection:
+        row = connection.execute(
+            text("SELECT user_id FROM app_users WHERE email = :email AND status = 'PENDING_VERIFICATION' LIMIT 1"),
+            {"email": email},
+        ).first()
+        if row:
+            token = _make_action_token(connection, str(row[0]), "VERIFY_EMAIL", timedelta(hours=24))
+    if token:
+        _send_action_email(email, "Verify your TradingPlatform account", _action_url("verify", token), "verify your email")
+    return {"requested": True}
 
 
 @router.post("/verify-email")
@@ -202,46 +217,55 @@ def verify_email(body: TokenRequest) -> dict:
 
 @router.post("/login")
 def login(body: Credentials, request: Request, response: Response) -> dict:
-    settings = get_settings()
     email = body.email.lower()
     identity = hash_token(f"{email}|{request.client.host if request.client else 'unknown'}")
     now = utcnow()
+    raw_token = csrf = None
+    user_row = None
+    failure_status = None
     with get_engine().begin() as connection:
         attempt = connection.execute(
             text("SELECT failed_attempts, window_started_at, locked_until FROM app_auth_login_attempts WHERE identity_hash = :identity"),
             {"identity": identity},
         ).mappings().first()
         if attempt and attempt["locked_until"] and attempt["locked_until"] > now:
-            raise HTTPException(status_code=429, detail="Too many failed attempts. Try again later.")
-        row = connection.execute(
-            text("SELECT user_id, email, password_hash, role, status FROM app_users WHERE email = :email LIMIT 1"),
-            {"email": email},
-        ).mappings().first()
-        valid = False
-        if row and row["status"] == "ACTIVE" and row["password_hash"]:
-            try:
-                valid = password_hasher.verify(row["password_hash"], body.password)
-            except (VerifyMismatchError, InvalidHashError):
-                valid = False
-        if not valid:
-            failures = 1
-            if attempt and now - attempt["window_started_at"] <= timedelta(minutes=15):
-                failures = int(attempt["failed_attempts"]) + 1
-            locked_until = now + timedelta(minutes=15) if failures >= 8 else None
-            connection.execute(
-                text("""
-                    INSERT INTO app_auth_login_attempts (identity_hash, failed_attempts, window_started_at, locked_until)
-                    VALUES (:identity, :failures, :now, :locked)
-                    ON DUPLICATE KEY UPDATE failed_attempts = VALUES(failed_attempts),
-                        window_started_at = VALUES(window_started_at), locked_until = VALUES(locked_until)
-                """),
-                {"identity": identity, "failures": failures, "now": now, "locked": locked_until},
-            )
-            raise HTTPException(status_code=401, detail="Email or password is incorrect, or the account is not active")
-        connection.execute(text("DELETE FROM app_auth_login_attempts WHERE identity_hash = :identity"), {"identity": identity})
-        raw_token, csrf = _create_session(connection, str(row["user_id"]), request)
+            failure_status = 429
+        else:
+            row = connection.execute(
+                text("SELECT user_id, email, password_hash, role, status FROM app_users WHERE email = :email LIMIT 1"),
+                {"email": email},
+            ).mappings().first()
+            valid = False
+            if row and row["status"] == "ACTIVE" and row["password_hash"]:
+                try:
+                    valid = password_hasher.verify(row["password_hash"], body.password)
+                except (VerifyMismatchError, InvalidHashError):
+                    valid = False
+            if not valid:
+                failures = 1
+                if attempt and now - attempt["window_started_at"] <= timedelta(minutes=15):
+                    failures = int(attempt["failed_attempts"]) + 1
+                locked_until = now + timedelta(minutes=15) if failures >= 8 else None
+                connection.execute(
+                    text("""
+                        INSERT INTO app_auth_login_attempts (identity_hash, failed_attempts, window_started_at, locked_until)
+                        VALUES (:identity, :failures, :now, :locked)
+                        ON DUPLICATE KEY UPDATE failed_attempts = VALUES(failed_attempts),
+                            window_started_at = VALUES(window_started_at), locked_until = VALUES(locked_until)
+                    """),
+                    {"identity": identity, "failures": failures, "now": now, "locked": locked_until},
+                )
+                failure_status = 401
+            else:
+                connection.execute(text("DELETE FROM app_auth_login_attempts WHERE identity_hash = :identity"), {"identity": identity})
+                raw_token, csrf = _create_session(connection, str(row["user_id"]), request)
+                user_row = dict(row)
+    if failure_status == 429:
+        raise HTTPException(status_code=429, detail="Too many failed attempts. Try again later.")
+    if failure_status:
+        raise HTTPException(status_code=401, detail="Email or password is incorrect, or the account is not active")
     _set_session(response, raw_token, csrf)
-    return {"user": _public_user(dict(row)), "csrf_token": csrf}
+    return {"user": _public_user(user_row), "csrf_token": csrf}
 
 
 @router.post("/logout")
@@ -338,6 +362,57 @@ def accept_invitation(body: PasswordTokenRequest) -> dict:
     return {"accepted": True}
 
 
+@router.get("/sessions")
+def list_sessions(request: Request) -> dict:
+    actor = getattr(request.state, "application_user", None)
+    if not actor:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    current_token = request.cookies.get(get_settings().session_cookie_name)
+    current_hash = hash_token(current_token) if current_token else ""
+    with get_engine().connect() as connection:
+        rows = connection.execute(
+            text("""
+                SELECT token_hash, created_at, last_seen_at, expires_at, user_agent, ip_address,
+                       revoked_at
+                FROM app_user_sessions
+                WHERE user_id = :user_id
+                ORDER BY created_at DESC
+            """),
+            {"user_id": actor["user_id"]},
+        ).mappings().all()
+    return {"sessions": [
+        {
+            "session_id": row["token_hash"],
+            "created_at": row["created_at"],
+            "last_seen_at": row["last_seen_at"],
+            "expires_at": row["expires_at"],
+            "user_agent": row["user_agent"],
+            "ip_address": row["ip_address"],
+            "revoked": row["revoked_at"] is not None,
+            "current": row["token_hash"] == current_hash,
+        }
+        for row in rows
+    ]}
+
+
+@router.delete("/sessions/{session_id}")
+def revoke_session(session_id: str, request: Request) -> dict:
+    actor = getattr(request.state, "application_user", None)
+    if not actor:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    with get_engine().begin() as connection:
+        result = connection.execute(
+            text("""
+                UPDATE app_user_sessions SET revoked_at = :now
+                WHERE token_hash = :session_id AND user_id = :user_id AND revoked_at IS NULL
+            """),
+            {"now": utcnow(), "session_id": session_id, "user_id": actor["user_id"]},
+        )
+        if result.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Active session not found")
+    return {"revoked": True}
+
+
 @router.get("/users")
 def list_users(request: Request) -> dict:
     actor = getattr(request.state, "application_user", None)
@@ -361,11 +436,11 @@ def invite_viewer(body: InviteRequest, request: Request) -> dict:
         exists = connection.execute(text("SELECT user_id FROM app_users WHERE email = :email"), {"email": email}).first()
         if exists:
             raise HTTPException(status_code=409, detail="An account with this email already exists")
-        token = _make_action_token(connection, user_id, "INVITE", timedelta(days=2))
         connection.execute(
             text("INSERT INTO app_users (user_id, email, role, status) VALUES (:id, :email, 'VIEWER', 'PENDING_VERIFICATION')"),
             {"id": user_id, "email": email},
         )
+        token = _make_action_token(connection, user_id, "INVITE", timedelta(days=2))
     delivery = _send_action_email(email, "You are invited to TradingPlatform", _action_url("invite", token), "accept your invitation")
     return {"invited": True, "email": email, **delivery}
 
