@@ -35,6 +35,7 @@ Clean-room rebuild of TradingPlatform. The legacy repository is a feature refere
 
    ```powershell
    mysql -u root -p trading_platform_v2 < ..\database\migrations\001_initial.sql
+   mysql -u root -p trading_platform_v2 < ..\database\migrations\002_application_authentication.sql
    ```
 
 7. Start the API:
