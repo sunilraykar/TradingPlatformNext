@@ -1714,7 +1714,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     </div>}
   </>;
 }
-export default function App() {
+export default function App({ user = null }) {
   const [theme, setTheme] = useState(() => {
     try {
       return window.localStorage.getItem('trading-platform-theme') === 'light' ? 'light' : 'dark';
@@ -1728,6 +1728,10 @@ export default function App() {
   }, [theme]);
 
   const [applicationTab, setApplicationTab] = useState('autotrender');
+  useEffect(() => {
+    if (user?.role === 'VIEWER' && applicationTab === 'trades') setApplicationTab('autotrender');
+    if (user?.role !== 'SUPER_ADMIN' && applicationTab === 'settings') setApplicationTab('autotrender');
+  }, [user?.role, applicationTab]);
   const [autotrenderView, setAutotrenderView] = useState('live');
   const [kiteTab, setKiteTab] = useState('Dashboard');
   const [kiteData, setKiteData] = useState(null);
@@ -2206,8 +2210,8 @@ export default function App() {
         <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
         <button type="button" className={applicationTab === 'option-chain' ? 'active' : ''} onClick={() => setApplicationTab('option-chain')}>Market Intelligence</button>
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
-        <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>
-        <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>
+        {user?.role !== 'VIEWER' && <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>}
+        {user?.role === 'SUPER_ADMIN' && <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>}
       </nav>
         <div className="topbar-right">
           <div className="theme-switch" role="group" aria-label="Appearance">
