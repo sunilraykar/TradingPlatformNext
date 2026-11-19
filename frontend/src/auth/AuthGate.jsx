@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import App from '../App.jsx';
 import UserAccess from './UserAccess.jsx';
+import Sessions from './Sessions.jsx';
 import './AuthGate.css';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -64,6 +65,7 @@ export default function AuthGate() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
+  const [showSessions, setShowSessions] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -137,6 +139,7 @@ export default function AuthGate() {
     try { await authRequest('/logout', { method: 'POST' }); } catch (signOutError) { setError(signOutError.message); }
     setUser(null);
     setShowUsers(false);
+    setShowSessions(false);
   }
 
   if (loading) return <div className="auth-loading">Connecting to TradingPlatformNext…</div>;
@@ -172,10 +175,11 @@ export default function AuthGate() {
     <header className="auth-toolbar">
       <div><strong>TRADING PLATFORM <span>NEXT</span></strong><small>{user.email} · {user.role.replace('_', ' ')}</small></div>
       <nav>
-        {user.role === 'SUPER_ADMIN' && <button type="button" className={showUsers ? 'selected' : ''} onClick={() => setShowUsers(!showUsers)}>User Access</button>}
+        <button type="button" className={showSessions ? 'selected' : ''} onClick={() => { setShowSessions(!showSessions); setShowUsers(false); }}>Sessions</button>
+        {user.role === 'SUPER_ADMIN' && <button type="button" className={showUsers ? 'selected' : ''} onClick={() => { setShowUsers(!showUsers); setShowSessions(false); }}>User Access</button>}
         <button type="button" onClick={signOut}>Sign out</button>
       </nav>
     </header>
-    {showUsers && user.role === 'SUPER_ADMIN' ? <UserAccess /> : <App />}
+    {showUsers && user.role === 'SUPER_ADMIN' ? <UserAccess /> : showSessions ? <Sessions onSignOut={signOut} /> : <App />}
   </div>;
 }
