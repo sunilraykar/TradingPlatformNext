@@ -135,6 +135,13 @@ async def _restore_kite_session() -> None:
 async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
+
+    # Local API-only mode: do not initialize trading services or background workers.
+    if settings.dev_safe_mode:
+        logger.warning("DEV_SAFE_MODE enabled: trading services and background workers are disabled.")
+        yield
+        return
+
     ensure_notification_schema()
     autotrender_kite_execution.ensure_schema()
     system_alerts.install_system_alert_handler()
@@ -256,7 +263,18 @@ async def application_authentication(request: Request, call_next):
         ):
             return JSONResponse(status_code=403, content={"detail": "CSRF validation failed"})
 
-    if path in PUBLIC_AUTH_PATHS or path == "/api/v1/kite/callback":
+    if path in PUBLIC_AUTH_PATHS:
+        return await call_next(request)
+
+    # In local safe mode, allow authentication APIs only.
+    # All trading, provider and notification APIs are blocked.
+    if settings.dev_safe_mode and not path.startswith("/api/v1/auth/"):
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "API disabled in local development safe mode"},
+        )
+
+    if path == "/api/v1/kite/callback":
         return await call_next(request)
 
     raw_session = request.cookies.get(settings.session_cookie_name)

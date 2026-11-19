@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "TradingPlatformNext"
     app_env: str = "development"
+    dev_safe_mode: bool = False
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     log_level: str = "INFO"
