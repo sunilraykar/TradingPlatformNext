@@ -149,7 +149,6 @@ def bootstrap_admin(body: BootstrapRequest, request: Request, response: Response
     if not expected_email or body.email.lower() != expected_email:
         raise HTTPException(status_code=403, detail="This email is not authorized for initial setup")
     engine = get_engine()
-    raw_session = csrf = None
     user_id = str(uuid.uuid4())
     with engine.begin() as connection:
         lock = connection.execute(text("SELECT GET_LOCK('tradingplatform_initial_admin', 10)")).scalar()
