@@ -25,7 +25,7 @@ if (typeof window !== 'undefined' && !window.__tradingPlatformFetchWrapped) {
     if (!requestUrl.pathname.startsWith('/api/v1/')) return originalFetch(input, init);
     const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
     const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
-    if (window.__tpUserRole === 'VIEWER' && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+    if (window.__tpUserRole === 'VIEWER' && !['GET', 'HEAD', 'OPTIONS'].includes(method) && !requestUrl.pathname.endsWith('/auth/logout') && !(method === 'DELETE' && requestUrl.pathname.startsWith('/api/v1/auth/sessions/'))) {
       return Promise.resolve(new Response(JSON.stringify({ detail: 'Viewer accounts have read-only access' }), {
         status: 403, headers: { 'Content-Type': 'application/json' },
       }));
