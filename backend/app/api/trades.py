@@ -309,9 +309,22 @@ def reconcile_live_terminal_positions() -> dict[str, Any]:
 @router.websocket("/stream")
 async def trade_terminal_stream_socket(websocket: WebSocket) -> None:
     """Push trade lifecycle and quote updates to an authenticated application session."""
-    if get_settings().app_env.lower() != "test" and not get_websocket_user(websocket.cookies):
-        await websocket.close(code=4401, reason="Application login required")
-        return
+    settings = get_settings()
+    if settings.app_env.lower() != "test":
+        allowed_origins = {
+            item.strip().rstrip("/")
+            for item in settings.cors_allowed_origins.split(",")
+            if item.strip()
+        }
+        if settings.app_public_url:
+            allowed_origins.add(settings.app_public_url.rstrip("/"))
+        origin = websocket.headers.get("origin")
+        if origin and origin.rstrip("/") not in allowed_origins:
+            await websocket.close(code=4403, reason="WebSocket origin is not allowed")
+            return
+        if not get_websocket_user(websocket.cookies):
+            await websocket.close(code=4401, reason="Application login required")
+            return
     await trade_terminal_stream.connect(websocket)
     try:
         # Reconcile cached ticks before taking the snapshot, so stale trade rows cannot
