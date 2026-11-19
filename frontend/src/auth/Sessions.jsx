@@ -36,7 +36,8 @@ export default function Sessions({ onSignOut }) {
 
   async function revoke(session) {
     if (session.current) {
-      await onSignOut();
+      if (onSignOut) await onSignOut();
+      else setNotice('Use Sign out in the application toolbar to end the current session.');
       return;
     }
     try {
