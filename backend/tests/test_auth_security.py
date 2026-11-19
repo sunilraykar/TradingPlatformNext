@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-import app.auth.security as security
+from app.auth import security
 
 
 def test_csrf_token_round_trip(monkeypatch):
