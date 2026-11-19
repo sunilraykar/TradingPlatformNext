@@ -197,7 +197,10 @@ export default function AuthGate() {
   async function signOut() {
     try {
       await authRequest('/logout', { method: 'POST' });
+      // Logout clears the CSRF cookie on the server. Re-bootstrap it immediately
+      // so the next sign-in in this same page load has a valid cookie/header pair.
       csrfToken = '';
+      await ensureCsrfToken();
     } catch (signOutError) {
       setError(signOutError.message);
     }
