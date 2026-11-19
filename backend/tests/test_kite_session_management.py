@@ -1,5 +1,7 @@
 from unittest.mock import MagicMock
 
+from fastapi import HTTPException
+
 from app.api import routes
 from app.providers.kite.client import KiteAuthenticationError, KiteProviderError
 from app.services.kite_sessions import KiteSessionStoreError
@@ -83,8 +85,8 @@ def test_reset_reports_database_failure_after_clearing_runtime_session(monkeypat
 
     try:
         routes.reset_kite_session()
-    except Exception as exc:
-        assert getattr(exc, "status_code", None) == 503
+    except HTTPException as exc:
+        assert exc.status_code == 503
     else:
         raise AssertionError("Expected reset to report a persistence failure")
 
