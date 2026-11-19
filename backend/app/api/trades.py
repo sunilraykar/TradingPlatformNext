@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy import text
 
 from app.db.session import get_engine
+from app.auth.security import get_websocket_user
+from app.core.config import get_settings
 from app.providers.kite.client import KiteOrderRejectedError, KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services import live_market_data, trade_terminal, trade_terminal_stream
@@ -306,7 +308,10 @@ def reconcile_live_terminal_positions() -> dict[str, Any]:
 
 @router.websocket("/stream")
 async def trade_terminal_stream_socket(websocket: WebSocket) -> None:
-    """Push trade lifecycle and quote updates to the terminal without polling."""
+    """Push trade lifecycle and quote updates to an authenticated application session."""
+    if get_settings().app_env.lower() != "test" and not get_websocket_user(websocket.cookies):
+        await websocket.close(code=4401, reason="Application login required")
+        return
     await trade_terminal_stream.connect(websocket)
     try:
         # Reconcile cached ticks before taking the snapshot, so stale trade rows cannot
