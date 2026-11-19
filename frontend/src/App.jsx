@@ -1727,7 +1727,7 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
     </div>}
   </>;
 }
-export default function App({ user = null }) {
+export default function App({ user = null, onSignOut }) {
   const [theme, setTheme] = useState(() => {
     try {
       return window.localStorage.getItem('trading-platform-theme') === 'light' ? 'light' : 'dark';
@@ -2225,6 +2225,7 @@ export default function App({ user = null }) {
         <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
         {user?.role !== 'VIEWER' && <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>}
         {user?.role === 'SUPER_ADMIN' && <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>}
+        {user && <span className="app-user-identity" title={user.email}>{user.email} · {String(user.role || '').replaceAll('_', ' ')}</span>}
       </nav>
         <div className="topbar-right">
           <div className="theme-switch" role="group" aria-label="Appearance">
@@ -2238,6 +2239,7 @@ export default function App({ user = null }) {
           </>}
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
           <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={websocketStatus?.reason || ('Kite WebSocket: ' + (websocketStatus?.state || 'checking'))}><i />WS {websocketStatus?.connected ? 'Connected' : websocketStatus?.state === 'login_required' ? 'Disconnected' : (websocketStatus?.state || 'Checking')}</span>
+          <button type="button" className="status-pill app-signout-button" onClick={onSignOut}>Sign out</button>
         </div>
       </header>
 
