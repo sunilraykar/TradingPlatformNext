@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import App from '../App.jsx';
-import UserAccess from './UserAccess.jsx';
-import Sessions from './Sessions.jsx';
 import './AuthGate.css';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
@@ -105,8 +103,6 @@ export default function AuthGate() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [showUsers, setShowUsers] = useState(false);
-  const [showSessions, setShowSessions] = useState(false);
 
   useEffect(() => {
     window.__tpUserRole = user?.role || '';
@@ -115,8 +111,6 @@ export default function AuthGate() {
   useEffect(() => {
     const handleExpired = () => {
       setUser(null);
-      setShowUsers(false);
-      setShowSessions(false);
       setError('Your application session expired. Please sign in again.');
     };
     window.addEventListener('tp-auth-expired', handleExpired);
@@ -205,8 +199,6 @@ export default function AuthGate() {
       setError(signOutError.message);
     }
     setUser(null);
-    setShowUsers(false);
-    setShowSessions(false);
   }
 
   if (loading) return <div className="auth-loading">Connecting to TradingPlatformNext…</div>;
@@ -243,11 +235,9 @@ export default function AuthGate() {
     <header className="auth-toolbar">
       <div><strong>TRADING PLATFORM <span>NEXT</span></strong><small>{user.email} · {user.role.replace('_', ' ')}</small></div>
       <nav>
-        <button type="button" className={showSessions ? 'selected' : ''} onClick={() => { setShowSessions(!showSessions); setShowUsers(false); }}>Sessions</button>
-        {user.role === 'SUPER_ADMIN' && <button type="button" className={showUsers ? 'selected' : ''} onClick={() => { setShowUsers(!showUsers); setShowSessions(false); }}>User Access</button>}
         <button type="button" onClick={signOut}>Sign out</button>
       </nav>
     </header>
-    {showUsers && user.role === 'SUPER_ADMIN' ? <UserAccess /> : showSessions ? <Sessions onSignOut={signOut} /> : <App user={user} />}
+    <App user={user} />
   </div>;
 }
