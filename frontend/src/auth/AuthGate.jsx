@@ -7,11 +7,34 @@ import './AuthGate.css';
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const AUTH = `${API}/api/v1/auth`;
 let csrfToken = '';
+let csrfInitializationPromise = null;
 
 function readCookie(name) {
   const prefix = `${name}=`;
   const part = document.cookie.split('; ').find((item) => item.startsWith(prefix));
   return part ? decodeURIComponent(part.slice(prefix.length)) : '';
+}
+
+// React Strict Mode replays mount effects in development. Share the initial
+// CSRF bootstrap request so concurrent mounts cannot rotate the cookie twice.
+async function ensureCsrfToken() {
+  const cookieToken = readCookie('tp_csrf');
+  if (cookieToken) {
+    csrfToken = cookieToken;
+    return cookieToken;
+  }
+  if (!csrfInitializationPromise) {
+    csrfInitializationPromise = authRequest('/csrf')
+      .then((payload) => {
+        const currentCookie = readCookie('tp_csrf');
+        csrfToken = currentCookie || payload.csrf_token || '';
+        return csrfToken;
+      })
+      .finally(() => {
+        csrfInitializationPromise = null;
+      });
+  }
+  return csrfInitializationPromise;
 }
 
 // Existing application components use fetch directly. Attach the session cookie and
@@ -31,8 +54,12 @@ if (typeof window !== 'undefined' && !window.__tradingPlatformFetchWrapped) {
       }));
     }
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
-      const csrf = csrfToken || readCookie('tp_csrf');
-      if (csrf) headers.set('X-CSRF-Token', csrf);
+      // The readable cookie is the server-validated half of the double-submit
+      // pair, so always prefer its current value over a potentially stale
+      // in-memory token (for example after logout or a new CSRF bootstrap).
+      const cookieToken = readCookie('tp_csrf');
+      csrfToken = cookieToken || '';
+      if (cookieToken) headers.set('X-CSRF-Token', cookieToken);
     }
     return originalFetch(input, { ...init, headers, credentials: 'include' }).then(async (response) => {
       if (response.ok && (requestUrl.pathname.endsWith('/auth/csrf') || requestUrl.pathname.endsWith('/auth/login'))) {
@@ -100,7 +127,7 @@ export default function AuthGate() {
     let active = true;
     (async () => {
       try {
-        await authRequest('/csrf');
+        await ensureCsrfToken();
         const status = await authRequest('/bootstrap/status');
         if (!active) return;
         setBootstrapRequired(Boolean(status.required));
@@ -168,7 +195,12 @@ export default function AuthGate() {
   }
 
   async function signOut() {
-    try { await authRequest('/logout', { method: 'POST' }); } catch (signOutError) { setError(signOutError.message); }
+    try {
+      await authRequest('/logout', { method: 'POST' });
+      csrfToken = '';
+    } catch (signOutError) {
+      setError(signOutError.message);
+    }
     setUser(null);
     setShowUsers(false);
     setShowSessions(false);
