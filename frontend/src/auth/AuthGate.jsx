@@ -41,6 +41,14 @@ if (typeof window !== 'undefined' && !window.__tradingPlatformFetchWrapped) {
           if (payload.csrf_token) csrfToken = payload.csrf_token;
         } catch { /* keep the current in-memory token */ }
       }
+      if (response.status === 401 && !requestUrl.pathname.startsWith('/api/v1/auth/')) {
+        try {
+          const payload = await response.clone().json();
+          if (payload.detail === 'Authentication required') {
+            window.dispatchEvent(new Event('tp-auth-expired'));
+          }
+        } catch { /* non-JSON provider response */ }
+      }
       return response;
     });
   };
@@ -76,6 +84,17 @@ export default function AuthGate() {
   useEffect(() => {
     window.__tpUserRole = user?.role || '';
   }, [user]);
+
+  useEffect(() => {
+    const handleExpired = () => {
+      setUser(null);
+      setShowUsers(false);
+      setShowSessions(false);
+      setError('Your application session expired. Please sign in again.');
+    };
+    window.addEventListener('tp-auth-expired', handleExpired);
+    return () => window.removeEventListener('tp-auth-expired', handleExpired);
+  }, []);
 
   useEffect(() => {
     let active = true;
