@@ -232,12 +232,6 @@ export default function AuthGate() {
   }
 
   return <div className="authenticated-app">
-    <header className="auth-toolbar">
-      <div><strong>TRADING PLATFORM <span>NEXT</span></strong><small>{user.email} · {user.role.replace('_', ' ')}</small></div>
-      <nav>
-        <button type="button" onClick={signOut}>Sign out</button>
-      </nav>
-    </header>
-    <App user={user} />
+    <App user={user} onSignOut={signOut} />
   </div>;
 }
