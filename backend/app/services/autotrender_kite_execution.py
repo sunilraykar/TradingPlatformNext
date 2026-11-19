@@ -13,7 +13,6 @@ import logging
 from typing import Any
 
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
 from app.providers.kite.client import KiteOrderRejectedError
@@ -156,7 +155,7 @@ def _submit_intent(key: str) -> dict[str, Any]:
                 "broker_exit_error": str(exc),
             }, event_type="BROKER_EXIT_REJECTED")
         raise
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - broker transport failures have provider-specific types
         # A timeout can happen after the broker accepted the order. Search the
         # tag before deciding whether the outcome is unknown.
         try:
