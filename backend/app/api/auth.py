@@ -468,8 +468,13 @@ def update_user_status(user_id: str, body: UserStatusRequest, request: Request) 
             {"status": body.status, "user_id": user_id},
         )
         if body.status == "DISABLED":
+            now = utcnow()
             connection.execute(
                 text("UPDATE app_user_sessions SET revoked_at = :now WHERE user_id = :user_id AND revoked_at IS NULL"),
-                {"now": utcnow(), "user_id": user_id},
+                {"now": now, "user_id": user_id},
+            )
+            connection.execute(
+                text("UPDATE app_auth_tokens SET consumed_at = :now WHERE user_id = :user_id AND consumed_at IS NULL"),
+                {"now": now, "user_id": user_id},
             )
     return {"updated": True, "user_id": user_id, "status": body.status}
