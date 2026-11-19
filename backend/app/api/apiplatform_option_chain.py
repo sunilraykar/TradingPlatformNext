@@ -104,7 +104,7 @@ def option_chain_symbols() -> dict[str, Any]:
                 for row in payload
                 if isinstance(row, dict) and row.get("symbol")
             ]
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - provider clients may raise transport-specific exceptions
             logger.warning("APIPLATFORM symbol master is unavailable: %s", type(exc).__name__)
             symbols = [{"symbol": key, "category": "INDEX"} for key in _INDEX_INSTRUMENTS]
 
@@ -419,7 +419,7 @@ def refresh_option_chain_subscriptions(
 
 @router.get("/live-quotes")
 def option_chain_live_quotes(
-    instrument_tokens: list[int] = Query(..., min_length=1, max_length=500),
+    instrument_tokens: list[int] = Query(..., min_length=1, max_length=500),  # noqa: B008 - FastAPI query declaration
 ) -> dict[str, Any]:
     """Read only the latest Kite WebSocket cache entries for requested tokens."""
     quotes: dict[str, Any] = {}
