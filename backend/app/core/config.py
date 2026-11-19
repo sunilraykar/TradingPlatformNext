@@ -19,6 +19,20 @@ class Settings(BaseSettings):
     mysql_password: str = ""
     mysql_pool_size: int = 5
 
+    app_secret_key: str = ""
+    app_public_url: str = "http://127.0.0.1:5173"
+    initial_super_admin_email: str = ""
+    session_cookie_name: str = "tp_session"
+    csrf_cookie_name: str = "tp_csrf"
+    session_idle_timeout_minutes: int = 720
+    session_absolute_timeout_days: int = 7
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_use_tls: bool = True
+
     # StaticIP.in authenticated outbound HTTP proxy. Disabled until configured locally.
     outbound_proxy_enabled: bool = False
     outbound_proxy_scheme: str = "http"
