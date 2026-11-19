@@ -155,12 +155,12 @@ def _submit_intent(key: str) -> dict[str, Any]:
                 "broker_exit_error": str(exc),
             }, event_type="BROKER_EXIT_REJECTED")
         raise
-    except Exception as exc:  # noqa: BLE001 - broker transport failures have provider-specific types
+    except Exception as exc:
         # A timeout can happen after the broker accepted the order. Search the
         # tag before deciding whether the outcome is unknown.
         try:
             found = _broker_order_for_tag(provider.orders(), intent["order_tag"])
-        except Exception:
+        except Exception:  # noqa: BLE001 - an unavailable broker order book leaves submission outcome unknown
             found = None
         if found:
             _save_status(key, str(found.get("status") or "OPEN").upper(),
