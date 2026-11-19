@@ -18,6 +18,8 @@ dependencies = [
   "requests>=2.32,<3.0",
   "selenium>=4.25,<5.0",
   "python-dotenv>=1.0,<2.0",
+  "argon2-cffi>=23.1,<26.0",
+  "email-validator>=2.2,<3.0",
 ]
 
 [project.optional-dependencies]
