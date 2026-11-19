@@ -31,7 +31,7 @@ Clean-room rebuild of TradingPlatform. The legacy repository is a feature refere
    pip install -e .[dev]
    ```
 
-6. Apply the initial SQL schema to the new database:
+6. Apply the initial SQL schema and then the application authentication migration to the new database:
 
    ```powershell
    mysql -u root -p trading_platform_v2 < ..\database\migrations\001_initial.sql
@@ -43,7 +43,7 @@ Clean-room rebuild of TradingPlatform. The legacy repository is a feature refere
    uvicorn app.main:app --reload
    ```
 
-The Kite API key/secret, encryption key, and MySQL credentials must remain local in `.env`; never commit secrets. The redirect URL used in the Kite developer console must match the local callback URL. The application does not ask you to paste request tokens or access tokens.
+Copy the authentication settings from `.env.example` into `.env`. Generate a unique `APP_SECRET_KEY` (at least 32 random characters), set `INITIAL_SUPER_ADMIN_EMAIL`, and configure SMTP before production use. The first administrator creates their account from the login page and must verify the email before signing in. The Kite API key/secret, encryption key, application secret, SMTP credentials, and MySQL credentials must remain local in `.env`; never commit secrets. The redirect URL used in the Kite developer console must match the local callback URL. The application does not ask you to paste request tokens or access tokens.
 
 ## StaticIP.in proxy for Kite/Zerodha only
 
