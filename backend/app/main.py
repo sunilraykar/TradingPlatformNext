@@ -192,7 +192,7 @@ settings = get_settings()
 app = FastAPI(title=settings.app_name, version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in settings.cors_allowed_origins.split(",") if origin.strip()],
+    allow_origins=list({origin.strip().rstrip("/") for origin in settings.cors_allowed_origins.split(",") if origin.strip()} | ({settings.app_public_url.rstrip("/")} if settings.app_public_url else set())),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"],
     allow_headers=["Accept", "Content-Type", "Authorization", "X-CSRF-Token"],
@@ -217,6 +217,7 @@ PUBLIC_AUTH_PATHS = {
     "/api/v1/auth/bootstrap/status",
     "/api/v1/auth/bootstrap",
     "/api/v1/auth/verify-email",
+    "/api/v1/auth/verification/resend",
     "/api/v1/auth/invitations/accept",
     "/api/v1/auth/password/forgot",
     "/api/v1/auth/password/reset",
