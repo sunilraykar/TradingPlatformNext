@@ -4,10 +4,9 @@ from datetime import datetime as RealDateTime
 from unittest.mock import MagicMock
 
 import pytest
-from app.api import autotrender_market_data as market_data
-
 from fastapi.testclient import TestClient
 
+from app.api import autotrender_market_data as market_data
 from app.main import app
 
 
