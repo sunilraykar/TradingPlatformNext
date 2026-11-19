@@ -7,8 +7,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from app.providers.apiplatform.client import APIPLATFORMClientError
 from app.providers.apiplatform.auth import APIPLATFORMAuthError
+from app.providers.apiplatform.client import APIPLATFORMClientError
 from app.providers.apiplatform.registry import get_apiplatform_client
 
 logger = logging.getLogger(__name__)
