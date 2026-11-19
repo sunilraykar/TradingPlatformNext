@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TradeTerminal from './TradeTerminal.jsx';
 import LtpOptionChainDashboard from './LtpOptionChainDashboard.jsx';
+import Sessions from './auth/Sessions.jsx';
+import UserAccess from './auth/UserAccess.jsx';
 
 const API = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/$/, '');
 const DEFAULT_INDICES = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'];
@@ -603,6 +605,7 @@ function Metric({ label, value, tone }) {
 const SETTINGS_TABS = [
   ['trading-mode', 'Trading Mode'],
   ['accounts', 'Trading Accounts'],
+  ['security', 'Security'],
   ['market-intelligence', 'Market Intelligence'],
   ['option-chain', 'Option Chain'],
   ['symbol-whitelist', 'Symbol Whitelist'],
@@ -1065,6 +1068,7 @@ function TelegramSettings() {
 }
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
+  const [securityTab, setSecurityTab] = useState('sessions');
   const [settings, setSettings] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1161,6 +1165,15 @@ function SettingsPanel() {
     {error && <div className="error-banner"><strong>Settings issue</strong><span>{error}</span></div>}
     {message && <div className="settings-success">{message}</div>}
     {loading ? <section className="panel settings-section">Loading saved settings…</section> : <section className="panel settings-section">
+      {tab === 'security' && <>
+        <h2>Security &amp; Access</h2>
+        <p className="settings-intro">Review signed-in devices, revoke sessions, and manage application user access.</p>
+        <nav className="settings-tabs" aria-label="Security settings sections">
+          <button type="button" className={securityTab === 'sessions' ? 'active' : ''} onClick={() => setSecurityTab('sessions')}>Login Sessions</button>
+          <button type="button" className={securityTab === 'users' ? 'active' : ''} onClick={() => setSecurityTab('users')}>User Access</button>
+        </nav>
+        {securityTab === 'sessions' ? <Sessions /> : <UserAccess />}
+      </>}
       {tab === 'trading-mode' && <><h2>Trading Mode</h2><label className="settings-control"><span>Execution Mode</span><select value={value('executionMode')} onChange={(e) => change('executionMode', e.target.value)}><option value="PAPER">PAPER</option><option value="REAL">REAL</option></select><small>PAPER mode is the safe default. This setting does not itself enable live order placement.</small></label><label className="settings-toggle"><input type="checkbox" checked={Boolean(value('showTradeDetailsByDefault'))} onChange={(e) => change('showTradeDetailsByDefault', e.target.checked)} /><span><strong>Show Trade Details by default</strong><small>Controls the default visibility of trade notes and conditions.</small></span></label></>}
       {tab === 'accounts' && <><h2>Trading Accounts</h2><p className="settings-intro">Each account represents one broker account. Configure one broker and enable at least one intelligence provider. Credentials and runtime tokens are not stored in this business record.</p><div className="settings-grid">
         {fieldControl(['accountName','Account Name','text','','Required display name.'])}
