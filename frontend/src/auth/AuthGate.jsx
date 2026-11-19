@@ -62,6 +62,7 @@ export default function AuthGate() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bootstrapRequired, setBootstrapRequired] = useState(false);
+  const [bootstrapConfigured, setBootstrapConfigured] = useState(false);
   const [mode, setMode] = useState('login');
   const [token, setToken] = useState('');
   const [email, setEmail] = useState('');
@@ -84,6 +85,7 @@ export default function AuthGate() {
         const status = await authRequest('/bootstrap/status');
         if (!active) return;
         setBootstrapRequired(Boolean(status.required));
+        setBootstrapConfigured(Boolean(status.configured));
         const query = new URLSearchParams(window.location.search);
         const verify = query.get('verify');
         const invite = query.get('invite');
@@ -123,6 +125,8 @@ export default function AuthGate() {
         setUser(result.user);
       } else if (mode === 'bootstrap') {
         const result = await authRequest('/bootstrap', { method: 'POST', body: JSON.stringify({ email, password }) });
+        setBootstrapRequired(false);
+        setMode('login');
         setMessage(result.verification?.action_url
           ? `Initial administrator created. Open this development verification link: ${result.verification.action_url}`
           : 'Initial administrator created. Check your email to verify the account.');
@@ -169,11 +173,12 @@ export default function AuthGate() {
                 : 'Use your application account. Broker login sessions remain separate.'}</p>
         {(mode === 'login' || mode === 'bootstrap' || mode === 'forgot') && <label>Email address<input type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>}
         {(mode === 'login' || mode === 'bootstrap' || mode === 'invite' || mode === 'reset') && <label>{mode === 'login' ? 'Password' : 'Password (minimum 12 characters)'}<input type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={mode === 'login' ? 1 : 12} value={password} onChange={(event) => setPassword(event.target.value)} required /></label>}
-        {error && <div className="auth-error" role="alert">{error}</div>}
+        {mode === 'login' && bootstrapRequired && !bootstrapConfigured && <div className="auth-error" role="alert">Initial setup is not configured. Set INITIAL_SUPER_ADMIN_EMAIL in the backend environment first.</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>
         {message && <div className="auth-message" role="status">{message}</div>}
         <button className="auth-primary" type="submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : mode === 'bootstrap' ? 'Create administrator' : mode === 'forgot' ? 'Send reset link' : mode === 'invite' ? 'Activate account' : 'Save new password'}</button>
         <div className="auth-links">
-          {mode === 'login' && <><button type="button" onClick={() => { setMode('forgot'); setError(''); setMessage(''); }}>Forgot password?</button>{bootstrapRequired && <button type="button" onClick={() => { setMode('bootstrap'); setError(''); setMessage(''); }}>Initial setup</button>}</>}
+          {mode === 'login' && <><button type="button" onClick={() => { setMode('forgot'); setError(''); setMessage(''); }}>Forgot password?</button>{bootstrapRequired && bootstrapConfigured && <button type="button" onClick={() => { setMode('bootstrap'); setError(''); setMessage(''); }}>Initial setup</button>}</>}
           {mode !== 'login' && <button type="button" onClick={() => { setMode('login'); setError(''); setMessage(''); }}>Back to sign in</button>}
         </div>
       </form>
