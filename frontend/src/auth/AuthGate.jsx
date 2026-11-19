@@ -25,12 +25,17 @@ if (typeof window !== 'undefined' && !window.__tradingPlatformFetchWrapped) {
     if (!requestUrl.pathname.startsWith('/api/v1/')) return originalFetch(input, init);
     const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
     const method = String(init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+    if (window.__tpUserRole === 'VIEWER' && !['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      return Promise.resolve(new Response(JSON.stringify({ detail: 'Viewer accounts have read-only access' }), {
+        status: 403, headers: { 'Content-Type': 'application/json' },
+      }));
+    }
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
       const csrf = csrfToken || readCookie('tp_csrf');
       if (csrf) headers.set('X-CSRF-Token', csrf);
     }
     return originalFetch(input, { ...init, headers, credentials: 'include' }).then(async (response) => {
-      if (response.ok && requestUrl.pathname.endsWith('/auth/csrf') || response.ok && requestUrl.pathname.endsWith('/auth/login')) {
+      if (response.ok && (requestUrl.pathname.endsWith('/auth/csrf') || requestUrl.pathname.endsWith('/auth/login'))) {
         try {
           const payload = await response.clone().json();
           if (payload.csrf_token) csrfToken = payload.csrf_token;
@@ -66,6 +71,10 @@ export default function AuthGate() {
   const [busy, setBusy] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
   const [showSessions, setShowSessions] = useState(false);
+
+  useEffect(() => {
+    window.__tpUserRole = user?.role || '';
+  }, [user]);
 
   useEffect(() => {
     let active = true;
@@ -180,6 +189,6 @@ export default function AuthGate() {
         <button type="button" onClick={signOut}>Sign out</button>
       </nav>
     </header>
-    {showUsers && user.role === 'SUPER_ADMIN' ? <UserAccess /> : showSessions ? <Sessions onSignOut={signOut} /> : <App />}
+    {showUsers && user.role === 'SUPER_ADMIN' ? <UserAccess /> : showSessions ? <Sessions onSignOut={signOut} /> : <App user={user} />}
   </div>;
 }
