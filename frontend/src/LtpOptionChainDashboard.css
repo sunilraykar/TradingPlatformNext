@@ -2358,3 +2358,18 @@
 .ltp-option-chain .ltp-option-table tbody td .ltp-metric-normal {
   font-weight: 500 !important;
 }
+
+
+/* Alternative 75% emphasis: cyan text plus a clear underline, not a cell fill. */
+.ltp-option-chain .ltp-option-table tbody td .ltp-metric-emphasis {
+  color: #67e8f9 !important;
+  font-weight: 900 !important;
+  text-decoration-line: underline;
+  text-decoration-color: #22d3ee;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+.ltp-option-chain .ltp-option-table tbody tr td[class*="ltp-rank-"] .ltp-metric-emphasis {
+  color: inherit !important;
+  text-decoration-color: currentColor;
+}
