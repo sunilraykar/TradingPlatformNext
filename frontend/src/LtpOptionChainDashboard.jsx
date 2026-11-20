@@ -255,6 +255,11 @@ export default function LtpOptionChainDashboard() {
   const chainRequestId = useRef(0);
   const chainFetchBusy = useRef(false);
   const metadataRequestId = useRef(0);
+  const [orderDraft, setOrderDraft] = useState(null);
+  const [orderDirection, setOrderDirection] = useState('BUY');
+  const [orderLots, setOrderLots] = useState('1');
+  const [orderSaving, setOrderSaving] = useState(false);
+  const [orderError, setOrderError] = useState('');
 
   const openSymbolOptionChain = (nextSymbol) => {
     if (!nextSymbol) return;
@@ -284,6 +289,70 @@ export default function LtpOptionChainDashboard() {
   const underlying = priceMode === 'SPOT' ? spot : (n(futureQuote && futureQuote.last_price) ?? n(data.Price_fno));
   const pain = useMemo(() => maxPain(rows), [rows]);
   const instrumentMap = useMemo(() => new Map(instruments.map((item) => [String(Number(item.strike)) + ':' + item.side, item])), [instruments]);
+
+  const atmStrike = useMemo(() => {
+    if (spot === null || !rows.length) return null;
+    return rows.reduce((best, row) => {
+      const strike = n(row.strike);
+      if (strike === null) return best;
+      return best === null || Math.abs(strike - spot) < Math.abs(best - spot) ? strike : best;
+    }, null);
+  }, [rows, spot]);
+  const atmPut = atmStrike === null ? null : instrumentMap.get(String(atmStrike) + ':PE') || null;
+  const atmCall = atmStrike === null ? null : instrumentMap.get(String(atmStrike) + ':CE') || null;
+  const quoteForInstrument = (instrument) => instrument ? quotes[String(instrument.instrument_token)] : null;
+  const openAtmOrder = (instrument) => {
+    if (!instrument || !instrument.tradingsymbol) return;
+    setOrderDraft(instrument);
+    setOrderDirection('BUY');
+    setOrderLots('1');
+    setOrderError('');
+  };
+  const submitAtmPaperOrder = async (event) => {
+    event.preventDefault();
+    if (!orderDraft || orderSaving) return;
+    const lots = Number(orderLots);
+    const lot = Number(orderDraft.lot_size || lotSize);
+    if (!Number.isInteger(lots) || lots < 1 || !Number.isInteger(lot) || lot < 1) {
+      setOrderError('Enter a valid lot quantity.');
+      return;
+    }
+    const quote = quoteForInstrument(orderDraft);
+    const ltp = n(quote && quote.last_price);
+    if (ltp === null || ltp <= 0) {
+      setOrderError('Live option price is not available yet.');
+      return;
+    }
+    setOrderSaving(true);
+    setOrderError('');
+    try {
+      const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : 'atm-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+      await request('/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idempotency_key: idempotencyKey,
+          execution_mode: 'PAPER',
+          source: 'MANUAL',
+          strategy: 'ATM Option Chain',
+          underlying: symbol,
+          instrument_symbol: orderDraft.tradingsymbol,
+          exchange: orderDraft.exchange || 'NFO',
+          direction: orderDirection,
+          quantity: lots * lot,
+          entry_price: ltp,
+          notes: 'ATM ' + (orderDraft.side === 'PE' ? 'PUT' : 'CALL') + ' · ' + expiry,
+        }),
+      });
+      setOrderDraft(null);
+    } catch (e) {
+      setOrderError(e.message || 'Unable to create paper trade.');
+    } finally {
+      setOrderSaving(false);
+    }
+  };
 
   // Show the 20 strikes nearest to the live spot, centered on the nearest ATM strike.
   // Keep the provider's full response in `rows` for calculations and heatmap ranking.
@@ -500,6 +569,11 @@ export default function LtpOptionChainDashboard() {
       <button type="button" className={activeView === "option-chain" ? "active" : ""} aria-current={activeView === "option-chain" ? "page" : undefined} onClick={() => setActiveView("option-chain")}>Option Chain</button>
       <button type="button" className={activeView === "swing-trade" ? "active" : ""} aria-current={activeView === "swing-trade" ? "page" : undefined} onClick={() => setActiveView("swing-trade")}>Swing Trade</button>
     </nav>
+    <div className="ltp-atm-contracts" aria-label="ATM contracts">
+      <button type="button" className="ltp-atm-contract put" onClick={() => openAtmOrder(atmPut)} disabled={!atmPut || !quoteForInstrument(atmPut)}>
+        <strong>{atmPut?.tradingsymbol || '—'}</strong><span>{fmt(quoteForInstrument(atmPut)?.last_price)}</span>
+      </button>
+    </div>
     <div className="ltp-index-shortcuts" role="group" aria-label="Quick select index">
       {['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].map((item) => (
         <button
@@ -510,6 +584,11 @@ export default function LtpOptionChainDashboard() {
           onClick={() => openSymbolOptionChain(item)}
         >{item}</button>
       ))}
+    </div>
+    <div className="ltp-atm-contracts" aria-label="ATM contracts">
+      <button type="button" className="ltp-atm-contract call" onClick={() => openAtmOrder(atmCall)} disabled={!atmCall || !quoteForInstrument(atmCall)}>
+        <strong>{atmCall?.tradingsymbol || '—'}</strong><span>{fmt(quoteForInstrument(atmCall)?.last_price)}</span>
+      </button>
     </div>
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
@@ -609,6 +688,21 @@ export default function LtpOptionChainDashboard() {
       </aside>
     </section>}
 
+    {orderDraft && <div className="ltp-order-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !orderSaving) setOrderDraft(null); }}>
+      <form className="ltp-order-dialog" onSubmit={submitAtmPaperOrder}>
+        <div className="ltp-order-heading"><h2>{orderDraft.tradingsymbol}</h2><button type="button" onClick={() => setOrderDraft(null)} disabled={orderSaving}>×</button></div>
+        <div className="ltp-order-quote"><span>{symbol} · {expiry}</span><strong>{fmt(quoteForInstrument(orderDraft)?.last_price)}</strong></div>
+        <div className="ltp-order-directions">
+          <button type="button" className={orderDirection === 'BUY' ? 'active buy' : 'buy'} onClick={() => setOrderDirection('BUY')}>BUY</button>
+          <button type="button" className={orderDirection === 'SELL' ? 'active sell' : 'sell'} onClick={() => setOrderDirection('SELL')}>SELL</button>
+        </div>
+        <label><span>LOTS</span><input type="number" min="1" step="1" value={orderLots} onChange={(event) => setOrderLots(event.target.value)} required /></label>
+        <div className="ltp-order-quantity"><span>QUANTITY</span><strong>{(Number(orderLots) > 0 ? Number(orderLots) : 0) * Number(orderDraft.lot_size || lotSize)}</strong></div>
+        {orderError && <div className="ltp-order-error">{orderError}</div>}
+        <div className="ltp-order-actions"><button type="button" onClick={() => setOrderDraft(null)} disabled={orderSaving}>CANCEL</button><button type="submit" disabled={orderSaving || !quoteForInstrument(orderDraft)?.last_price}>{orderSaving ? 'SAVING…' : 'CONFIRM PAPER TRADE'}</button></div>
+        <div className="ltp-order-mode">PAPER MODE · NO BROKER ORDER</div>
+      </form>
+    </div>}
     <footer className="ltp-footer">Market data is provided by APIPLATFORM and Kite Connect. Verify all levels independently before placing trades.</footer>
   </section>;
 }
