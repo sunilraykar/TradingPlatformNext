@@ -1948,3 +1948,52 @@ select,input,textarea{
   .autotrend-refresh-meta { gap: 10px; font-size: 9px; }
   .app-shell--all-indices .control-panel .autotrender-view-switch { margin-left: auto; }
 }
+
+
+/* AutoTrender readability refinement: modestly larger text without changing chart geometry. */
+.app-shell--all-indices .brand-copy strong { font-size: 13px; }
+.app-shell--all-indices .brand-copy span { font-size: 8.5px; }
+.app-shell--all-indices .application-tabs button {
+  font-size: 12px;
+  padding-left: 11px;
+  padding-right: 11px;
+}
+.app-shell--all-indices .status-pill {
+  font-size: 10px;
+  padding: 6px 9px;
+}
+.app-shell--all-indices .app-account-menu > summary { font-size: 10px; }
+.app-shell--all-indices .all-indices-card-heading h3 {
+  font-size: 12px;
+}
+.app-shell--all-indices .all-indices-card-heading > div span {
+  font-size: 10px;
+}
+.app-shell--all-indices .all-indices-card-heading > div strong {
+  font-size: 13px;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics > div > div {
+  font-size: 10px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong {
+  font-size: 15px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong.index-price-value {
+  font-size: 16px !important;
+}
+/* Summary labels and values are intentionally different weights, but equally easy to read. */
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) > span {
+  font-size: 11px !important;
+  line-height: 1.2 !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) > strong {
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-bottom-actions {
+  padding: 8px 10px;
+}
+@media (max-width: 1100px) {
+  .app-shell--all-indices .application-tabs button { font-size: 11px; }
+  .app-shell--all-indices .status-pill { font-size: 9px; }
+}
