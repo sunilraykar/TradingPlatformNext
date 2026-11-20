@@ -1885,3 +1885,31 @@
   min-width: 70px !important;
   flex: 0 1 76px !important;
 }
+
+
+/* Restore the original filter widths; keep the current control heights unchanged. */
+.ltp-option-chain .ltp-overview-row .ltp-controls label {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label:nth-child(1) select {
+  width: 150px !important;
+  min-width: 150px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label:nth-child(2) select {
+  width: 140px !important;
+  min-width: 140px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label:nth-child(3) select {
+  width: 110px !important;
+  min-width: 110px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls .ltp-lot-size {
+  width: 86px !important;
+  min-width: 86px !important;
+  flex: 0 0 86px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls .ltp-lot-size input {
+  width: 76px !important;
+  min-width: 76px !important;
+}
