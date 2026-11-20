@@ -1830,3 +1830,30 @@
     min-width: 0 !important;
   }
 }
+
+
+/* Restore ranked OI/volume heatmap cells above alternating-row and hover backgrounds. */
+.ltp-option-chain .ltp-option-table tbody tr td[class*="ltp-rank-"] {
+  font-weight: 900 !important;
+}
+.ltp-option-chain .ltp-option-table tbody tr td[class*="ltp-rank-"] *,
+.ltp-option-chain .ltp-option-table tbody tr td[class*="ltp-rank-"] strong,
+.ltp-option-chain .ltp-option-table tbody tr td[class*="ltp-rank-"] small {
+  color: inherit !important;
+}
+
+/* CALL OI change — red; CALL OI — blue; CALL volume — yellow. */
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-callOiChg-first { background: #f5a0a8 !important; color: #351018 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-callOiChg-second { background: #f9d5d9 !important; color: #54232a !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-callOi-first { background: #8ed0f2 !important; color: #102b40 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-callOi-second { background: #cceafa !important; color: #193b50 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-callVol-first { background: #fff36a !important; color: #302900 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-callVol-second { background: #ffe6a1 !important; color: #453400 !important; }
+
+/* PUT volume — teal; PUT OI — blue; PUT OI change — green. */
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putVol-first { background: #a9e4dc !important; color: #103c36 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putVol-second { background: #d2f1ec !important; color: #1b4943 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putOi-first { background: #b8d6ff !important; color: #172f55 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putOi-second { background: #dce9ff !important; color: #263f65 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putOiChg-first { background: #b9e6a2 !important; color: #1b3c12 !important; }
+.ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putOiChg-second { background: #dff2d2 !important; color: #2b4820 !important; }
