@@ -2250,7 +2250,7 @@ export default function App({ user = null, onSignOut }) {
   const hasMarketData = Boolean(intraday || oi);
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell${applicationTab === 'autotrender' && showAllIndices && autotrenderView === 'live' ? ' app-shell--all-indices' : ''}`}>
       <header className="topbar">
         <div className="brand-mark">TP</div>
         <div className="brand-copy"><strong>TradingPlatformNext</strong><span>MARKET INTELLIGENCE</span></div>
