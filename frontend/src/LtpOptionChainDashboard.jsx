@@ -264,7 +264,6 @@ export default function LtpOptionChainDashboard() {
   const [quotes, setQuotes] = useState({});
   const [candles, setCandles] = useState([]);
   const [chartType, setChartType] = useState('tradingview');
-  const [showChart, setShowChart] = useState(false);
   const [showOptionLtp, setShowOptionLtp] = useState(false);
   const [feedConnected, setFeedConnected] = useState(false);
   const [activeView, setActiveView] = useState('option-chain');
@@ -625,17 +624,7 @@ export default function LtpOptionChainDashboard() {
     {activeView === "swing-trade" ? <SwingTradePanel onSymbolSelect={openSymbolOptionChain} /> : <section className="ltp-workspace">
       <article className="ltp-option-panel">
         <div className="ltp-table-scroll"><table className="ltp-option-table">
-          <thead>
-            <tr className="ltp-option-group-head">
-              <th colSpan="4" className="ltp-call-group">CALLS</th>
-              <th rowSpan="2" className="ltp-strike-head">STRIKE</th>
-              <th colSpan="4" className="ltp-put-group">PUTS</th>
-            </tr>
-            <tr className="ltp-option-subhead">
-              <th>OI CHG</th><th>OI</th><th>VOLUME</th><th>REVERSAL</th>
-              <th>REVERSAL</th><th>VOLUME</th><th>OI</th><th>OI CHG</th>
-            </tr>
-          </thead>
+          <thead><tr><th>CALL OI CHG</th><th>CALL OI</th><th>CALL VOLUME</th><th>CALL REVERSAL</th><th className="ltp-strike-head">STRIKE</th><th>PUT REVERSAL</th><th>PUT VOLUME</th><th>PUT OI</th><th>PUT OI CHG</th></tr></thead>
           <tbody>{visibleRows.map((row, index) => {
             const strike = n(row.strike);
             const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
@@ -679,50 +668,38 @@ export default function LtpOptionChainDashboard() {
         <div className="ltp-table-legend"><span><i className="atm" /> ATM strike</span><span><i className="max" /> Highest OI / volume</span><span className="positive">● Positive</span><span className="negative">● Negative</span></div>
       </article>
 
-      <aside className={'ltp-chart-panel ' + (showChart ? 'expanded' : 'collapsed')}>
-        <div className="ltp-panel-heading">
-          <div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div>
-          <div className="ltp-chart-heading-actions">
-            <div className="ltp-chart-toggle" role="group" aria-label="Chart type">
-              <button type="button" className={chartType === 'classic' ? 'active' : ''} onClick={() => setChartType('classic')}>Classic</button>
-              <button type="button" className={chartType === 'tradingview' ? 'active' : ''} onClick={() => setChartType('tradingview')}>TradingView</button>
-            </div>
-            <small>5-minute candles</small>
-            <button type="button" className="ltp-chart-expand" aria-expanded={showChart} onClick={() => setShowChart((value) => !value)}>{showChart ? 'Hide chart ▲' : 'Show chart ▼'}</button>
-          </div>
-        </div>
-        {showChart && <>
-          <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
-          {chartType === 'tradingview' ? <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
-            // Keep target numbering in ascending target order: T1 is the nearer target,
-            // T2 is the farther/higher target. Supports retain the reference mapping.
-            { title: 'T2', value: rs.rreversalNext, color: '#ff6474' },
-            { title: 'T1', value: rs.rreversal, color: '#ffad42' },
-            { title: 'S1', value: rs.sreversal, color: '#35dc8a' },
-            { title: 'S2', value: rs.sreversalBack, color: '#43c8e8' },
-            // Max Pain boundaries are separate APIPLATFORM reversalModel values.
-            { title: 'Max Pain', value: model.resistanceSL, color: '#ff9b45', lineStyle: 2 },
-            { title: 'Max Pain', value: model.supportSL, color: '#ff9b45', lineStyle: 2 },
-          ]} /> : <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />}
-          <section className="ltp-direction-banner ltp-chart-scenario"><span>MARKET SCENARIO</span><strong>{marketDirection}</strong><small>{model.scenario || ''}</small></section>
-          <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
-          <section className="ltp-intelligence-groups" aria-label="Resistance and support shifting">
-            <article className="ltp-intelligence-group resistance-group">
-              <h3>RESISTANCE</h3>
-              <div className="ltp-intelligence-status"><span>STATUS</span><strong className={tone(rs.Resistance_Status)}>{rs.Resistance_Status || '—'}</strong></div>
-              <div><span>VOLUME SHIFT</span><strong>{rs.R_Vol_ShiftingStrike || '—'}</strong><small>{rs.R_Vol_Status || '—'}</small></div>
-              <div><span>OI SHIFT</span><strong>{rs.R_OI_ShiftingStrike || '—'}</strong><small>{rs.R_OI_Status || '—'}</small></div>
-              <div><span>RESISTANCE SHIFT</span><strong>{rs.R_ShiftingStrike || '—'}</strong></div>
-            </article>
-            <article className="ltp-intelligence-group support-group">
-              <h3>SUPPORT</h3>
-              <div className="ltp-intelligence-status"><span>STATUS</span><strong className={tone(rs.Support_Status)}>{rs.Support_Status || '—'}</strong></div>
-              <div><span>VOLUME SHIFT</span><strong>{rs.S_Vol_ShiftingStrike || '—'}</strong><small>{rs.S_Vol_Status || '—'}</small></div>
-              <div><span>OI SHIFT</span><strong>{rs.S_OI_ShiftingStrike || '—'}</strong><small>{rs.S_OI_Status || '—'}</small></div>
-              <div><span>SUPPORT SHIFT</span><strong>{rs.S_ShiftingStrike || '—'}</strong></div>
-            </article>
-          </section>
-        </>}
+      <aside className="ltp-chart-panel">
+        <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><div className="ltp-chart-heading-actions"><div className="ltp-chart-toggle" role="group" aria-label="Chart type"><button type="button" className={chartType === 'classic' ? 'active' : ''} onClick={() => setChartType('classic')}>Classic</button><button type="button" className={chartType === 'tradingview' ? 'active' : ''} onClick={() => setChartType('tradingview')}>TradingView</button></div><small>5-minute candles</small></div></div>
+        <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
+        {chartType === 'tradingview' ? <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
+          // Keep target numbering in ascending target order: T1 is the nearer target,
+          // T2 is the farther/higher target. Supports retain the reference mapping.
+          { title: 'T2', value: rs.rreversalNext, color: '#ff6474' },
+          { title: 'T1', value: rs.rreversal, color: '#ffad42' },
+          { title: 'S1', value: rs.sreversal, color: '#35dc8a' },
+          { title: 'S2', value: rs.sreversalBack, color: '#43c8e8' },
+          // Max Pain boundaries are separate APIPLATFORM reversalModel values.
+          { title: 'Max Pain', value: model.resistanceSL, color: '#ff9b45', lineStyle: 2 },
+          { title: 'Max Pain', value: model.supportSL, color: '#ff9b45', lineStyle: 2 },
+        ]} /> : <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />}
+        <section className="ltp-direction-banner ltp-chart-scenario"><span>MARKET SCENARIO</span><strong>{marketDirection}</strong><small>{model.scenario || ''}</small></section>
+        <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
+        <section className="ltp-intelligence-groups" aria-label="Resistance and support shifting">
+          <article className="ltp-intelligence-group resistance-group">
+            <h3>RESISTANCE</h3>
+            <div className="ltp-intelligence-status"><span>STATUS</span><strong className={tone(rs.Resistance_Status)}>{rs.Resistance_Status || '—'}</strong></div>
+            <div><span>VOLUME SHIFT</span><strong>{rs.R_Vol_ShiftingStrike || '—'}</strong><small>{rs.R_Vol_Status || '—'}</small></div>
+            <div><span>OI SHIFT</span><strong>{rs.R_OI_ShiftingStrike || '—'}</strong><small>{rs.R_OI_Status || '—'}</small></div>
+            <div><span>RESISTANCE SHIFT</span><strong>{rs.R_ShiftingStrike || '—'}</strong></div>
+          </article>
+          <article className="ltp-intelligence-group support-group">
+            <h3>SUPPORT</h3>
+            <div className="ltp-intelligence-status"><span>STATUS</span><strong className={tone(rs.Support_Status)}>{rs.Support_Status || '—'}</strong></div>
+            <div><span>VOLUME SHIFT</span><strong>{rs.S_Vol_ShiftingStrike || '—'}</strong><small>{rs.S_Vol_Status || '—'}</small></div>
+            <div><span>OI SHIFT</span><strong>{rs.S_OI_ShiftingStrike || '—'}</strong><small>{rs.S_OI_Status || '—'}</small></div>
+            <div><span>SUPPORT SHIFT</span><strong>{rs.S_ShiftingStrike || '—'}</strong></div>
+          </article>
+        </section>
       </aside>
     </section>}
 
