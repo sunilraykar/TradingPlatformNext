@@ -1381,3 +1381,75 @@
 @media (max-width: 760px) {
   .ltp-option-chain { padding: 6px 0 12px !important; }
 }
+
+
+/* Keep Swing Trade inside Market Intelligence on the same AutoTrender palette. */
+.ltp-section-tabs {
+  border-color: var(--line) !important;
+  border-radius: 8px !important;
+  background: var(--surface-raised) !important;
+}
+.ltp-section-tabs button {
+  border-radius: 6px !important;
+  color: var(--muted) !important;
+}
+.ltp-section-tabs button.active {
+  border-color: var(--accent) !important;
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
+  box-shadow: none !important;
+}
+.ltp-swing-panel {
+  border-color: var(--line) !important;
+  border-radius: 10px !important;
+  background: var(--surface-raised) !important;
+  color: var(--text) !important;
+  box-shadow: none !important;
+}
+.ltp-swing-heading,
+.ltp-swing-toolbar {
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+}
+.ltp-swing-heading h2 { color: var(--text-strong) !important; }
+.ltp-swing-heading span,
+.ltp-swing-refresh-meta { color: var(--muted) !important; }
+.ltp-swing-toolbar { color: var(--text) !important; }
+.ltp-swing-tabs button {
+  border-color: var(--line) !important;
+  border-radius: 6px !important;
+  background: var(--surface-inset) !important;
+  color: var(--text) !important;
+}
+.ltp-swing-tabs button.bullish.active {
+  border-color: #239b68 !important;
+  background: #176544 !important;
+  color: #eafff5 !important;
+}
+.ltp-swing-tabs button.bearish.active {
+  border-color: #bd5964 !important;
+  background: #813943 !important;
+  color: #fff0f1 !important;
+}
+.ltp-swing-table-wrap { background: var(--surface-raised) !important; }
+.ltp-swing-table thead {
+  background: var(--surface) !important;
+  color: var(--text-strong) !important;
+}
+.ltp-swing-table th {
+  background: var(--surface) !important;
+  color: var(--muted) !important;
+}
+.ltp-swing-table td {
+  border-color: var(--line) !important;
+  color: var(--text) !important;
+}
+.ltp-swing-table tbody tr:nth-child(odd) { background: var(--surface-raised) !important; }
+.ltp-swing-table tbody tr:nth-child(even) { background: var(--surface) !important; }
+.ltp-swing-table tbody tr:hover { background: var(--surface-inset) !important; }
+.ltp-swing-table td.symbol { color: #79b8ff !important; }
+.ltp-swing-table td.cmp { color: var(--text-strong) !important; }
+.ltp-swing-footnote {
+  border-color: var(--line) !important;
+  color: var(--muted) !important;
+}
