@@ -273,11 +273,28 @@ export default function LtpOptionChainDashboard() {
   const pain = useMemo(() => maxPain(rows), [rows]);
   const instrumentMap = useMemo(() => new Map(instruments.map((item) => [String(Number(item.strike)) + ':' + item.side, item])), [instruments]);
 
-  // Display the complete returned option chain; the page handles vertical scrolling.
-  const visibleRows = useMemo(
-    () => rows.slice().sort((a, b) => (n(a.strike) || 0) - (n(b.strike) || 0)),
-    [rows]
-  );
+  // Show the 25 strikes nearest to the live spot, balanced above and below ATM.
+  // Keep the provider's full response in `rows` for calculations and heatmap ranking.
+  const visibleRows = useMemo(() => {
+    const sorted = rows.slice().sort((a, b) => (n(a.strike) || 0) - (n(b.strike) || 0));
+    if (sorted.length <= 25) return sorted;
+    const referencePrice = spot ?? n(data.Price_S);
+    let centerIndex = Math.floor(sorted.length / 2);
+    if (referencePrice !== null && referencePrice !== undefined) {
+      let nearestDistance = Infinity;
+      sorted.forEach((row, index) => {
+        const strike = n(row.strike);
+        if (strike === null) return;
+        const distance = Math.abs(strike - referencePrice);
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          centerIndex = index;
+        }
+      });
+    }
+    const start = Math.max(0, Math.min(sorted.length - 25, centerIndex - 12));
+    return sorted.slice(start, start + 25);
+  }, [rows, spot, data.Price_S]);
 
   const maxima = useMemo(() => {
     const rankValues = (field, absolute = false) => [...new Set(rows
