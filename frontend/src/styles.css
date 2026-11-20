@@ -2699,3 +2699,17 @@ select,input,textarea{
   font-size: 10px !important;
   line-height: 1;
 }
+
+
+/* AutoTrender top price/strength metrics: reduce label and value typography by ~30%. */
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics > div > div {
+  font-size: 6.5px !important;
+  line-height: 1.1 !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong {
+  font-size: 9.8px !important;
+  line-height: 1.15 !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong.index-price-value {
+  font-size: 10.5px !important;
+}
