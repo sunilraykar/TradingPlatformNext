@@ -2648,3 +2648,67 @@
   color: #8492a6;
   cursor: not-allowed;
 }
+
+
+/* Keep contract and index shortcuts on a dedicated row, shown only in Option Chain view. */
+.ltp-option-chain .ltp-contract-index-row {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr) 232px;
+  align-items: center;
+  justify-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0 10px;
+  padding: 0 4px;
+}
+.ltp-option-chain .ltp-contract-index-row .ltp-atm-contracts {
+  width: 100%;
+  min-width: 0;
+  max-width: 232px;
+}
+.ltp-option-chain .ltp-contract-index-row .ltp-atm-contract {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 232px !important;
+}
+.ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  position: static;
+}
+@media (max-width: 900px) {
+  .ltp-option-chain .ltp-contract-index-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: 8px;
+  }
+  .ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .ltp-option-chain .ltp-contract-index-row .ltp-atm-contracts:first-child {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .ltp-option-chain .ltp-contract-index-row .ltp-atm-contracts:last-child {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+@media (max-width: 520px) {
+  .ltp-option-chain .ltp-contract-index-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts,
+  .ltp-option-chain .ltp-contract-index-row .ltp-atm-contracts:first-child,
+  .ltp-option-chain .ltp-contract-index-row .ltp-atm-contracts:last-child {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
