@@ -1453,3 +1453,307 @@
   border-color: var(--line) !important;
   color: var(--muted) !important;
 }
+
+
+/* Market Intelligence refinement pass — match AutoTrender Dashboard proportions and density. */
+.ltp-option-chain {
+  padding: 6px 10px 14px !important;
+  background: transparent !important;
+  color: #e7edf5 !important;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif !important;
+}
+.ltp-overview-row {
+  grid-template-columns: minmax(205px, 0.34fr) minmax(0, 1.66fr) !important;
+  gap: 8px !important;
+  align-items: stretch !important;
+  margin-bottom: 8px !important;
+}
+.ltp-overview-row .ltp-section-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+  margin: 0;
+  padding: 4px;
+  border: 1px solid #48515d !important;
+  border-radius: 9px !important;
+  background: #303740 !important;
+}
+.ltp-overview-row .ltp-section-tabs button {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid transparent !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: #c9b89e !important;
+  font: 700 12px/1.2 'DM Sans', 'Segoe UI', sans-serif !important;
+  white-space: nowrap;
+}
+.ltp-overview-row .ltp-section-tabs button.active {
+  border-color: #ff7a55 !important;
+  background: #f15b3a !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+.ltp-overview-row .ltp-option-toolbar {
+  display: flex;
+  align-items: center;
+  justify-self: stretch;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  min-height: 48px;
+  height: auto;
+  gap: 9px;
+  padding: 6px 10px;
+  border: 1px solid #48515d !important;
+  border-radius: 9px !important;
+  background: #303740 !important;
+  box-shadow: none !important;
+}
+.ltp-overview-row .ltp-brand {
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: 7px;
+}
+.ltp-overview-row .ltp-brand-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-size: 17px;
+}
+.ltp-overview-row .ltp-brand strong {
+  color: #f4f6f8 !important;
+  font-size: 12px !important;
+  line-height: 1.15;
+}
+.ltp-overview-row .ltp-brand small {
+  color: #c4b398 !important;
+  font-size: 8px !important;
+  line-height: 1.2;
+  letter-spacing: .75px;
+}
+.ltp-overview-row .ltp-controls {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  flex-wrap: nowrap;
+  min-width: 0;
+  gap: 6px;
+}
+.ltp-overview-row .ltp-controls label {
+  flex: 1 1 0;
+  min-width: 70px;
+  gap: 3px;
+  color: #c9b89e !important;
+  font-size: 9px !important;
+  line-height: 1.1;
+  letter-spacing: .45px;
+}
+.ltp-overview-row .ltp-controls select,
+.ltp-overview-row .ltp-controls input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 29px;
+  padding: 3px 7px;
+  border: 1px solid #56616e !important;
+  border-radius: 5px !important;
+  background: #252d36 !important;
+  color: #f2f5f8 !important;
+  font: 600 11px/1.2 'DM Sans', 'Segoe UI', sans-serif !important;
+}
+.ltp-overview-row .ltp-controls .ltp-lot-size {
+  flex: 0 1 66px;
+  min-width: 55px;
+}
+.ltp-overview-row .ltp-ltp-toggle,
+.ltp-overview-row .ltp-refresh {
+  flex: 0 0 auto;
+  height: 29px;
+  padding: 0 9px;
+  border-radius: 5px;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.ltp-overview-row .ltp-ltp-toggle {
+  border: 1px solid #56616e;
+  background: #252d36;
+  color: #e7edf5;
+}
+.ltp-overview-row .ltp-ltp-toggle.active {
+  border-color: #258b68;
+  background: #185d48;
+  color: #d8ffed;
+}
+.ltp-overview-row .ltp-refresh {
+  border: 1px solid #f15b3a !important;
+  background: #f15b3a !important;
+  color: #fff !important;
+}
+.ltp-overview-row .ltp-feed-status {
+  flex: 0 0 auto;
+  gap: 5px;
+  color: #42d99a !important;
+  font-size: 9px !important;
+  white-space: nowrap;
+}
+.ltp-overview-row .ltp-feed-status i { width: 6px; height: 6px; }
+
+/* Balanced 58:42 split leaves enough room for all option-chain columns and chart labels. */
+.ltp-workspace {
+  grid-template-columns: minmax(0, 1.38fr) minmax(420px, 1fr) !important;
+  gap: 9px !important;
+  align-items: start !important;
+}
+.ltp-option-panel,
+.ltp-chart-panel {
+  min-width: 0;
+  border: 1px solid #48515d !important;
+  border-radius: 9px !important;
+  background: #303740 !important;
+  box-shadow: none !important;
+}
+.ltp-option-panel { overflow: hidden; }
+.ltp-chain-count {
+  min-height: 20px;
+  padding: 1px 9px 3px;
+  color: #d4dce5 !important;
+  font-size: 10px !important;
+}
+.ltp-table-scroll {
+  max-height: calc(100vh - 300px) !important;
+  min-height: 390px !important;
+  background: #303740 !important;
+}
+.ltp-option-table {
+  min-width: 790px;
+  font-family: 'DM Sans', 'Segoe UI', sans-serif !important;
+}
+.ltp-option-table th {
+  padding: 8px 6px !important;
+  font-size: 10px !important;
+  line-height: 1.2;
+  background: #343d47 !important;
+  color: #e7edf5 !important;
+  border-color: #515c68 !important;
+}
+.ltp-option-table th:nth-child(-n+4) { background: #28513f !important; color: #d6f7e4 !important; }
+.ltp-option-table th:nth-child(n+6) { background: #563b40 !important; color: #ffe0e2 !important; }
+.ltp-option-table th.ltp-strike-head,
+.ltp-option-table tfoot td.ltp-strike-head { background: #ed653f !important; color: #fff !important; }
+.ltp-option-table td {
+  padding: 6px 6px !important;
+  font-size: 11px !important;
+  line-height: 1.15;
+  border-color: #48525e !important;
+  background: #303740 !important;
+  color: #edf1f5 !important;
+  font-weight: 600;
+}
+.ltp-option-table tbody tr:nth-child(even) td { background: #363f49 !important; }
+.ltp-option-table tbody tr:hover td { background: #414c58 !important; }
+.ltp-option-table td strong { font-size: 11px !important; }
+.ltp-option-table td small { margin-top: 2px; color: #c4ced8 !important; font-size: 9px !important; line-height: 1.1; }
+.ltp-option-table td.ltp-strike-cell { background: #bd591f !important; color: #fff !important; }
+.ltp-option-table .ltp-atm-row td { background: #51472f !important; color: #fff0c5 !important; }
+.ltp-option-table .ltp-atm-row td.ltp-strike-cell { background: #e87932 !important; color: #fff !important; }
+.ltp-option-table td.positive { color: #55e39b !important; }
+.ltp-option-table td.negative { color: #ff858c !important; }
+.ltp-option-table td[class*="ltp-rank-"] { font-weight: 900 !important; }
+.ltp-option-table td[class*="ltp-rank-"] *,
+.ltp-option-table td[class*="ltp-rank-"] strong,
+.ltp-option-table td[class*="ltp-rank-"] small { color: inherit !important; }
+.ltp-option-table td.ltp-rank-callOiChg-first { background: #e99aa2 !important; color: #351018 !important; }
+.ltp-option-table td.ltp-rank-callOiChg-second { background: #f3c6cb !important; color: #54232a !important; }
+.ltp-option-table td.ltp-rank-callOi-first { background: #91c9e8 !important; color: #102b40 !important; }
+.ltp-option-table td.ltp-rank-callOi-second { background: #c4e0f0 !important; color: #193b50 !important; }
+.ltp-option-table td.ltp-rank-callVol-first { background: #f4df70 !important; color: #302900 !important; }
+.ltp-option-table td.ltp-rank-callVol-second { background: #f5e7b3 !important; color: #453400 !important; }
+.ltp-option-table td.ltp-rank-putVol-first { background: #9ed8cf !important; color: #103c36 !important; }
+.ltp-option-table td.ltp-rank-putVol-second { background: #c5e9e3 !important; color: #1b4943 !important; }
+.ltp-option-table td.ltp-rank-putOi-first { background: #a9c9ee !important; color: #172f55 !important; }
+.ltp-option-table td.ltp-rank-putOi-second { background: #d0def2 !important; color: #263f65 !important; }
+.ltp-option-table td.ltp-rank-putOiChg-first { background: #b1d89b !important; color: #1b3c12 !important; }
+.ltp-option-table td.ltp-rank-putOiChg-second { background: #d6e9c9 !important; color: #2b4820 !important; }
+.ltp-option-table tfoot td {
+  padding: 6px !important;
+  background: #3b4652 !important;
+  color: #edf2f7 !important;
+  font-size: 9px !important;
+  border-color: #56616e !important;
+}
+.ltp-option-table tfoot td strong { font-size: 11px !important; }
+.ltp-spot-marker-row td { padding: 4px 5px !important; background: #49333a !important; color: #f5dfe2 !important; font-size: 9px !important; }
+.ltp-spot-marker-row td.ltp-spot-marker-cell { background: #70402e !important; color: #fff !important; }
+.ltp-spot-marker-cell b { font-size: 11px !important; }
+.ltp-reversal { max-width: 100px; padding: 3px 5px !important; font-size: 9px !important; line-height: 1.15; }
+.ltp-table-legend { padding: 7px 9px !important; gap: 10px; color: #c7d1dc !important; font-size: 9px !important; }
+
+/* Compact chart composition so scenario and resistance/support remain in view. */
+.ltp-chart-panel {
+  min-height: 0 !important;
+  height: auto;
+  overflow: hidden;
+  background: #303740 !important;
+}
+.ltp-chart-panel > .ltp-panel-heading { min-height: 43px; padding: 7px 10px !important; background: #343d47 !important; border-color: #515c68 !important; }
+.ltp-chart-panel .ltp-panel-heading span { font-size: 9px !important; color: #c9b89e !important; }
+.ltp-chart-panel .ltp-panel-heading h2 { font-size: 14px !important; color: #f3f5f7 !important; }
+.ltp-chart-heading-actions { gap: 7px; }
+.ltp-chart-heading-actions small { font-size: 9px !important; color: #d1d9e1 !important; }
+.ltp-chart-toggle { padding: 2px; border-color: #56616e; background: #252d36; }
+.ltp-chart-toggle button { padding: 4px 7px; font-size: 9px; }
+.ltp-chart-toggle button.active { background: #f15b3a; }
+.ltp-chart-quote { min-height: 42px; padding: 5px 10px !important; background: #303740 !important; border-color: #515c68 !important; }
+.ltp-chart-quote strong { font-size: 22px !important; color: #f4f6f8 !important; }
+.ltp-chart-quote span { font-size: 10px !important; }
+.ltp-lightweight-chart {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  height: clamp(285px, calc(100vh - 565px), 360px) !important;
+  padding: 3px 5px 2px !important;
+  background: #303740 !important;
+}
+.ltp-lightweight-canvas { width: 100% !important; height: 100% !important; min-height: 0 !important; }
+.ltp-candle-chart { min-height: 0 !important; padding: 4px 5px 2px !important; background: #303740 !important; }
+.ltp-candle-chart svg { display: block; width: 100%; height: auto !important; min-height: 0 !important; max-height: none !important; }
+.ltp-chart-scenario { min-height: 36px !important; margin: 4px 6px !important; padding: 5px 8px !important; gap: 4px 8px !important; }
+.ltp-chart-panel .ltp-chart-scenario span { font-size: 9px !important; }
+.ltp-chart-panel .ltp-chart-scenario strong { font-size: 12px !important; }
+.ltp-chart-panel .ltp-chart-scenario small { font-size: 9px !important; }
+.ltp-chart-panel .ltp-chart-footer { padding: 4px 8px !important; font-size: 8px !important; }
+.ltp-chart-panel .ltp-intelligence-groups { grid-template-columns: 1fr 1fr !important; gap: 5px !important; margin: 5px !important; }
+.ltp-chart-panel .ltp-intelligence-group {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 3px !important;
+  padding: 5px !important;
+  background: #343d47 !important;
+  border-color: #515c68 !important;
+}
+.ltp-chart-panel .ltp-intelligence-group h3 { padding: 3px !important; font-size: 10px !important; }
+.ltp-chart-panel .ltp-intelligence-group > div { padding: 4px 3px !important; background: #252d36 !important; }
+.ltp-chart-panel .ltp-intelligence-group > div > span { font-size: 8px !important; }
+.ltp-chart-panel .ltp-intelligence-group > div > strong { font-size: 10px !important; }
+.ltp-chart-panel .ltp-intelligence-group > div > small { font-size: 8px !important; }
+
+@media (max-width: 1500px) {
+  .ltp-overview-row { grid-template-columns: minmax(0, 1fr) !important; }
+  .ltp-overview-row .ltp-option-toolbar { flex-wrap: wrap; }
+  .ltp-overview-row .ltp-controls { flex-wrap: wrap; }
+}
+@media (max-width: 1150px) {
+  .ltp-workspace { grid-template-columns: minmax(0, 1fr) !important; }
+  .ltp-table-scroll { max-height: 560px !important; }
+  .ltp-lightweight-chart { height: 420px !important; }
+}
+@media (max-width: 760px) {
+  .ltp-option-chain { padding: 6px 8px 12px !important; }
+  .ltp-overview-row .ltp-section-tabs { justify-content: flex-start; }
+  .ltp-overview-row .ltp-option-toolbar { flex-wrap: wrap; }
+  .ltp-overview-row .ltp-controls { flex-wrap: wrap; }
+  .ltp-overview-row .ltp-market-strip { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .ltp-chart-panel .ltp-intelligence-groups { grid-template-columns: 1fr !important; }
+}
