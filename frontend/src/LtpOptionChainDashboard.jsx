@@ -242,6 +242,7 @@ export default function LtpOptionChainDashboard() {
   const [feedConnected, setFeedConnected] = useState(false);
   const [activeView, setActiveView] = useState('option-chain');
   const chainRequestId = useRef(0);
+  const chainFetchBusy = useRef(false);
   const metadataRequestId = useRef(0);
 
   const openSymbolOptionChain = (nextSymbol) => {
@@ -341,6 +342,10 @@ export default function LtpOptionChainDashboard() {
   const loadChain = useCallback(async (showLoading = true) => {
     if (!expiry) return;
     const requestId = ++chainRequestId.current;
+    // Never overlap full-chain requests. If a request is still running at the
+    // next poll, its response is ignored and the following 2-second tick retries.
+    if (chainFetchBusy.current) return;
+    chainFetchBusy.current = true;
     if (showLoading) setLoading(true);
     setError('');
     try {
@@ -357,6 +362,7 @@ export default function LtpOptionChainDashboard() {
     } catch (e) {
       if (requestId === chainRequestId.current) setError(e.message || 'Unable to fetch option-chain data.');
     } finally {
+      chainFetchBusy.current = false;
       if (requestId === chainRequestId.current && showLoading) setLoading(false);
     }
   }, [symbol, expiry, lotSize]);
@@ -403,7 +409,12 @@ export default function LtpOptionChainDashboard() {
   }, []);
 
   useEffect(() => { loadMetadata(symbol); }, [symbol, loadMetadata]);
-  useEffect(() => { if (auth.authenticated && expiry) loadChain(); }, [auth.authenticated, expiry, symbol, lotSize, priceMode]);
+  useEffect(() => {
+    if (!auth.authenticated || !expiry) return undefined;
+    loadChain();
+    const timer = window.setInterval(() => loadChain(false), 2000);
+    return () => window.clearInterval(timer);
+  }, [auth.authenticated, expiry, loadChain, priceMode]);
   useEffect(() => {
     if (!instruments.length && !spotToken) return undefined;
     refreshQuotes();
