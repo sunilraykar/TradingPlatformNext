@@ -40,6 +40,12 @@ def _symbol(value: str) -> str:
     return normalized
 
 
+def _instrument_name(symbol: str) -> str:
+    """Return the Kite instrument-master name for an option-chain symbol."""
+    index_spec = _INDEX_INSTRUMENTS.get(symbol)
+    return index_spec[1] if index_spec else symbol
+
+
 def _expiry(value: str) -> date:
     for pattern in ("%d-%m-%Y", "%Y-%m-%d"):
         try:
@@ -126,11 +132,11 @@ def option_chain_metadata(symbol: str = Query(default="NIFTY", max_length=30)) -
                 WHERE source = 'KITE' AND is_active = TRUE
                   AND exchange = :exchange
                   AND instrument_type IN ('CE', 'PE')
-                  AND tradingsymbol LIKE :prefix
+                  AND name = :instrument_name
                   AND expiry >= :today
                 GROUP BY expiry
                 ORDER BY expiry
-            """), {"exchange": exchange, "prefix": f"{key}%", "today": today}).mappings().all()
+            """), {"exchange": exchange, "instrument_name": _instrument_name(key), "today": today}).mappings().all()
         expiries = [{"expiry": _expiry_label(row["expiry"]), "lot_size": int(row["lot_size"] or 0)} for row in rows]
     except SQLAlchemyError as exc:
         logger.exception("Could not resolve option expiries for %s", key)
@@ -173,8 +179,8 @@ def fetch_apiplatform_option_chain(
                   AND exchange = :exchange
                   AND instrument_type IN ('CE', 'PE')
                   AND expiry = :expiry
-                  AND tradingsymbol LIKE :prefix
-            """), {"exchange": exchange, "expiry": expiry_date, "prefix": f"{key}%"}).mappings().all()
+                  AND name = :instrument_name
+            """), {"exchange": exchange, "expiry": expiry_date, "instrument_name": _instrument_name(key)}).mappings().all()
 
             index_spec = _INDEX_INSTRUMENTS.get(key)
             if index_spec:
@@ -217,9 +223,9 @@ def fetch_apiplatform_option_chain(
                 FROM instruments
                 WHERE source = 'KITE' AND is_active = TRUE
                   AND exchange = :exchange AND instrument_type = 'FUT'
-                  AND expiry = :expiry AND tradingsymbol LIKE :prefix
+                  AND expiry = :expiry AND name = :instrument_name
                 LIMIT 1
-            """), {"exchange": exchange, "expiry": expiry_date, "prefix": f"{key}%"}).mappings().first()
+            """), {"exchange": exchange, "expiry": expiry_date, "instrument_name": _instrument_name(key)}).mappings().first()
             if future_row:
                 future_token = int(future_row["instrument_token"])
 
@@ -314,10 +320,10 @@ def refresh_option_chain_subscriptions(
                   AND exchange = :exchange
                   AND instrument_type IN ('CE', 'PE')
                   AND expiry = :expiry
-                  AND tradingsymbol LIKE :prefix
+                  AND name = :instrument_name
                 ORDER BY strike, instrument_type
             """), {
-                "exchange": exchange, "expiry": expiry_date, "prefix": f"{key}%"
+                "exchange": exchange, "expiry": expiry_date, "instrument_name": _instrument_name(key)
             }).mappings().all()
 
             index_spec = _INDEX_INSTRUMENTS.get(key)
@@ -347,11 +353,11 @@ def refresh_option_chain_subscriptions(
                 FROM instruments
                 WHERE source = 'KITE' AND is_active = TRUE
                   AND exchange = :exchange AND instrument_type = 'FUT'
-                  AND expiry = :expiry AND tradingsymbol LIKE :prefix
+                  AND expiry = :expiry AND name = :instrument_name
                 ORDER BY instrument_token
                 LIMIT 1
             """), {
-                "exchange": exchange, "expiry": expiry_date, "prefix": f"{key}%"
+                "exchange": exchange, "expiry": expiry_date, "instrument_name": _instrument_name(key)
             }).mappings().first()
 
         if not rows:
@@ -486,11 +492,11 @@ def option_chain_intraday_candles(
                     FROM instruments
                     WHERE source = 'KITE' AND is_active = TRUE
                       AND exchange = :exchange AND instrument_type = 'FUT'
-                      AND expiry = :expiry AND tradingsymbol LIKE :prefix
+                      AND expiry = :expiry AND name = :instrument_name
                     ORDER BY instrument_token
                     LIMIT 1
                 """), {"exchange": "BFO" if key in {"SENSEX", "BANKEX"} else "NFO",
-                      "expiry": _expiry(expiry), "prefix": f"{key}%"}).mappings().first()
+                      "expiry": _expiry(expiry), "instrument_name": _instrument_name(key)}).mappings().first()
         if not row:
             return {
                 "symbol": key, "candles": [],
