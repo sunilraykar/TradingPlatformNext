@@ -1261,3 +1261,123 @@
 }
 
 
+
+
+/* AutoTrender Dashboard visual system applied to Market Intelligence workspace.
+   Preserve semantic call/put, ATM, rank and price-level colors. */
+.ltp-option-chain {
+  min-height: calc(100vh - 50px);
+  padding: 6px 0 14px !important;
+  background: transparent !important;
+  color: var(--text) !important;
+  font-family: var(--font-ui, Inter, sans-serif) !important;
+}
+.ltp-option-toolbar {
+  min-height: 44px;
+  border: 1px solid var(--line) !important;
+  border-radius: 9px !important;
+  background: var(--surface-raised) !important;
+  color: var(--text-strong) !important;
+  box-shadow: none !important;
+}
+.ltp-brand strong { color: var(--text-strong) !important; }
+.ltp-brand small,
+.ltp-controls label { color: var(--muted) !important; }
+.ltp-controls select,
+.ltp-controls input {
+  border: 1px solid var(--line) !important;
+  border-radius: 6px !important;
+  background: var(--surface-inset) !important;
+  color: var(--text-strong) !important;
+}
+.ltp-refresh,
+.ltp-auth-banner button {
+  border: 1px solid var(--accent) !important;
+  border-radius: 6px !important;
+  background: var(--accent) !important;
+  color: var(--accent-contrast) !important;
+}
+.ltp-option-panel,
+.ltp-chart-panel {
+  border: 1px solid var(--line) !important;
+  border-radius: 10px !important;
+  background: var(--surface-raised) !important;
+  box-shadow: none !important;
+}
+.ltp-panel-heading,
+.ltp-chart-quote {
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+}
+.ltp-panel-heading h2,
+.ltp-chart-quote strong { color: var(--text-strong) !important; }
+.ltp-panel-heading span,
+.ltp-panel-heading > small,
+.ltp-table-legend,
+.ltp-chart-legend,
+.ltp-chart-footer { color: var(--muted) !important; }
+.ltp-table-scroll,
+.ltp-candle-chart { background: var(--surface-raised) !important; }
+.ltp-option-table th {
+  border-color: var(--line) !important;
+  background: var(--surface) !important;
+  color: var(--text-strong) !important;
+}
+.ltp-option-table th:nth-child(-n+4) {
+  background: #244b3b !important;
+  color: #c9f5dc !important;
+}
+.ltp-option-table th:nth-child(n+6) {
+  background: #56343b !important;
+  color: #ffd6d9 !important;
+}
+.ltp-option-table th.ltp-strike-head,
+.ltp-option-table tfoot td.ltp-strike-head {
+  background: var(--accent) !important;
+  color: #fff !important;
+}
+.ltp-option-table td {
+  border-color: var(--line) !important;
+  background: var(--surface-raised) !important;
+  color: var(--text-strong) !important;
+}
+.ltp-option-table tbody tr:nth-child(even) td { background: var(--surface) !important; }
+.ltp-option-table tbody tr:hover td { background: var(--surface-inset) !important; }
+.ltp-option-table td.ltp-strike-cell { background: #d96512 !important; color: #fff !important; }
+.ltp-option-table .ltp-atm-row td { background: #574a27 !important; color: #fff4cf !important; }
+.ltp-option-table .ltp-atm-row td.ltp-strike-cell { background: #f08a20 !important; color: #fff !important; }
+.ltp-option-table td.ltp-max-cell { background: #76631b !important; color: #fff !important; }
+.ltp-option-table tfoot td { background: var(--surface) !important; color: var(--text-strong) !important; }
+.ltp-chart-grid { stroke: var(--line) !important; }
+.ltp-chart-axis { fill: var(--muted) !important; }
+.ltp-level-label { stroke: var(--surface-raised) !important; }
+.ltp-chart-empty { background: var(--surface-raised) !important; color: var(--muted) !important; }
+.ltp-intelligence-strip {
+  border-color: var(--line) !important;
+  background: var(--line) !important;
+}
+.ltp-intelligence-strip > div { background: var(--surface-raised) !important; }
+.ltp-intelligence-strip > div > span,
+.ltp-intelligence-strip small { color: var(--muted) !important; }
+.ltp-intelligence-strip strong { color: var(--text-strong) !important; }
+.ltp-intelligence-strip .ltp-intelligence-title { background: var(--surface) !important; }
+.ltp-intelligence-strip .ltp-intelligence-title span { color: var(--muted) !important; }
+.ltp-intelligence-strip .ltp-intelligence-title strong { color: var(--text-strong) !important; }
+.ltp-rs-chip { background: var(--surface-inset) !important; border-color: var(--line) !important; }
+.ltp-rs-chip b { color: var(--text-strong) !important; }
+.ltp-rs-chip small { color: var(--muted) !important; }
+.ltp-auth-banner {
+  border-color: #9a7a39 !important;
+  border-radius: 8px !important;
+  background: #3a3425 !important;
+  color: #f5dfae !important;
+}
+.ltp-error {
+  border-color: #8b4545 !important;
+  border-radius: 8px !important;
+  background: #3b292c !important;
+  color: #ffd0d0 !important;
+}
+@media (max-width: 760px) {
+  .ltp-option-chain { padding: 6px 0 12px !important; }
+}
