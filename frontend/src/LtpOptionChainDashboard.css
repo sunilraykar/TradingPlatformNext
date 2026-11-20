@@ -2446,3 +2446,128 @@
     text-underline-offset: 1px;
   }
 }
+
+
+/* Market Intelligence terminal layout: full-width chain with an expandable chart below. */
+.ltp-option-chain .ltp-workspace {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: start !important;
+  gap: 10px !important;
+}
+.ltp-option-chain .ltp-option-panel,
+.ltp-option-chain .ltp-chart-panel {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+.ltp-option-chain .ltp-option-panel {
+  overflow: visible !important;
+}
+.ltp-option-chain .ltp-option-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+}
+.ltp-option-chain .ltp-option-table thead th {
+  white-space: normal !important;
+  text-overflow: clip !important;
+  overflow: visible !important;
+  text-align: center !important;
+}
+.ltp-option-chain .ltp-option-table thead .ltp-option-group-head th {
+  padding: 8px 6px !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  letter-spacing: .8px;
+  text-align: center !important;
+}
+.ltp-option-chain .ltp-option-table thead .ltp-call-group {
+  background: #28513f !important;
+  color: #d6f7e4 !important;
+}
+.ltp-option-chain .ltp-option-table thead .ltp-put-group {
+  background: #563b40 !important;
+  color: #ffe0e2 !important;
+}
+.ltp-option-chain .ltp-option-table thead .ltp-strike-head {
+  background: #ed653f !important;
+  color: #fff !important;
+  vertical-align: middle;
+}
+.ltp-option-chain .ltp-option-table thead .ltp-option-subhead th {
+  padding: 6px 4px !important;
+  font-size: 9px !important;
+  line-height: 1.2;
+  white-space: normal !important;
+  text-align: center !important;
+}
+.ltp-option-chain .ltp-option-table thead .ltp-option-subhead th:nth-child(-n+4) {
+  background: #244b3b !important;
+  color: #d6f7e4 !important;
+}
+.ltp-option-chain .ltp-option-table thead .ltp-option-subhead th:nth-child(n+5) {
+  background: #56343b !important;
+  color: #ffe0e2 !important;
+}
+.ltp-option-chain .ltp-option-table tbody td {
+  padding: 6px 5px !important;
+  font-size: 11px !important;
+}
+.ltp-option-chain .ltp-option-table tbody td strong { font-size: 11px !important; }
+.ltp-option-chain .ltp-option-table tbody td small { font-size: 9px !important; }
+.ltp-option-chain .ltp-chart-panel {
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+.ltp-option-chain .ltp-chart-panel.collapsed { min-height: 0 !important; }
+.ltp-option-chain .ltp-chart-panel .ltp-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ltp-option-chain .ltp-chart-heading-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ltp-option-chain .ltp-chart-expand {
+  min-height: 30px;
+  padding: 5px 11px;
+  border: 1px solid #64748b;
+  border-radius: 5px;
+  background: #263646;
+  color: #eaf2fb;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ltp-option-chain .ltp-chart-expand:hover { background: #344b61; }
+.ltp-option-chain .ltp-chart-panel.expanded .ltp-lightweight-chart,
+.ltp-option-chain .ltp-chart-panel.expanded .ltp-candle-chart {
+  min-height: 420px;
+}
+@media (max-width: 760px) {
+  .ltp-option-chain .ltp-option-table thead .ltp-option-group-head th {
+    padding: 6px 2px !important;
+    font-size: 9px !important;
+  }
+  .ltp-option-chain .ltp-option-table thead .ltp-option-subhead th {
+    padding: 5px 2px !important;
+    font-size: 8px !important;
+  }
+  .ltp-option-chain .ltp-option-table tbody td {
+    padding: 5px 2px !important;
+    font-size: 9px !important;
+  }
+  .ltp-option-chain .ltp-option-table tbody td strong { font-size: 9px !important; }
+  .ltp-option-chain .ltp-option-table tbody td small { font-size: 8px !important; }
+  .ltp-option-chain .ltp-chart-panel .ltp-panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .ltp-option-chain .ltp-chart-heading-actions { justify-content: flex-start; }
+}
