@@ -370,6 +370,23 @@ export default function LtpOptionChainDashboard() {
     try {
       const query = new URLSearchParams({ symbol, expiry, lotSize: String(lotSize) });
       const payload = await request('/apiplatform/option-chain/fetch?' + query.toString());
+      // TEMPORARY DIAGNOSTIC: inspect the exact API payload before React state is updated.
+      const responseDebugRow = Array.isArray(payload?.data?.OptionChain)
+        ? payload.data.OptionChain.find((item) => Number(item.strike) === 25500)
+        : null;
+      console.info('[OptionChain fetch response diagnostic]', {
+        request: '/apiplatform/option-chain/fetch?' + query.toString(),
+        fetchTime: payload?.data?.FetchTime,
+        row25500: responseDebugRow ? {
+          strike: responseDebugRow.strike,
+          callOI: responseDebugRow.callOI,
+          callVol: responseDebugRow.callVol,
+          callOIchg: responseDebugRow.callOIchg,
+          putOI: responseDebugRow.putOI,
+          putVol: responseDebugRow.putVol,
+          putOIchg: responseDebugRow.putOIchg,
+        } : null,
+      });
       if (requestId !== chainRequestId.current) return;
       setResult(payload);
       const mapped = payload.kite_instruments || [];
