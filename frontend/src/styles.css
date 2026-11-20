@@ -1678,3 +1678,273 @@ select,input,textarea{
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* AutoTrender professional UI pass: compact navigation, clear controls and balanced card hierarchy. */
+.app-shell--all-indices {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.app-shell--all-indices .topbar {
+  flex: 0 0 50px;
+  height: 50px;
+  min-height: 50px;
+  gap: 9px;
+}
+.app-shell--all-indices .brand-mark {
+  width: 30px;
+  height: 30px;
+  flex-basis: 30px;
+}
+.app-shell--all-indices .brand-copy strong { font-size: 12px; }
+.app-shell--all-indices .brand-copy span { font-size: 8px; letter-spacing: 1.2px; }
+.app-shell--all-indices .application-tabs {
+  margin-left: 12px;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+}
+.app-shell--all-indices .application-tabs button {
+  min-width: 0;
+  padding: 7px 11px;
+  font-size: 11px;
+}
+.app-shell--all-indices .topbar-right {
+  gap: 6px;
+}
+.app-shell--all-indices .status-pill {
+  padding: 5px 8px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.app-shell--all-indices .status-pill i { width: 6px; height: 6px; }
+.app-shell--all-indices .theme-switch {
+  padding: 2px;
+  border-radius: 7px;
+}
+.app-shell--all-indices .theme-switch button {
+  padding: 5px 8px;
+  font-size: 9px;
+}
+.app-account-menu {
+  position: relative;
+  flex: 0 0 auto;
+}
+.app-account-menu > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 6px 10px;
+  color: var(--text);
+  background: var(--surface-inset);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.app-account-menu > summary::-webkit-details-marker { display: none; }
+.app-account-menu[open] > summary { border-color: var(--accent); }
+.app-account-menu-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  box-shadow: 0 12px 32px #0004;
+}
+.app-account-menu-popover strong {
+  color: var(--text-strong);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.app-account-menu-popover > span {
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+}
+.app-account-menu-popover button {
+  margin-top: 5px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: var(--text);
+  background: var(--surface-inset);
+  text-align: left;
+  font-size: 10px;
+  font-weight: 700;
+}
+.app-shell--all-indices > .control-panel {
+  flex: 0 0 46px;
+  min-height: 46px;
+  margin: 7px 0 9px;
+  padding: 4px 9px;
+  gap: 12px;
+  border-radius: 9px;
+  background: var(--surface-raised);
+}
+.app-shell--all-indices .control-panel .index-switch {
+  padding: 3px;
+  gap: 2px;
+  border-radius: 7px;
+}
+.app-shell--all-indices .control-panel .index-switch button {
+  padding: 6px 11px;
+  font-size: 10px;
+  letter-spacing: .25px;
+}
+.app-shell--all-indices .control-panel .index-switch button.selected {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: none;
+}
+.autotrend-refresh-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.autotrend-refresh-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.autotrend-refresh-meta strong {
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+}
+.app-shell--all-indices .control-panel .autotrend-view-switch {
+  margin: 0 0 0 auto;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 7px;
+}
+.app-shell--all-indices .control-panel .autotrend-view-switch button {
+  padding: 6px 10px;
+  font-size: 10px;
+}
+.app-shell--all-indices .all-indices-grid { gap: 9px; }
+.app-shell--all-indices .all-indices-card {
+  border-radius: 10px;
+  border-color: var(--line);
+  background: var(--surface-raised);
+  padding: 8px 10px 7px;
+}
+.app-shell--all-indices .all-indices-card-heading {
+  padding: 3px 5px 7px;
+}
+.app-shell--all-indices .all-indices-card-heading h3 {
+  font-size: 12px;
+  letter-spacing: .55px;
+  font-weight: 700;
+}
+.app-shell--all-indices .all-indices-card-heading > div {
+  gap: 8px;
+  font-size: 11px;
+}
+.app-shell--all-indices .all-indices-card-heading > div span {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: .35px;
+}
+.app-shell--all-indices .all-indices-card-heading > div strong {
+  color: var(--text-strong);
+  font-size: 12px;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics > div > div {
+  font-size: 9px !important;
+  letter-spacing: .35px;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong {
+  font-size: 15px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong.index-price-value {
+  font-size: 16px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-wrap {
+  padding-left: 38px;
+  padding-right: 7px;
+}
+.app-shell--all-indices .all-indices-card .chart-axis {
+  font-size: 9px;
+  color: var(--muted);
+}
+.app-shell--all-indices .all-indices-card .price-vwap-times {
+  font-size: 8px;
+  color: var(--muted);
+}
+.app-shell--all-indices .all-indices-card .price-vwap-legend {
+  font-size: 8px;
+  gap: 8px;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-bottom-actions {
+  border-color: var(--line);
+  border-radius: 7px;
+  background: var(--surface-inset);
+}
+.app-shell--all-indices .dashboard-day-trades { gap: 10px; }
+.app-shell--all-indices .dashboard-day-trades .autotrend-active-trades {
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+@media (max-width: 1100px) {
+  .app-shell--all-indices .topbar { gap: 7px; }
+  .app-shell--all-indices .application-tabs { margin-left: 4px; }
+  .app-shell--all-indices .application-tabs button { padding: 6px 8px; }
+  .app-shell--all-indices .topbar-right { gap: 4px; }
+  .app-shell--all-indices .status-pill { padding: 5px 6px; }
+}
+@media (max-width: 900px) {
+  .app-shell--all-indices .topbar {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 50px;
+    flex-wrap: wrap;
+    padding: 6px 0;
+  }
+  .app-shell--all-indices .topbar-right {
+    margin-left: auto;
+    flex-wrap: wrap;
+  }
+  .app-shell--all-indices > .control-panel {
+    align-items: center;
+    flex-wrap: wrap;
+    flex-basis: auto;
+    padding: 7px;
+  }
+  .autotrend-refresh-meta { order: 3; width: 100%; }
+  .app-shell--all-indices .control-panel .autotrender-view-switch { margin-left: auto; }
+}
+@media (max-width: 600px) {
+  .app-shell--all-indices { padding-left: 8px; padding-right: 8px; }
+  .app-shell--all-indices .topbar { align-items: center; }
+  .app-shell--all-indices .brand-copy span { display: none; }
+  .app-shell--all-indices .application-tabs {
+    order: 3;
+    width: 100%;
+    margin: 5px 0 0;
+  }
+  .app-shell--all-indices .application-tabs button { flex: 1; }
+  .app-shell--all-indices .topbar-right { width: 100%; justify-content: space-between; }
+  .app-shell--all-indices .control-panel .index-switch {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .app-shell--all-indices .control-panel .index-switch button { flex: 1 0 auto; }
+  .autotrend-refresh-meta { gap: 10px; font-size: 9px; }
+  .app-shell--all-indices .control-panel .autotrender-view-switch { margin-left: auto; }
+}
