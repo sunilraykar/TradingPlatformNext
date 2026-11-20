@@ -106,7 +106,6 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
   const [mode, setMode] = useState('ALL');
   const [status, setStatus] = useState('OPEN');
   const [sourceFilter, setSourceFilter] = useState('ALL');
-  const [symbolLetter, setSymbolLetter] = useState('ALL');
   const [selectedTradingDate, setSelectedTradingDate] = useState(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
   const [showAllOpen, setShowAllOpen] = useState(false);
   const [showAllClosed, setShowAllClosed] = useState(false);
@@ -277,16 +276,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       return (mode === 'ALL' || trade.execution_mode === mode) && statusMatches && sourceMatches && createdKey === selectedTradingDate;
     });
   const tradesMatchingOtherFilters = tradesMatchingBaseFilters;
-  const symbolLetters = [...new Set(tradesMatchingOtherFilters.flatMap((trade) =>
-    [trade.instrument_symbol, trade.underlying]
-      .map((value) => String(value || '').trim().charAt(0).toUpperCase())
-      .filter((letter) => /^[A-Z]$/.test(letter))
-  ))].sort();
-  const visibleTrades = showAllOpen || showAllClosed ? tradesMatchingOtherFilters : tradesMatchingOtherFilters.filter((trade) =>
-    symbolLetter === 'ALL' ||
-    String(trade.instrument_symbol || '').trim().toUpperCase().startsWith(symbolLetter) ||
-    String(trade.underlying || '').trim().toUpperCase().startsWith(symbolLetter)
-  );
+  const visibleTrades = tradesMatchingOtherFilters;
 
   const create = async (event) => {
     event.preventDefault(); setSaving(true); setError('');
@@ -633,7 +623,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       <div className="trade-filter-group"><span className="trade-filter-label">Mode</span><div className="trade-filter-buttons">{[['ALL','All'],['PAPER','Paper'],['LIVE','Live']].map(([value,label]) => <button key={value} type="button" className={mode === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setMode(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Source</span><div className="trade-filter-buttons">{[['ALL','All'],...['AUTOTRENDER','MANUAL','KITE'].map(value => [value, value === 'AUTOTRENDER' ? 'AutoTrender' : value.charAt(0)+value.slice(1).toLowerCase()])].map(([value,label]) => <button key={value} type="button" className={sourceFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSourceFilter(value)}>{label}</button>)}</div></div>
-      <div className="trade-filter-group trade-symbol-letter-filter"><span className="trade-filter-label">Symbol</span><div className="trade-filter-buttons">{[['ALL','All'],...symbolLetters.map((letter) => [letter,letter])].map(([value,label]) => <button key={value} type="button" className={symbolLetter === value ? 'trade-filter-button active' : 'trade-filter-button'} aria-pressed={symbolLetter === value} onClick={() => setSymbolLetter(value)}>{label}</button>)}</div></div>
+
       
     </div>
     </section>
