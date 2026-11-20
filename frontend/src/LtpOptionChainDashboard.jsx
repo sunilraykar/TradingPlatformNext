@@ -125,6 +125,25 @@ function OptionRow({ row, spot, quotes, instruments, maxima, showLtp }) {
   const putVol = n(row.putVol);
   const callChg = n(row.callOIchg);
   const putChg = n(row.putOIchg);
+  // TEMPORARY DIAGNOSTIC: log the raw provider values reaching the rendered row.
+  // Log once per distinct 25500-strike payload to avoid flooding the console.
+  if (strike === 25500) {
+    const debugValues = {
+      strike: row.strike,
+      callOI: row.callOI,
+      callVol: row.callVol,
+      callOIchg: row.callOIchg,
+      putOI: row.putOI,
+      putVol: row.putVol,
+      putOIchg: row.putOIchg,
+    };
+    const debugKey = JSON.stringify(debugValues);
+    if (!window.__optionChainDebugRows) window.__optionChainDebugRows = new Set();
+    if (!window.__optionChainDebugRows.has(debugKey)) {
+      window.__optionChainDebugRows.add(debugKey);
+      console.info('[OptionChain row diagnostic]', debugValues);
+    }
+  }
   // Every metric is normalized against the maximum absolute value in its own
   // column across the full provider response. Preserve the sign for OI change.
   const callChgPct = maxima.callOiChg ? callChg / maxima.callOiChg * 100 : null;
