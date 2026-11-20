@@ -41,9 +41,8 @@ def _symbol(value: str) -> str:
 
 
 def _instrument_name(symbol: str) -> str:
-    """Return the Kite instrument-master name for an option-chain symbol."""
-    index_spec = _INDEX_INSTRUMENTS.get(symbol)
-    return index_spec[1] if index_spec else symbol
+    """Return the derivative underlying name used by Kite's instrument master."""
+    return symbol
 
 
 def _expiry(value: str) -> date:
