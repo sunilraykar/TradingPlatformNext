@@ -1620,7 +1620,7 @@ select,input,textarea{
   .app-shell--all-indices .all-indices-card { min-height: 300px; }
 }
 
-//* Keep all four index charts in the initial viewport; let trade panels extend the page vertically. */
+/* Keep all four index charts in the initial viewport; let trade panels extend the page vertically. */
 .app-shell--all-indices {
   height: auto;
   min-height: 100dvh;
