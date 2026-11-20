@@ -1758,3 +1758,75 @@
   .ltp-chart-panel .ltp-intelligence-groups { grid-template-columns: 1fr !important; }
 }
 
+/* Option-chain readability and full-length table: let the document scroll, not the table. */
+.ltp-option-chain .ltp-option-panel {
+  overflow: visible !important;
+}
+.ltp-option-chain .ltp-table-scroll {
+  height: auto !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  scrollbar-gutter: auto !important;
+  background: #303740 !important;
+}
+.ltp-option-chain .ltp-option-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.ltp-option-chain .ltp-option-table th,
+.ltp-option-chain .ltp-option-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ltp-option-chain .ltp-option-table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  color: #edf2f7 !important;
+}
+.ltp-option-chain .ltp-option-table td {
+  color: #edf1f5 !important;
+}
+.ltp-option-chain .ltp-option-table td small {
+  color: #cbd5df !important;
+}
+.ltp-option-chain .ltp-option-table td.positive,
+.ltp-option-chain .ltp-option-table td.positive strong,
+.ltp-option-chain .ltp-option-table td.positive small {
+  color: #55e39b !important;
+}
+.ltp-option-chain .ltp-option-table td.negative,
+.ltp-option-chain .ltp-option-table td.negative strong,
+.ltp-option-chain .ltp-option-table td.negative small {
+  color: #ff858c !important;
+}
+.ltp-option-chain .ltp-option-table .ltp-rs-chip {
+  min-width: 0 !important;
+  padding: 4px 8px !important;
+  border: 1px solid #667586 !important;
+  border-radius: 5px !important;
+  background: #26313d !important;
+  color: #f1f5f9 !important;
+  box-shadow: 0 1px 3px #0004 !important;
+}
+.ltp-option-chain .ltp-option-table .ltp-rs-chip b {
+  color: #f2d17b !important;
+}
+.ltp-option-chain .ltp-option-table .ltp-rs-chip strong {
+  color: #65e5a3 !important;
+}
+.ltp-option-chain .ltp-option-table .ltp-rs-chip small {
+  color: #c6d1dc !important;
+}
+.ltp-option-chain .ltp-option-table tfoot td {
+  position: static !important;
+}
+@media (max-width: 1150px) {
+  .ltp-option-chain .ltp-option-table {
+    min-width: 0 !important;
+  }
+}
