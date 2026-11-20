@@ -121,7 +121,8 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
   </svg></div>;
 }
 
-function OptionRow({ row, spot, quotes, instruments, maxima, showLtp }) {
+function OptionRow({ row, spot, quotes, instruments, maxima }) {
+  const [activeLtp, setActiveLtp] = useState(null);
   const strike = n(row.strike);
   const call = instruments.get(String(strike) + ':CE');
   const put = instruments.get(String(strike) + ':PE');
@@ -168,14 +169,24 @@ function OptionRow({ row, spot, quotes, instruments, maxima, showLtp }) {
     const label = rankLabel(key, value, absolute);
     return label ? <em className={'ltp-rank-badge ' + (label === '1st Highest' ? 'first' : 'second')}>{label}</em> : null;
   };
-  const reversal = (value, quote) => <><span className={'ltp-reversal ' + tone(value)}>{value || '—'}</span>{showLtp && <small className="ltp-option-price">LTP {fmt(quote && quote.last_price)}</small>}</>;
+  const reversal = (side, value, quote) => {
+    const isOpen = activeLtp === side;
+    const ltp = n(quote && quote.last_price);
+    return <span className="ltp-reversal-wrap">
+      <button type="button" className={'ltp-reversal ' + tone(value)} aria-label={side + ' reversal ' + (value || 'unavailable') + ', show option LTP'} aria-expanded={isOpen} onClick={() => setActiveLtp(isOpen ? null : side)}>{value || '—'}</button>
+      {isOpen && <span className="ltp-reversal-popover" role="status">
+        <span>{side === 'CALL' ? 'CALL' : 'PUT'} LTP</span>
+        <strong>{ltp !== null && ltp > 0 ? fmt(ltp) : '—'}</strong>
+      </span>}
+    </span>;
+  };
   return <tr className={isAtm ? 'ltp-atm-row' : ''}>
     <td className={(callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : '') + rankClass('callOiChg', callChg, true)}><strong className={percentageWeight(callChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callChg, 0)}</strong><small className={percentageWeight(callChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small>{rankBadge('callOiChg', callChg, true)}</td>
     <td className={rankClass('callOi', callOi)}><strong className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callOi, 0)}</strong><small className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small>{rankBadge('callOi', callOi)}</td>
     <td className={rankClass('callVol', callVol)}><strong className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callVol, 0)}</strong><small className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small>{rankBadge('callVol', callVol)}</td>
-    <td>{reversal(row.calReversal, cq)}</td>
+    <td>{reversal('CALL', row.calReversal, cq)}</td>
     <td className="ltp-strike-cell"><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</td>
-    <td>{reversal(row.putReversal, pq)}</td>
+    <td>{reversal('PUT', row.putReversal, pq)}</td>
     <td className={rankClass('putVol', putVol)}><strong className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putVol, 0)}</strong><small className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small>{rankBadge('putVol', putVol)}</td>
     <td className={rankClass('putOi', putOi)}><strong className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putOi, 0)}</strong><small className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small>{rankBadge('putOi', putOi)}</td>
     <td className={(putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : '') + rankClass('putOiChg', putChg, true)}><strong className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putChg, 0)}</strong><small className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small>{rankBadge('putOiChg', putChg, true)}</td>
@@ -264,7 +275,6 @@ export default function LtpOptionChainDashboard() {
   const [quotes, setQuotes] = useState({});
   const [candles, setCandles] = useState([]);
   const [chartType, setChartType] = useState('tradingview');
-  const [showOptionLtp, setShowOptionLtp] = useState(false);
   const [feedConnected, setFeedConnected] = useState(false);
   const [activeView, setActiveView] = useState('option-chain');
   const chainRequestId = useRef(0);
@@ -608,11 +618,10 @@ export default function LtpOptionChainDashboard() {
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
       <div className="ltp-controls">
-        <label><span>SYMBOL</span><select value={symbol} onChange={(e) => openSymbolOptionChain(e.target.value)}>{symbols.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
-        <label><span>EXPIRY</span><select value={expiry} onChange={(e) => { const selected = expiries.find((item) => item.expiry === e.target.value); setExpiry(e.target.value); if (selected && selected.lot_size) setLotSize(selected.lot_size); }}>{expiries.length ? expiries.map((item) => <option key={item.expiry} value={item.expiry}>{item.expiry}</option>) : <option value={expiry}>{expiry}</option>}</select></label>
-        <label><span>PRICE</span><select value={priceMode} onChange={(e) => setPriceMode(e.target.value)}><option value="SPOT">SPOT</option><option value="FUTURE">FUTURE</option></select></label>
+        <label className="ltp-symbol-field"><span>SYMBOL</span><select value={symbol} onChange={(e) => openSymbolOptionChain(e.target.value)}>{symbols.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        <label className="ltp-expiry-field"><span>EXPIRY</span><select value={expiry} onChange={(e) => { const selected = expiries.find((item) => item.expiry === e.target.value); setExpiry(e.target.value); if (selected && selected.lot_size) setLotSize(selected.lot_size); }}>{expiries.length ? expiries.map((item) => <option key={item.expiry} value={item.expiry}>{item.expiry}</option>) : <option value={expiry}>{expiry}</option>}</select></label>
+        <label className="ltp-price-field"><span>PRICE</span><select value={priceMode} onChange={(e) => setPriceMode(e.target.value)}><option value="SPOT">SPOT</option><option value="FUTURE">FUTURE</option></select></label>
         <label className="ltp-lot-size"><span>LOT SIZE</span><input type="number" min="1" value={lotSize} onChange={(e) => setLotSize(Number(e.target.value) || 1)} /></label>
-        <button type="button" className={'ltp-ltp-toggle ' + (showOptionLtp ? 'active' : '')} aria-pressed={showOptionLtp} onClick={() => setShowOptionLtp((value) => !value)}>{showOptionLtp ? 'Hide LTP' : 'Show LTP'}</button>
       </div>
     </section>
 
@@ -630,7 +639,7 @@ export default function LtpOptionChainDashboard() {
             const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
             const showSpot = underlying !== null && strike !== null && (underlying >= strike && (nextStrike === null || underlying < nextStrike));
             return <React.Fragment key={row._id || row.strike}>
-              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} showLtp={showOptionLtp} />
+              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} />
               {showSpot && <tr className="ltp-spot-marker-row">
                 <td colSpan="4"><div className="ltp-rs-indicators ltp-rs-call">
                   <span className="ltp-rs-chip"><b>{rs.R_OI_Status || '—'}</b><strong>{fmt(rs.R_OI_ShiftingStrike_per, 2)}%</strong><small>OI · {rs.R_OI_Strike || '—'}{rs.R_OI_Shifting ? ' → ' + (rs.R_OI_ShiftingStrike || '—') : ''}</small></span>
