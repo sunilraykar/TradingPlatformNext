@@ -501,7 +501,7 @@ export default function LtpOptionChainDashboard() {
       <button type="button" className={activeView === "swing-trade" ? "active" : ""} aria-current={activeView === "swing-trade" ? "page" : undefined} onClick={() => setActiveView("swing-trade")}>Swing Trade</button>
     </nav>
     <div className="ltp-index-shortcuts" role="group" aria-label="Quick select index">
-      {['NIFTY', 'BANKNIFTY', 'SENSEX'].map((item) => (
+      {['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].map((item) => (
         <button
           key={item}
           type="button"
