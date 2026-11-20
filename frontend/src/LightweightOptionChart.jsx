@@ -93,7 +93,17 @@ export default function LightweightOptionChart({ candles = [], livePrice, levels
         borderColor: '#52677e',
         timeVisible: true,
         secondsVisible: false,
-        tickMarkFormatter: (time) => formatIndiaTime(time, true),
+        tickMarkFormatter: (() => {
+          let previousDay = null;
+          return (time) => {
+            const timestamp = typeof time === 'number' ? time * 1000 : Date.UTC(time.year, time.month - 1, time.day);
+            const date = new Date(timestamp);
+            const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+            const showDate = previousDay !== null && day !== previousDay;
+            previousDay = day;
+            return formatIndiaTime(time, showDate);
+          };
+        })(),
         rightOffset: 4,
         barSpacing: 9,
         minBarSpacing: 3,
