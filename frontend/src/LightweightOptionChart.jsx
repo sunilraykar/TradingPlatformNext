@@ -7,6 +7,18 @@ function numeric(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function formatIndiaTime(value, includeDate = false) {
+  const date = new Date(typeof value === 'number' ? value * 1000 : value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    ...(includeDate ? { day: '2-digit', month: 'short' } : {}),
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
 function toTimestamp(value) {
   if (typeof value === 'number' && Number.isFinite(value)) {
     // Kite timestamps are occasionally returned in milliseconds.
@@ -72,12 +84,16 @@ export default function LightweightOptionChart({ candles = [], livePrice, levels
         autoScale: true,
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
+      localization: {
+        timeFormatter: (time) => formatIndiaTime(time, true),
+      },
       timeScale: {
-        visible: false,
-        borderVisible: false,
+        visible: true,
+        borderVisible: true,
         borderColor: '#52677e',
-        timeVisible: false,
+        timeVisible: true,
         secondsVisible: false,
+        tickMarkFormatter: (time) => formatIndiaTime(time, true),
         rightOffset: 4,
         barSpacing: 9,
         minBarSpacing: 3,
