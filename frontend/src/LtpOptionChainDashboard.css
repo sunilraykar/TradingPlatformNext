@@ -2235,3 +2235,93 @@
   .ltp-option-chain .ltp-overview-row > .ltp-atm-contracts { order: 3; }
   .ltp-option-chain .ltp-atm-contract { max-width: 46vw; min-width: 0; }
 }
+
+
+/* ATM PUT/CALL controls: full contract symbols, fixed footprint, unmistakable side colors. */
+.ltp-option-chain .ltp-overview-row > .ltp-atm-contracts {
+  flex: 0 0 232px !important;
+  width: 232px !important;
+  min-width: 232px !important;
+  max-width: 232px !important;
+}
+.ltp-option-chain .ltp-atm-contract {
+  box-sizing: border-box !important;
+  width: 232px !important;
+  min-width: 232px !important;
+  max-width: 232px !important;
+  height: 38px !important;
+  padding: 0 11px !important;
+  gap: 9px !important;
+  justify-content: space-between !important;
+  border-width: 2px !important;
+  border-radius: 6px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: .1px !important;
+  box-shadow: 0 2px 7px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.12) !important;
+}
+.ltp-option-chain .ltp-atm-contract strong {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+  color: #fff !important;
+  font-size: 10px !important;
+}
+.ltp-option-chain .ltp-atm-contract span {
+  flex: 0 0 auto !important;
+  color: #fff !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+}
+.ltp-option-chain .ltp-atm-contract.put {
+  border-color: #ff6572 !important;
+  border-left: 5px solid #ff394d !important;
+  background: linear-gradient(180deg, #a92e3c 0%, #78202d 100%) !important;
+}
+.ltp-option-chain .ltp-atm-contract.call {
+  border-color: #36d69a !important;
+  border-right: 5px solid #18c783 !important;
+  background: linear-gradient(180deg, #16885e 0%, #105c43 100%) !important;
+}
+.ltp-option-chain .ltp-atm-contract.put:not(:disabled):hover {
+  border-color: #ff9aa2 !important;
+  background: linear-gradient(180deg, #c63c4b 0%, #922b39 100%) !important;
+  transform: translateY(-1px);
+}
+.ltp-option-chain .ltp-atm-contract.call:not(:disabled):hover {
+  border-color: #75efbd !important;
+  background: linear-gradient(180deg, #20a875 0%, #167653 100%) !important;
+  transform: translateY(-1px);
+}
+.ltp-option-chain .ltp-atm-contract:disabled {
+  filter: saturate(.65);
+  opacity: .72 !important;
+}
+@media (max-width: 1500px) {
+  .ltp-option-chain .ltp-overview-row > .ltp-atm-contracts {
+    flex-basis: 205px !important;
+    width: 205px !important;
+    min-width: 205px !important;
+    max-width: 205px !important;
+  }
+  .ltp-option-chain .ltp-atm-contract {
+    width: 205px !important;
+    min-width: 205px !important;
+    max-width: 205px !important;
+  }
+}
+@media (max-width: 1100px) {
+  .ltp-option-chain .ltp-overview-row > .ltp-atm-contracts {
+    flex: 1 1 205px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+  .ltp-option-chain .ltp-atm-contract {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
