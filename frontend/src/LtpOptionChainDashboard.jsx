@@ -554,7 +554,6 @@ export default function LtpOptionChainDashboard() {
 
     {activeView === "swing-trade" ? <SwingTradePanel onSymbolSelect={openSymbolOptionChain} /> : <section className="ltp-workspace">
       <article className="ltp-option-panel">
-        <div className="ltp-chain-count"><span>{visibleRows.length} strikes shown · {rows.length} returned</span></div>
         <div className="ltp-table-scroll"><table className="ltp-option-table">
           <thead><tr><th>CALL OI CHG</th><th>CALL OI</th><th>CALL VOLUME</th><th>CALL REVERSAL</th><th className="ltp-strike-head">STRIKE</th><th>PUT REVERSAL</th><th>PUT VOLUME</th><th>PUT OI</th><th>PUT OI CHG</th></tr></thead>
           <tbody>{visibleRows.map((row, index) => {
