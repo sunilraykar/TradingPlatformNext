@@ -601,7 +601,6 @@ export default function LtpOptionChainDashboard() {
       </article>
 
       <aside className="ltp-chart-panel">
-        <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong></div>
         <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
           // Keep target numbering in ascending target order: T1 is the nearer target,
           // T2 is the farther/higher target. Supports retain the reference mapping.
