@@ -2523,3 +2523,50 @@
   font-size: 10px;
   font-weight: 900;
 }
+
+
+/* ATM CALL/PUT contract buttons reduced by 20% for a lighter toolbar. */
+.ltp-option-chain .ltp-overview-row > .ltp-atm-contracts {
+  flex-basis: 186px !important;
+  width: 186px !important;
+  min-width: 186px !important;
+  max-width: 186px !important;
+}
+.ltp-option-chain .ltp-atm-contract {
+  width: 186px !important;
+  min-width: 186px !important;
+  max-width: 186px !important;
+  height: 30px !important;
+  padding: 0 9px !important;
+  gap: 7px !important;
+  font-size: 9px !important;
+}
+.ltp-option-chain .ltp-atm-contract strong {
+  font-size: 9px !important;
+}
+@media (max-width: 1500px) {
+  .ltp-option-chain .ltp-overview-row > .ltp-atm-contracts {
+    flex-basis: 164px !important;
+    width: 164px !important;
+    min-width: 164px !important;
+    max-width: 164px !important;
+  }
+  .ltp-option-chain .ltp-atm-contract {
+    width: 164px !important;
+    min-width: 164px !important;
+    max-width: 164px !important;
+  }
+}
+@media (max-width: 1100px) {
+  .ltp-option-chain .ltp-overview-row > .ltp-atm-contracts {
+    flex: 1 1 164px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+  .ltp-option-chain .ltp-atm-contract {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+}
