@@ -2789,3 +2789,141 @@ select,input,textarea{
   content: none !important;
   display: none !important;
 }
+
+
+/* Trade Terminal filter toolbar: remove Underlying group and give the full Symbol alphabet one unbroken row. */
+.trade-date-filter-panel {
+  display: grid !important;
+  grid-template-columns: 224px minmax(0, 1fr) !important;
+  align-items: center !important;
+  justify-content: stretch !important;
+  gap: 8px 12px !important;
+  padding: 9px 12px !important;
+  min-width: 0 !important;
+}
+.trade-date-filter-panel .trade-date-navigator {
+  grid-column: 1;
+  grid-row: 1;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+.trade-date-filter-panel .trade-terminal-filters {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid !important;
+  grid-template-columns: max-content max-content max-content max-content !important;
+  align-items: center !important;
+  justify-content: start !important;
+  gap: 8px 12px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+.trade-date-filter-panel .trade-terminal-filters > .trade-filter-group {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.trade-date-filter-panel .trade-terminal-filters .trade-show-all-group {
+  grid-column: auto !important;
+  flex-wrap: nowrap !important;
+  gap: 4px !important;
+}
+.trade-date-filter-panel .trade-terminal-filters .trade-filter-label {
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+.trade-date-filter-panel .trade-terminal-filters .trade-filter-buttons {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 3px !important;
+  width: auto !important;
+  min-width: 0 !important;
+}
+.trade-date-filter-panel .trade-terminal-filters .trade-filter-button {
+  flex: 0 0 auto !important;
+  min-height: 25px !important;
+  height: 25px !important;
+  padding: 4px 7px !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+.trade-date-filter-panel .trade-terminal-filters .trade-symbol-letter-filter {
+  grid-column: 1 / -1 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+.trade-date-filter-panel .trade-terminal-filters .trade-symbol-letter-filter .trade-filter-buttons {
+  flex: 1 1 auto !important;
+  flex-wrap: nowrap !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: thin;
+  padding-bottom: 2px;
+}
+.trade-date-filter-panel .trade-terminal-filters .trade-symbol-letter-filter .trade-filter-button {
+  min-width: 24px !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+@media (max-width: 1250px) {
+  .trade-date-filter-panel {
+    grid-template-columns: 200px minmax(0, 1fr) !important;
+  }
+  .trade-date-filter-panel .trade-terminal-filters {
+    grid-template-columns: repeat(2, max-content) !important;
+    gap: 8px 12px !important;
+  }
+  .trade-date-filter-panel .trade-terminal-filters .trade-symbol-letter-filter {
+    grid-column: 1 / -1 !important;
+  }
+}
+@media (max-width: 850px) {
+  .trade-date-filter-panel {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .trade-date-filter-panel .trade-date-navigator {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    width: min(100%, 320px) !important;
+  }
+  .trade-date-filter-panel .trade-terminal-filters {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    grid-template-columns: repeat(2, max-content) !important;
+  }
+  .trade-date-filter-panel .trade-terminal-filters .trade-symbol-letter-filter {
+    grid-column: 1 / -1 !important;
+  }
+}
+@media (max-width: 520px) {
+  .trade-date-filter-panel .trade-terminal-filters {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .trade-date-filter-panel .trade-terminal-filters .trade-symbol-letter-filter .trade-filter-buttons {
+    overflow-x: auto !important;
+  }
+}
