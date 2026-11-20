@@ -289,7 +289,7 @@ def test_restore_open_trade_preserves_and_applies_existing_cached_quote(monkeypa
     terminal._dirty.clear()
 
 
-def test_paper_market_close_rejects_stale_quote(monkeypatch):
+def test_paper_market_close_uses_last_price_even_when_quote_is_stale(monkeypatch):
     from datetime import UTC, datetime, timedelta
 
     monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
@@ -307,16 +307,18 @@ def test_paper_market_close_rejects_stale_quote(monkeypatch):
         "last_market_data_at": (datetime.now(UTC) - timedelta(minutes=2)).isoformat(),
     }
 
-    import pytest
-    with pytest.raises(ValueError, match="no valid quote from the last 30 seconds"):
-        trade_terminal.update_trade("stale-close", {
-            "status": "CLOSED",
-            "exit_price": 100.0,
-            "average_exit_price": 100.0,
-            "closed_quantity": 10,
-            "open_quantity": 0,
-            "exit_method": "PAPER_MARKET_SIMULATION",
-        })
+    closed = trade_terminal.update_trade("stale-close", {
+        "status": "CLOSED",
+        "exit_price": 100.0,
+        "average_exit_price": 100.0,
+        "closed_quantity": 10,
+        "open_quantity": 0,
+        "exit_method": "PAPER_MARKET_SIMULATION",
+    })
+
+    assert closed["exit_price"] == 105.0
+    assert closed["average_exit_price"] == 105.0
+    assert closed["gross_realized_pnl"] == 50.0
 
 
 def test_paper_market_close_uses_fresh_backend_quote_for_realized_pnl(monkeypatch):
