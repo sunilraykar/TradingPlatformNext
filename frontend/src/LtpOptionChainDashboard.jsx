@@ -584,7 +584,7 @@ export default function LtpOptionChainDashboard() {
     </nav>
     <div className="ltp-atm-contracts" aria-label="ATM contracts">
       <button type="button" className="ltp-atm-contract put" onClick={() => openAtmOrder(atmPut)} disabled={!atmPut || !quoteForInstrument(atmPut)}>
-        <strong>{atmPut?.tradingsymbol || '—'}</strong><span>{fmt(quoteForInstrument(atmPut)?.last_price)}</span>
+        <strong>{atmPut?.tradingsymbol || '—'}</strong>
       </button>
     </div>
     <div className="ltp-index-shortcuts" role="group" aria-label="Quick select index">
@@ -600,7 +600,7 @@ export default function LtpOptionChainDashboard() {
     </div>
     <div className="ltp-atm-contracts" aria-label="ATM contracts">
       <button type="button" className="ltp-atm-contract call" onClick={() => openAtmOrder(atmCall)} disabled={!atmCall || !quoteForInstrument(atmCall)}>
-        <strong>{atmCall?.tradingsymbol || '—'}</strong><span>{fmt(quoteForInstrument(atmCall)?.last_price)}</span>
+        <strong>{atmCall?.tradingsymbol || '—'}</strong>
       </button>
     </div>
     <section className="ltp-option-toolbar">
