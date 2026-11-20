@@ -264,14 +264,16 @@ export default function LtpOptionChainDashboard() {
   const toggleReversalPopup = (rowKey, side) => {
     if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
     reversalPopupTimer.current = null;
-    setActiveReversal((current) => {
-      if (current?.rowKey === rowKey && current?.side === side) return null;
-      reversalPopupTimer.current = window.setTimeout(() => {
-        setActiveReversal((active) => active?.rowKey === rowKey && active?.side === side ? null : active);
-        reversalPopupTimer.current = null;
-      }, 5000);
-      return { rowKey, side };
-    });
+    if (activeReversal?.rowKey === rowKey && activeReversal?.side === side) {
+      setActiveReversal(null);
+      return;
+    }
+    const nextActive = { rowKey, side };
+    setActiveReversal(nextActive);
+    reversalPopupTimer.current = window.setTimeout(() => {
+      setActiveReversal((active) => active?.rowKey === rowKey && active?.side === side ? null : active);
+      reversalPopupTimer.current = null;
+    }, 5000);
   };
   useEffect(() => () => {
     if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
