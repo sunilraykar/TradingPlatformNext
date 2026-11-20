@@ -2087,3 +2087,60 @@
   }
   .ltp-index-shortcuts button { min-width: 84px; }
 }
+
+
+/* Keep view tabs, index shortcuts, and symbol controls on one horizontal row. */
+.ltp-option-chain .ltp-overview-row {
+  display: flex !important;
+  flex-flow: row nowrap !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+.ltp-option-chain .ltp-overview-row > .ltp-section-tabs {
+  order: 1;
+  flex: 0 0 300px;
+  width: 300px;
+}
+.ltp-option-chain .ltp-overview-row > .ltp-index-shortcuts {
+  order: 2;
+  position: static !important;
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0 !important;
+  justify-self: auto;
+}
+.ltp-option-chain .ltp-overview-row > .ltp-option-toolbar {
+  order: 3;
+  flex: 0 0 auto;
+  width: auto;
+  min-width: max-content;
+  margin-left: auto;
+}
+@media (max-width: 1100px) {
+  .ltp-option-chain .ltp-overview-row {
+    flex-wrap: wrap !important;
+  }
+  .ltp-option-chain .ltp-overview-row > .ltp-section-tabs {
+    flex: 1 1 220px;
+    width: auto;
+  }
+  .ltp-option-chain .ltp-overview-row > .ltp-index-shortcuts {
+    flex: 1 1 260px;
+  }
+  .ltp-option-chain .ltp-overview-row > .ltp-option-toolbar {
+    flex: 1 1 100%;
+    min-width: 0;
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 650px) {
+  .ltp-option-chain .ltp-overview-row > .ltp-index-shortcuts {
+    justify-content: center;
+  }
+  .ltp-option-chain .ltp-overview-row > .ltp-option-toolbar {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+}
