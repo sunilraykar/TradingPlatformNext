@@ -2967,3 +2967,155 @@ select,input,textarea{
     overflow-x: auto !important;
   }
 }
+
+
+/* Shared application chrome aligned to the AutoTrender Dashboard reference. */
+.app-shell {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 14px 24px;
+  color: var(--text);
+}
+.app-shell > .topbar {
+  display: flex;
+  flex: 0 0 50px;
+  height: 50px;
+  min-height: 50px;
+  align-items: center;
+  gap: 9px;
+  border-bottom: 1px solid var(--line);
+  background: var(--nav-bg);
+}
+.app-shell .brand-mark {
+  display: grid;
+  flex: 0 0 30px;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.app-shell .brand-copy { gap: 2px; }
+.app-shell .brand-copy strong {
+  font-size: 12px;
+  line-height: 1.15;
+  letter-spacing: .2px;
+}
+.app-shell .brand-copy span {
+  font-size: 8px;
+  line-height: 1.15;
+  letter-spacing: 1.2px;
+}
+.app-shell .application-tabs {
+  flex: 0 1 auto;
+  margin-left: 12px;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 8px;
+}
+.app-shell .application-tabs button {
+  min-width: 0;
+  padding: 7px 11px;
+  border-radius: 6px;
+  font-size: 11px !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.app-shell .topbar-right {
+  flex: 0 0 auto;
+  gap: 6px;
+  margin-left: auto;
+}
+.app-shell .status-pill {
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 9px !important;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.app-shell .status-pill i { width: 6px; height: 6px; }
+.app-shell .theme-switch {
+  gap: 3px;
+  padding: 2px;
+  border-radius: 7px;
+}
+.app-shell .theme-switch button {
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-size: 9px !important;
+  line-height: 1.2;
+}
+.app-shell .app-account-menu > summary {
+  padding: 5px 9px;
+  font-size: 9px;
+}
+.app-shell > .control-panel {
+  border-radius: 9px;
+}
+.app-shell .panel,
+.app-shell .kite-data-panel,
+.app-shell .trade-terminal-table-panel {
+  border-color: var(--line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+}
+.app-shell .panel-header {
+  padding: 12px 14px 9px;
+}
+.app-shell .panel-header h2,
+.app-shell .kite-dashboard-panel .kite-panel-header h2 {
+  font-size: 16px !important;
+  line-height: 1.25;
+}
+.app-shell .button,
+.app-shell .kite-tabs button,
+.app-shell .settings-tabs button {
+  border-radius: 7px;
+}
+.app-shell .kite-dashboard-content { padding: 0 14px 14px; }
+.app-shell .kite-account-stat,
+.app-shell .kite-account-balance,
+.app-shell .kite-segment-card,
+.app-shell .kite-dashboard-activity > div {
+  border-color: var(--line);
+  border-radius: 9px;
+  background: var(--surface-raised);
+}
+.app-shell .kite-segment-primary > div,
+.app-shell .kite-segment-values .kite-margin-columns {
+  background: var(--surface-inset);
+}
+.app-shell .kite-segment-values > div { border-color: var(--line); }
+.app-shell .kite-margin-row { border-color: var(--line); }
+
+@media (max-width: 1250px) {
+  .app-shell > .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 50px;
+    padding: 6px 0;
+  }
+  .app-shell .application-tabs { margin-left: auto; }
+  .app-shell .topbar-right { margin-left: auto; }
+}
+@media (max-width: 760px) {
+  .app-shell { padding-left: 10px; padding-right: 10px; }
+  .app-shell > .topbar {
+    min-height: 50px;
+    row-gap: 7px;
+  }
+  .app-shell .application-tabs {
+    order: 3;
+    flex: 1 1 100%;
+    width: 100%;
+    margin: 0;
+  }
+  .app-shell .application-tabs button { flex: 1 1 auto; }
+  .app-shell .topbar-right {
+    flex: 1 1 auto;
+    margin-left: auto;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+}
