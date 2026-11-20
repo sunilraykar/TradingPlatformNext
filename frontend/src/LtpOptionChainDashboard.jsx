@@ -57,8 +57,7 @@ function maxPain(rows) {
   return best;
 }
 
-function OptionRow({ row, spot, quotes, instruments, maxima }) {
-  const [activeLtp, setActiveLtp] = useState(null);
+function OptionRow({ row, spot, quotes, instruments, maxima, activeReversal, onToggleReversal, onOpenOrder }) {
   const strike = n(row.strike);
   const call = instruments.get(String(strike) + ':CE');
   const put = instruments.get(String(strike) + ':PE');
@@ -93,14 +92,15 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
   // Match the reference option-chain emphasis rule: values above 75% of
   // their column maximum use 900 weight; all other values use 500.
   const percentageWeight = (percentage) => percentage !== null && percentage > 75 ? 900 : 500;
-  const reversal = (side, value, quote) => {
-    const isOpen = activeLtp === side;
+  const reversal = (side, value, quote, instrument) => {
+    const rowKey = String(row._id || row.strike);
+    const isOpen = activeReversal?.rowKey === rowKey && activeReversal?.side === side;
     const ltp = n(quote && quote.last_price);
     return <span className="ltp-reversal-wrap">
-      <button type="button" className={'ltp-reversal ' + tone(value)} aria-label={side + ' reversal ' + (value || 'unavailable') + ', show option LTP'} aria-expanded={isOpen} onClick={() => setActiveLtp(isOpen ? null : side)}>{value || '—'}</button>
+      <button type="button" className={'ltp-reversal ' + tone(value)} aria-label={side + ' reversal ' + (value || 'unavailable') + ', show option LTP'} aria-expanded={isOpen} onClick={() => onToggleReversal(rowKey, side)}>{value || '—'}</button>
       {isOpen && <span className="ltp-reversal-popover" role="status">
-        <span>{side === 'CALL' ? 'CALL' : 'PUT'} LTP</span>
-        <strong>{ltp !== null && ltp > 0 ? fmt(ltp) : '—'}</strong>
+        <span>{side} LTP</span>
+        <button type="button" className="ltp-reversal-ltp-action" disabled={!instrument || ltp === null || ltp <= 0} onClick={() => onOpenOrder(instrument)} aria-label={'Open paper trade for ' + (instrument?.tradingsymbol || side)}>{ltp !== null && ltp > 0 ? fmt(ltp) : '—'}</button>
       </span>}
     </span>;
   };
@@ -108,9 +108,9 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
     <td className={(callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : '') + rankClass('callOiChg', callChg, true)}><strong className={percentageWeight(callChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callChg, 0)}</strong><small className={percentageWeight(callChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small></td>
     <td className={rankClass('callOi', callOi)}><strong className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callOi, 0)}</strong><small className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small></td>
     <td className={rankClass('callVol', callVol)}><strong className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callVol, 0)}</strong><small className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small></td>
-    <td>{reversal('CALL', row.calReversal, cq)}</td>
+    <td>{reversal('CALL', row.calReversal, cq, call)}</td>
     <td className="ltp-strike-cell"><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</td>
-    <td>{reversal('PUT', row.putReversal, pq)}</td>
+    <td>{reversal('PUT', row.putReversal, pq, put)}</td>
     <td className={rankClass('putVol', putVol)}><strong className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putVol, 0)}</strong><small className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small></td>
     <td className={rankClass('putOi', putOi)}><strong className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putOi, 0)}</strong><small className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small></td>
     <td className={(putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : '') + rankClass('putOiChg', putChg, true)}><strong className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putChg, 0)}</strong><small className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small></td>
@@ -208,6 +208,8 @@ export default function LtpOptionChainDashboard() {
   const [orderLots, setOrderLots] = useState('1');
   const [orderSaving, setOrderSaving] = useState(false);
   const [orderError, setOrderError] = useState('');
+  const [activeReversal, setActiveReversal] = useState(null);
+  const reversalPopupTimer = useRef(null);
 
   const openSymbolOptionChain = (nextSymbol) => {
     if (!nextSymbol) return;
@@ -251,11 +253,30 @@ export default function LtpOptionChainDashboard() {
   const quoteForInstrument = (instrument) => instrument ? quotes[String(instrument.instrument_token)] : null;
   const openAtmOrder = (instrument) => {
     if (!instrument || !instrument.tradingsymbol) return;
+    if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
+    reversalPopupTimer.current = null;
+    setActiveReversal(null);
     setOrderDraft(instrument);
     setOrderDirection('BUY');
     setOrderLots('1');
     setOrderError('');
   };
+  const toggleReversalPopup = (rowKey, side) => {
+    if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
+    reversalPopupTimer.current = null;
+    setActiveReversal((current) => {
+      if (current?.rowKey === rowKey && current?.side === side) return null;
+      reversalPopupTimer.current = window.setTimeout(() => {
+        setActiveReversal((active) => active?.rowKey === rowKey && active?.side === side ? null : active);
+        reversalPopupTimer.current = null;
+      }, 5000);
+      return { rowKey, side };
+    });
+  };
+  useEffect(() => () => {
+    if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
+  }, []);
+
   const submitAtmPaperOrder = async (event) => {
     event.preventDefault();
     if (!orderDraft || orderSaving) return;
@@ -562,7 +583,7 @@ export default function LtpOptionChainDashboard() {
             const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
             const showSpot = underlying !== null && strike !== null && (underlying >= strike && (nextStrike === null || underlying < nextStrike));
             return <React.Fragment key={row._id || row.strike}>
-              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} />
+              <OptionRow row={row} spot={underlying} quotes={quotes} instruments={instrumentMap} maxima={maxima} activeReversal={activeReversal} onToggleReversal={toggleReversalPopup} onOpenOrder={openAtmOrder} />
               {showSpot && <tr className="ltp-spot-marker-row">
                 <td colSpan="4"><div className="ltp-rs-indicators ltp-rs-call">
                   <span className="ltp-rs-chip"><b>{rs.R_OI_Status || '—'}</b><strong>{fmt(rs.R_OI_ShiftingStrike_per, 2)}%</strong><small>OI · {rs.R_OI_Strike || '—'}{rs.R_OI_Shifting ? ' → ' + (rs.R_OI_ShiftingStrike || '—') : ''}</small></span>
