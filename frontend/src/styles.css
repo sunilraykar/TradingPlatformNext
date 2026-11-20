@@ -1428,3 +1428,149 @@ select,input,textarea{
 .historical-intraday-export-dates>span{font-size:11px;color:var(--muted)}
 .historical-intraday-export-toolbar button:disabled{opacity:.6;cursor:wait}
 @media(max-width:600px){.historical-intraday-export-toolbar{align-items:stretch}.historical-intraday-export-dates{width:100%}.historical-intraday-export-dates label{flex:1;min-width:130px}.historical-intraday-export-dates input{min-width:0;width:100%}.historical-intraday-export-toolbar>button{width:100%}}
+
+
+/* AutoTrender four-index dashboard: fit the complete 2x2 overview in the viewport. */
+.app-shell--all-indices {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 18px 8px;
+}
+.app-shell--all-indices .topbar {
+  flex: 0 0 56px;
+  height: 56px;
+  min-height: 56px;
+  gap: 8px;
+}
+.app-shell--all-indices .brand-mark {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 9px;
+}
+.app-shell--all-indices .brand-copy strong { font-size: 12px; }
+.app-shell--all-indices .brand-copy span { font-size: 8px; }
+.app-shell--all-indices .application-tabs { gap: 2px; padding: 3px; }
+.app-shell--all-indices .application-tabs button { padding: 7px 10px; font-size: 11px; }
+.app-shell--all-indices .topbar-right { gap: 7px; }
+.app-shell--all-indices .status-pill { padding: 6px 8px; font-size: 9px; }
+.app-shell--all-indices .theme-switch { padding: 3px; }
+.app-shell--all-indices .theme-switch button { padding: 6px 9px; font-size: 10px; }
+.app-shell--all-indices > .control-panel {
+  flex: 0 0 52px;
+  min-height: 52px;
+  margin: 8px 0 10px;
+  padding: 5px 10px;
+  gap: 14px;
+}
+.app-shell--all-indices .control-panel .index-switch button,
+.app-shell--all-indices .control-panel .kite-tabs button {
+  padding: 6px 10px;
+  font-size: 10px;
+}
+.app-shell--all-indices .all-indices-dashboard {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+.app-shell--all-indices .all-indices-grid {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.app-shell--all-indices .all-indices-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 7px 9px 6px;
+}
+.app-shell--all-indices .all-indices-card-heading {
+  flex: 0 0 auto;
+  padding: 2px 4px 5px;
+}
+.app-shell--all-indices .all-indices-card-heading h3 { font-size: 11px; }
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics {
+  flex: 0 0 auto;
+  min-height: 0;
+  margin: 3px 0 4px !important;
+  padding: 3px 4px !important;
+  gap: 4px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics > div { min-width: 0 !important; padding: 0 8px !important; }
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics > div > div { font-size: 8px !important; }
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong { font-size: 14px !important; }
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong.index-price-value { font-size: 15px !important; }
+.app-shell--all-indices .all-indices-card .price-vwap-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 2px 5px 0 34px;
+  display: flex;
+  flex-direction: column;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-chart {
+  flex: 1 1 auto;
+  min-height: 76px;
+  height: clamp(76px, 13vh, 118px);
+  max-height: 118px;
+}
+.app-shell--all-indices .all-indices-card .chart-axis { top: 10px; bottom: 22px; font-size: 7px; }
+.app-shell--all-indices .all-indices-card .price-vwap-times { flex: 0 0 auto; padding-top: 2px; font-size: 6px; }
+.app-shell--all-indices .all-indices-card .price-vwap-legend {
+  flex: 0 0 auto;
+  gap: 6px;
+  margin-top: 3px;
+  padding: 0 3px;
+  font-size: 7px;
+  line-height: 1.1;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-legend i { transform: scale(.85); }
+.app-shell--all-indices .all-indices-card .price-vwap-bottom-actions {
+  flex: 0 0 auto;
+  min-height: 0;
+  margin-top: 5px !important;
+  padding: 3px 5px !important;
+  gap: 4px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary {
+  gap: 4px !important;
+  padding: 1px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span[aria-hidden="true"] {
+  font-size: 12px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) {
+  min-width: 54px !important;
+  gap: 2px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) > span {
+  font-size: 8px !important;
+  line-height: 1.1;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary strong { font-size: 10px !important; }
+.app-shell--all-indices .all-indices-card .price-vwap-trade-actions .button { padding: 5px 7px; font-size: 9px; }
+.app-shell--all-indices .all-indices-card .chart-empty { min-height: 0; flex: 1 1 auto; margin: 4px 0; padding: 8px; }
+
+@media (max-width: 900px) {
+  .app-shell--all-indices { height: auto; min-height: 100dvh; overflow: visible; padding: 0 10px 12px; }
+  .app-shell--all-indices .topbar { flex-wrap: wrap; height: auto; min-height: 56px; padding: 7px 0; }
+  .app-shell--all-indices > .control-panel { flex-wrap: wrap; height: auto; flex-basis: auto; }
+  .app-shell--all-indices .all-indices-dashboard { overflow: visible; }
+  .app-shell--all-indices .all-indices-grid { grid-template-rows: none; }
+  .app-shell--all-indices .all-indices-card { min-height: 280px; }
+}
+@media (max-width: 600px) {
+  .app-shell--all-indices .all-indices-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+  .app-shell--all-indices .all-indices-card { min-height: 300px; }
+}
