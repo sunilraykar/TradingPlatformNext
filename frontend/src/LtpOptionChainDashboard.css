@@ -2358,3 +2358,21 @@
 .ltp-option-chain .ltp-option-table tbody td .ltp-metric-normal {
   font-weight: 500 !important;
 }
+
+
+/* Make the >75% participation threshold unmistakable without replacing
+   the existing per-metric 1st/2nd-highest cell colors. */
+.ltp-option-chain .ltp-option-table tbody td .ltp-metric-emphasis {
+  display: inline-block;
+  padding: 1px 4px;
+  border: 1px solid #38b56b;
+  border-radius: 3px;
+  background: #c8f7d8 !important;
+  color: #123b25 !important;
+  font-weight: 900 !important;
+  line-height: 1.25;
+  box-shadow: 0 0 0 1px rgba(16, 110, 57, .12);
+}
+.ltp-option-chain .ltp-option-table tbody td small.ltp-metric-emphasis {
+  margin-top: 1px;
+}
