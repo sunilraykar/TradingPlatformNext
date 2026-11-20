@@ -262,7 +262,6 @@ export default function LtpOptionChainDashboard() {
   const [futureToken, setFutureToken] = useState(null);
   const [quotes, setQuotes] = useState({});
   const [candles, setCandles] = useState([]);
-  const [chartType, setChartType] = useState('tradingview');
   const [feedConnected, setFeedConnected] = useState(false);
   const [activeView, setActiveView] = useState('option-chain');
   const chainRequestId = useRef(0);
@@ -666,9 +665,9 @@ export default function LtpOptionChainDashboard() {
       </article>
 
       <aside className="ltp-chart-panel">
-        <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><div className="ltp-chart-heading-actions"><div className="ltp-chart-toggle" role="group" aria-label="Chart type"><button type="button" className={chartType === 'classic' ? 'active' : ''} onClick={() => setChartType('classic')}>Classic</button><button type="button" className={chartType === 'tradingview' ? 'active' : ''} onClick={() => setChartType('tradingview')}>TradingView</button></div><small>5-minute candles</small></div></div>
+        <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><div className="ltp-chart-heading-actions"><small>5-minute candles</small></div></div>
         <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
-        {chartType === 'tradingview' ? <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
+        <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
           // Keep target numbering in ascending target order: T1 is the nearer target,
           // T2 is the farther/higher target. Supports retain the reference mapping.
           { title: 'T2', value: rs.rreversalNext, color: '#ff6474' },
@@ -678,7 +677,7 @@ export default function LtpOptionChainDashboard() {
           // Max Pain boundaries are separate APIPLATFORM reversalModel values.
           { title: 'Max Pain', value: model.resistanceSL, color: '#ff9b45', lineStyle: 2 },
           { title: 'Max Pain', value: model.supportSL, color: '#ff9b45', lineStyle: 2 },
-        ]} /> : <CandleChart candles={candles} livePrice={underlying} levels={chartLevels} priceMode={priceMode} />}
+        ]} />
         <section className="ltp-direction-banner ltp-chart-scenario"><span>MARKET SCENARIO</span><strong>{marketDirection}</strong><small>{model.scenario || ''}</small></section>
         <div className="ltp-chart-footer"><span>Source: Kite WebSocket + today's Kite candles</span><span>Fetched {fetchedAt}</span></div>
         <section className="ltp-intelligence-groups" aria-label="Resistance and support shifting">
