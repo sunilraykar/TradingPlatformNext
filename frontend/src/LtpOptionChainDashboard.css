@@ -2571,13 +2571,12 @@
   }
 }
 
-
 /* Tighten Market Intelligence view tabs and align buttons cleanly in their frame. */
 .ltp-overview-row .ltp-section-tabs {
   width: max-content !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  padding: 0 !important;
+  padding: 3px !important;
   margin: 0 !important;
   gap: 6px !important;
   align-items: center !important;
