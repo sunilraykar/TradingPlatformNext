@@ -630,20 +630,20 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
           aria-pressed={showAllOpen}
           onClick={() => { setShowAllOpen((current) => !current); setShowAllClosed(false); }}
           title="Show every open trade across all dates, ignoring the other data filters"
-        >Open</button>
+        >Show All Open</button>
         <button
           type="button"
           className={showAllClosed ? 'trade-filter-button active' : 'trade-filter-button'}
           aria-pressed={showAllClosed}
           onClick={() => { setShowAllClosed((current) => !current); setShowAllOpen(false); }}
           title="Show every closed trade across all dates, ignoring the other data filters"
-        >Closed</button>
+        >Show All Closed</button>
       </div>
       <div className="trade-filter-group"><span className="trade-filter-label">Mode</span><div className="trade-filter-buttons">{[['ALL','All'],['PAPER','Paper'],['LIVE','Live']].map(([value,label]) => <button key={value} type="button" className={mode === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setMode(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Source</span><div className="trade-filter-buttons">{[['ALL','All'],...['AUTOTRENDER','MANUAL','KITE'].map(value => [value, value === 'AUTOTRENDER' ? 'AutoTrender' : value.charAt(0)+value.slice(1).toLowerCase()])].map(([value,label]) => <button key={value} type="button" className={sourceFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setSourceFilter(value)}>{label}</button>)}</div></div>
-      <label className="trade-filter-group trade-filter-select-group"><span className="trade-filter-label">Underlying</span><select className="trade-filter-select" aria-label="Filter by underlying" value={underlyingFilter} onChange={(event) => setUnderlyingFilter(event.target.value)}>{[['ALL','All'],['INDICES','Indices'],...underlyings.filter(x => !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(x)).map(x => [x,x])].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-      <label className="trade-filter-group trade-symbol-letter-filter trade-filter-select-group"><span className="trade-filter-label">Symbol</span><select className="trade-filter-select" aria-label="Filter by symbol initial" value={symbolLetter} onChange={(event) => setSymbolLetter(event.target.value)}>{[['ALL','All'],...symbolLetters.map((letter) => [letter,letter])].map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+      <div className="trade-filter-group trade-underlying-filter"><span className="trade-filter-label">Underlying</span><div className="trade-filter-buttons">{[['ALL','All'],['INDICES','Indices'],...underlyings.filter(x => !['NIFTY','BANKNIFTY','FINNIFTY','SENSEX'].includes(x)).map(x => [x,x])].map(([value,label]) => <button key={value} type="button" className={underlyingFilter === value ? 'trade-filter-button active' : 'trade-filter-button'} aria-pressed={underlyingFilter === value} onClick={() => setUnderlyingFilter(value)}>{label}</button>)}</div></div>
+      <div className="trade-filter-group trade-symbol-letter-filter"><span className="trade-filter-label">Symbol</span><div className="trade-filter-buttons">{[['ALL','All'],...symbolLetters.map((letter) => [letter,letter])].map(([value,label]) => <button key={value} type="button" className={symbolLetter === value ? 'trade-filter-button active' : 'trade-filter-button'} aria-pressed={symbolLetter === value} onClick={() => setSymbolLetter(value)}>{label}</button>)}</div></div>
       
     </div>
     </section>
