@@ -2927,3 +2927,43 @@ select,input,textarea{
     overflow-x: auto !important;
   }
 }
+
+
+/* Trade Terminal toolbar after removing Symbol filter: keep date and remaining filter groups on one line. */
+.trade-date-filter-panel {
+  grid-template-columns: 224px minmax(0, 1fr) !important;
+  align-items: center !important;
+}
+.trade-date-filter-panel .trade-terminal-filters {
+  display: flex !important;
+  flex-flow: row nowrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scrollbar-width: thin;
+}
+.trade-date-filter-panel .trade-terminal-filters > .trade-filter-group {
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+.trade-date-filter-panel .trade-terminal-filters .trade-filter-buttons {
+  flex-wrap: nowrap !important;
+}
+@media (max-width: 850px) {
+  .trade-date-filter-panel {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .trade-date-filter-panel .trade-date-navigator {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    width: min(100%, 320px) !important;
+  }
+  .trade-date-filter-panel .trade-terminal-filters {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+    overflow-x: auto !important;
+  }
+}
