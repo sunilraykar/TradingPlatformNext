@@ -630,14 +630,14 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
           aria-pressed={showAllOpen}
           onClick={() => { setShowAllOpen((current) => !current); setShowAllClosed(false); }}
           title="Show every open trade across all dates, ignoring the other data filters"
-        >Show All Open</button>
+        >Open</button>
         <button
           type="button"
           className={showAllClosed ? 'trade-filter-button active' : 'trade-filter-button'}
           aria-pressed={showAllClosed}
           onClick={() => { setShowAllClosed((current) => !current); setShowAllOpen(false); }}
           title="Show every closed trade across all dates, ignoring the other data filters"
-        >Show All Closed</button>
+        >Closed</button>
       </div>
       <div className="trade-filter-group"><span className="trade-filter-label">Mode</span><div className="trade-filter-buttons">{[['ALL','All'],['PAPER','Paper'],['LIVE','Live']].map(([value,label]) => <button key={value} type="button" className={mode === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setMode(value)}>{label}</button>)}</div></div>
       <div className="trade-filter-group"><span className="trade-filter-label">Status</span><div className="trade-filter-buttons">{[['ALL','All'],['OPEN','Open'],['CLOSED','Closed'],['CANCELLED','Cancelled']].map(([value,label]) => <button key={value} type="button" className={status === value ? 'trade-filter-button active' : 'trade-filter-button'} onClick={() => setStatus(value)}>{label}</button>)}</div></div>
