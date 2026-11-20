@@ -1759,115 +1759,86 @@
 }
 
 
-/* Option-chain contrast refinement — high-contrast ranked cells and clearer secondary values. */
+
 .ltp-option-chain .ltp-option-table th:nth-child(-n+4) {
-  background: #244638 !important;
-  color: #d9f5e5 !important;
+color: #d9f5e5 !important;
 }
 .ltp-option-chain .ltp-option-table th:nth-child(n+6) {
-  background: #50383e !important;
-  color: #f8dfe2 !important;
+color: #f8dfe2 !important;
 }
 .ltp-option-chain .ltp-option-table th.ltp-strike-head,
 .ltp-option-chain .ltp-option-table tfoot td.ltp-strike-head {
-  background: #e9653c !important;
-  color: #fff !important;
+color: #fff !important;
 }
 .ltp-option-chain .ltp-option-table tbody td {
-  color: #f0f4f8 !important;
-  font-size: 11.5px !important;
+font-size: 11.5px !important;
   font-weight: 650 !important;
 }
 .ltp-option-chain .ltp-option-table tbody td strong {
-  color: inherit !important;
-  font-size: 11.5px !important;
+font-size: 11.5px !important;
   font-weight: 800 !important;
 }
 .ltp-option-chain .ltp-option-table tbody td small {
   display: block;
   margin-top: 3px !important;
-  color: #cbd5df !important;
-  font-size: 9.5px !important;
+font-size: 9.5px !important;
   font-weight: 600 !important;
   opacity: 1 !important;
 }
 .ltp-option-chain .ltp-option-table tbody td.positive:not([class*="ltp-rank-"]),
-.ltp-option-chain .ltp-option-table tbody td.positive:not([class*="ltp-rank-"]) * {
-  color: #65e6a2 !important;
-}
-.ltp-option-chain .ltp-option-table tbody td.negative:not([class*="ltp-rank-"]),
-.ltp-option-chain .ltp-option-table tbody td.negative:not([class*="ltp-rank-"]) * {
-  color: #ff8991 !important;
-}
 
-/* Rank highlights use dark, colour-coded fills with light text — never dark text on pale fills. */
+.ltp-option-chain .ltp-option-table tbody td.negative:not([class*="ltp-rank-"]),
+
+
+
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOiChg-first,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOiChg-first *,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOiChg-second,
-.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOiChg-second * {
-  color: #ffe9ec !important;
-}
+
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOiChg-first { background: #713b45 !important; }
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOiChg-second { background: #59343c !important; }
 
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOi-first,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOi-first *,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOi-second,
-.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOi-second * {
-  color: #e3f4ff !important;
-}
+
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOi-first { background: #285b78 !important; }
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callOi-second { background: #244b63 !important; }
 
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callVol-first,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callVol-first *,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callVol-second,
-.ltp-option-chain .ltp-option-table tbody td.ltp-rank-callVol-second * {
-  color: #fff3c2 !important;
-}
+
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callVol-first { background: #6b591e !important; }
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-callVol-second { background: #55491f !important; }
 
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putVol-first,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putVol-first *,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putVol-second,
-.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putVol-second * {
-  color: #dcfff7 !important;
-}
+
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putVol-first { background: #24645b !important; }
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putVol-second { background: #20534d !important; }
 
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOi-first,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOi-first *,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOi-second,
-.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOi-second * {
-  color: #e5efff !important;
-}
+
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOi-first { background: #345b89 !important; }
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOi-second { background: #2c4d73 !important; }
 
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOiChg-first,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOiChg-first *,
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOiChg-second,
-.ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOiChg-second * {
-  color: #eaffdf !important;
-}
+
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOiChg-first { background: #426b35 !important; }
 .ltp-option-chain .ltp-option-table tbody td.ltp-rank-putOiChg-second { background: #385a30 !important; }
 
-.ltp-option-chain .ltp-option-table tbody tr:hover td[class*="ltp-rank-"] {
-  filter: brightness(1.12);
-}
+
 .ltp-option-chain .ltp-option-table tbody td.ltp-strike-cell,
-.ltp-option-chain .ltp-option-table tbody td.ltp-strike-cell * {
-  color: #fff !important;
-}
-.ltp-option-chain .ltp-option-table tbody td.ltp-strike-cell {
-  background: #bd591f !important;
-}
+
+
 .ltp-option-chain .ltp-option-table tbody tr.ltp-atm-row td:not(.ltp-strike-cell):not([class*="ltp-rank-"]) {
-  background: #51472f !important;
-  color: #fff0c5 !important;
+color: #fff0c5 !important;
 }
 .ltp-option-chain .ltp-option-table .ltp-reversal {
   font-size: 9px !important;
