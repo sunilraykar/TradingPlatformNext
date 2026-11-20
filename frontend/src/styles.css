@@ -1584,10 +1584,10 @@ select,input,textarea{
   gap: 2px !important;
 }
 .app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) > span {
-  font-size: 8px !important;
-  line-height: 1.1;
+  font-size: 9px !important;
+  line-height: 1.15;
 }
-.app-shell--all-indices .all-indices-card .price-vwap-summary strong { font-size: 10px !important; }
+.app-shell--all-indices .all-indices-card .price-vwap-summary strong { font-size: 11px !important; }
 .app-shell--all-indices .all-indices-card .price-vwap-trade-actions .button { padding: 5px 7px; font-size: 9px; }
 .app-shell--all-indices .all-indices-card .chart-empty { min-height: 0; flex: 1 1 auto; margin: 4px 0; padding: 8px; }
 
