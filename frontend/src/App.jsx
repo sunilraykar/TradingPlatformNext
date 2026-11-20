@@ -510,7 +510,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
 
 }
 
-function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
+function AllIndicesDashboard({ mins, settings, kiteIndexQuotes, refreshSeconds }) {
   const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
   const inFlight = useRef(false);
   useEffect(() => {
@@ -541,9 +541,9 @@ function AllIndicesDashboard({ mins, settings, kiteIndexQuotes }) {
       }
     };
     load();
-    const timer = window.setInterval(load, 5000);
+    const timer = window.setInterval(load, Math.max(5, Number(refreshSeconds) || 60) * 1000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [mins, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
+  }, [mins, refreshSeconds, settings.autoTrenderEntryStartTime, settings.autoTrenderEntryEndTime, settings.callPutStrengthDiff, settings.callPcr, settings.putPcr, settings.vwapPriceDifferenceBuffer]);
 
 
 
@@ -631,7 +631,7 @@ const SETTINGS_FIELDS = {
     ['optionChainSymbols', 'Option Chain Symbols (comma-separated)', 'text', '', 'Symbols to include in the option-chain universe.', ''],
   ],
   autotrend: [
-    ['autoTrenderRefreshSeconds', 'AutoTrender Refresh Interval (seconds)', 'number', '5', 'Refresh interval for AutoTrender data.', '1'],
+    ['autoTrenderRefreshSeconds', 'AutoTrender Refresh Interval (seconds)', 'number', '60', 'Refresh interval for AutoTrender provider data. Kite live index prices remain independent.', '5'],
     ['autoTrenderIntradayMinutes', 'AutoTrender Intraday Data Window (minutes)', 'number', '3', 'Lookback window requested for AutoTrender intraday data and chart.', '1'],
     ['autoTrenderWorkerIntervalSeconds', 'AutoTrender Signal Evaluation Interval (seconds)', 'number', '5', 'How often the backend evaluates AutoTrender signals; separate from UI refresh.', '1'],
     ['autoTrenderMaxSignalAgeSeconds', 'AutoTrender Maximum Signal Age (seconds)', 'number', '300', 'Reject signals older than this age or without a valid source timestamp.', '1'],
@@ -1145,6 +1145,12 @@ function SettingsPanel() {
       setSaving(false);
       return;
     }
+    const refreshSeconds = Number(value('autoTrenderRefreshSeconds'));
+    if (!Number.isInteger(refreshSeconds) || refreshSeconds < 5 || refreshSeconds > 300) {
+      setError('AutoTrender Refresh Interval must be a whole number between 5 and 300 seconds.');
+      setSaving(false);
+      return;
+    }
     try {
       const result = await api('/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ settings }) });
       // Save silently; do not display a success banner.
@@ -1157,7 +1163,7 @@ function SettingsPanel() {
     const current = value(key);
     if (type === 'boolean') return <label className="settings-toggle" key={key}><input type="checkbox" checked={Boolean(current)} onChange={(e) => change(key, e.target.checked)} /><span><strong>{label}</strong><small>{help}</small></span></label>;
     if (type === 'select') { const options = Array.isArray(extra) ? extra : String(extra || '').split(';').filter(Boolean); return <label className="settings-control" key={key}><span>{label}</span><select value={current} onChange={(e) => change(key, e.target.value)}>{options.map((item) => { const [v, name] = item.split('|'); return <option key={v} value={v}>{name || v}</option>; })}</select>{help && <small>{help}</small>}</label>; }
-    return <label className="settings-control" key={key}><span>{label}</span><input type={type} min={type === 'number' ? extra : undefined} step={type === 'number' ? 'any' : undefined} value={current ?? fallback} onChange={(e) => change(key, type === 'number' ? e.target.value : e.target.value)} />{help && <small>{help}</small>}</label>;
+    return <label className="settings-control" key={key}><span>{label}</span><input type={type} min={type === 'number' ? extra : undefined} max={key === 'autoTrenderRefreshSeconds' ? 300 : undefined} step={type === 'number' ? 'any' : undefined} value={current ?? fallback} onChange={(e) => change(key, type === 'number' ? e.target.value : e.target.value)} />{help && <small>{help}</small>}</label>;
   };
 
   return <section className="settings-page">
@@ -1766,12 +1772,14 @@ export default function App({ user = null, onSignOut }) {
   const [index, setIndex] = useState('NIFTY');
   const [showAllIndices, setShowAllIndices] = useState(true);
   const refreshInFlight = useRef(false);
+  const kiteQuoteRefreshInFlight = useRef(false);
   const kiteRefreshInFlight = useRef(false);
   const selectedIndexRef = useRef(index);
   selectedIndexRef.current = index;
   const [kiteIndexQuotes, setKiteIndexQuotes] = useState(null);
   const [individualApiplatformLevels, setIndividualApiplatformLevels] = useState([]);
   const [mins, setMins] = useState(3);
+  const [autoTrenderRefreshSeconds, setAutoTrenderRefreshSeconds] = useState(60);
   const [intraday, setIntraday] = useState(null);
   const [oi, setOi] = useState(null);
   const [auth, setAuth] = useState(null);
@@ -1818,7 +1826,6 @@ export default function App({ user = null, onSignOut }) {
       // Reload saved thresholds on every market-data refresh so newly arrived
       // timestamp rows are evaluated against the latest Settings values.
       api('/settings'),
-      api('/kite/market-data/autotrender-indices'),
     ]);
     if (selectedIndexRef.current !== requestedIndex) {
       setLoading(false);
@@ -1834,11 +1841,12 @@ export default function App({ user = null, onSignOut }) {
     }
     if (results[resultOffset].status === 'fulfilled') setAuth(results[resultOffset].value);
     if (results[resultOffset + 1].status === 'fulfilled') setCache(results[resultOffset + 1].value);
-    if (results[resultOffset + 3].status === 'fulfilled') setKiteIndexQuotes(results[resultOffset + 3].value);
     if (results[resultOffset + 2].status === 'fulfilled') {
       const saved = results[resultOffset + 2].value.settings || {};
       const configuredMinutes = Number(saved.autoTrenderIntradayMinutes ?? 3);
+      const configuredRefreshSeconds = Number(saved.autoTrenderRefreshSeconds ?? 60);
       setMins([1, 3, 5, 10, 15, 30, 60].includes(configuredMinutes) ? configuredMinutes : 3);
+      setAutoTrenderRefreshSeconds(Number.isInteger(configuredRefreshSeconds) && configuredRefreshSeconds >= 5 && configuredRefreshSeconds <= 300 ? configuredRefreshSeconds : 60);
       setAutotrendSettings({
         callPutStrengthDiff: saved.callPutStrengthDiff ?? 10,
         callPcr: saved.callPcr ?? 1,
@@ -1896,11 +1904,33 @@ export default function App({ user = null, onSignOut }) {
   }, [index, applicationTab, autotrenderView]);
 
   useEffect(() => {
+    if (applicationTab !== 'autotrender' || autotrenderView !== 'live') return undefined;
     refresh();
-    // AutoTrender live values should refresh once per second while this view is active.
-    const timer = window.setInterval(() => { refresh(); }, 1000);
+    const timer = window.setInterval(() => { refresh(); }, Math.max(5, Number(autoTrenderRefreshSeconds) || 60) * 1000);
     return () => window.clearInterval(timer);
-  }, [refresh]);
+  }, [refresh, applicationTab, autotrenderView, autoTrenderRefreshSeconds]);
+
+  // This endpoint reads the Kite market-data cache fed by the Kite WebSocket.
+  // Keep its 1-second cadence independent from slower AutoTrender provider polling.
+  useEffect(() => {
+    if (applicationTab !== 'autotrender' || autotrenderView !== 'live') return undefined;
+    let cancelled = false;
+    const loadKiteIndexQuotes = async () => {
+      if (kiteQuoteRefreshInFlight.current) return;
+      kiteQuoteRefreshInFlight.current = true;
+      try {
+        const quotes = await api('/kite/market-data/autotrender-indices');
+        if (!cancelled) setKiteIndexQuotes(quotes);
+      } catch (error) {
+        // Keep the last Kite WebSocket-backed quote snapshot visible on transient errors.
+      } finally {
+        kiteQuoteRefreshInFlight.current = false;
+      }
+    };
+    loadKiteIndexQuotes();
+    const timer = window.setInterval(loadKiteIndexQuotes, 1000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [applicationTab, autotrenderView]);
 
   const refreshKiteSessionStatus = useCallback(async () => {
     try {
@@ -2262,7 +2292,7 @@ export default function App({ user = null, onSignOut }) {
 
 
 
-      {showAllIndices ? <AllIndicesDashboard mins={mins} settings={autotrendSettings} kiteIndexQuotes={kiteIndexQuotes} /> : <>
+      {showAllIndices ? <AllIndicesDashboard mins={mins} settings={autotrendSettings} kiteIndexQuotes={kiteIndexQuotes} refreshSeconds={autoTrenderRefreshSeconds} /> : <>
       <section className="price-vwap-section">
         <div className="price-vwap-workspace">
           <article className="panel price-vwap-panel">
