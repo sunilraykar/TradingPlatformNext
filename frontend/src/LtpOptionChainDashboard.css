@@ -2712,3 +2712,126 @@
     grid-row: auto;
   }
 }
+
+
+/* Match the two-tier option-chain header: tabs above, all trading controls on row two. */
+.ltp-option-chain .ltp-contract-index-row {
+  display: grid !important;
+  grid-template-columns: minmax(210px, 290px) minmax(360px, 1fr) minmax(210px, 290px) auto;
+  align-items: center !important;
+  justify-items: stretch !important;
+  gap: 10px !important;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 8px 0 10px !important;
+  padding: 0 4px !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts .ltp-atm-contract {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  position: static !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts button {
+  min-width: 0 !important;
+  flex: 1 1 0 !important;
+  height: 40px !important;
+  padding: 0 8px !important;
+  white-space: nowrap;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {
+  display: flex !important;
+  align-items: end !important;
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls label {
+  flex: 0 0 auto !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls .ltp-symbol-field select {
+  width: 112px !important;
+  min-width: 112px !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls .ltp-expiry-field select {
+  width: 130px !important;
+  min-width: 130px !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls .ltp-price-field select {
+  width: 138px !important;
+  min-width: 138px !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls .ltp-lot-size {
+  width: 52px !important;
+  min-width: 52px !important;
+  flex: 0 0 52px !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls .ltp-lot-size input {
+  width: 48px !important;
+  min-width: 48px !important;
+}
+@media (max-width: 1450px) {
+  .ltp-option-chain .ltp-contract-index-row {
+    grid-template-columns: minmax(180px, 1fr) minmax(300px, 1.3fr) minmax(180px, 1fr);
+  }
+  .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {
+    grid-column: 1 / -1;
+    justify-content: flex-end !important;
+  }
+}
+@media (max-width: 900px) {
+  .ltp-option-chain .ltp-contract-index-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+  .ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts:first-child {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts:nth-of-type(2) {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+  }
+}
+@media (max-width: 520px) {
+  .ltp-option-chain .ltp-contract-index-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts,
+  .ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts:first-child,
+  .ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts:nth-of-type(2),
+  .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {
+    flex-wrap: wrap !important;
+  }
+}
