@@ -335,7 +335,7 @@ export default function LtpOptionChainDashboard() {
         body: JSON.stringify({
           idempotency_key: idempotencyKey,
           execution_mode: 'PAPER',
-          source: 'MANUAL',
+          source: 'Manual - MI',
           strategy: 'ATM Option Chain',
           underlying: symbol,
           instrument_symbol: orderDraft.tradingsymbol,
