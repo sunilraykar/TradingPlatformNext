@@ -2783,3 +2783,9 @@ select,input,textarea{
     grid-column: span 2;
   }
 }
+
+
+.trade-date-filter-panel .trade-show-all-group::before {
+  content: none !important;
+  display: none !important;
+}
