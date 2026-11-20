@@ -540,27 +540,6 @@ export default function LtpOptionChainDashboard() {
       <button type="button" className={activeView === "option-chain" ? "active" : ""} aria-current={activeView === "option-chain" ? "page" : undefined} onClick={() => setActiveView("option-chain")}>Option Chain</button>
       <button type="button" className={activeView === "swing-trade" ? "active" : ""} aria-current={activeView === "swing-trade" ? "page" : undefined} onClick={() => setActiveView("swing-trade")}>Swing Trade</button>
     </nav>
-    <div className="ltp-atm-contracts" aria-label="ATM contracts">
-      <button type="button" className="ltp-atm-contract put" onClick={() => openAtmOrder(atmPut)} disabled={!atmPut || !quoteForInstrument(atmPut)}>
-        <strong>{atmPut?.tradingsymbol || '—'}</strong>
-      </button>
-    </div>
-    <div className="ltp-index-shortcuts" role="group" aria-label="Quick select index">
-      {['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].map((item) => (
-        <button
-          key={item}
-          type="button"
-          className={symbol === item ? 'active' : ''}
-          aria-pressed={symbol === item}
-          onClick={() => openSymbolOptionChain(item)}
-        >{item}</button>
-      ))}
-    </div>
-    <div className="ltp-atm-contracts" aria-label="ATM contracts">
-      <button type="button" className="ltp-atm-contract call" onClick={() => openAtmOrder(atmCall)} disabled={!atmCall || !quoteForInstrument(atmCall)}>
-        <strong>{atmCall?.tradingsymbol || '—'}</strong>
-      </button>
-    </div>
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
       <div className="ltp-controls">
@@ -575,6 +554,24 @@ export default function LtpOptionChainDashboard() {
     {error && <div className="ltp-error"><strong>Data request issue</strong><span>{error}</span></div>}
 
     </div>
+
+    {activeView === "option-chain" && <div className="ltp-contract-index-row" aria-label="Option chain contract shortcuts">
+      <div className="ltp-atm-contracts" aria-label="ATM put contract">
+        <button type="button" className="ltp-atm-contract put" onClick={() => openAtmOrder(atmPut)} disabled={!atmPut || !quoteForInstrument(atmPut)}>
+          <strong>{atmPut?.tradingsymbol || '—'}</strong>
+        </button>
+      </div>
+      <div className="ltp-index-shortcuts" role="group" aria-label="Quick select index">
+        {['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].map((item) => (
+          <button key={item} type="button" className={symbol === item ? 'active' : ''} aria-pressed={symbol === item} onClick={() => openSymbolOptionChain(item)}>{item}</button>
+        ))}
+      </div>
+      <div className="ltp-atm-contracts" aria-label="ATM call contract">
+        <button type="button" className="ltp-atm-contract call" onClick={() => openAtmOrder(atmCall)} disabled={!atmCall || !quoteForInstrument(atmCall)}>
+          <strong>{atmCall?.tradingsymbol || '—'}</strong>
+        </button>
+      </div>
+    </div>}
 
     {activeView === "swing-trade" ? <SwingTradePanel onSymbolSelect={openSymbolOptionChain} /> : <section className="ltp-workspace">
       <article className="ltp-option-panel">
