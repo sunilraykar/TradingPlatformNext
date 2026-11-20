@@ -2625,3 +2625,26 @@
 .ltp-option-chain .ltp-reversal-popover {
   z-index: 1000 !important;
 }
+
+/* The LTP value itself is the action that opens the matching strike's paper order ticket. */
+.ltp-option-chain .ltp-reversal-popover .ltp-reversal-ltp-action {
+  border: 0;
+  border-radius: 3px;
+  padding: 1px 3px;
+  background: transparent;
+  color: #67e8f9;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.2;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.ltp-option-chain .ltp-reversal-popover .ltp-reversal-ltp-action:hover:not(:disabled) {
+  background: rgba(103,232,249,.14);
+  text-decoration: underline;
+}
+.ltp-option-chain .ltp-reversal-popover .ltp-reversal-ltp-action:disabled {
+  color: #8492a6;
+  cursor: not-allowed;
+}
