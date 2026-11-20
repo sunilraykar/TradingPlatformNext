@@ -500,6 +500,17 @@ export default function LtpOptionChainDashboard() {
       <button type="button" className={activeView === "option-chain" ? "active" : ""} aria-current={activeView === "option-chain" ? "page" : undefined} onClick={() => setActiveView("option-chain")}>Option Chain</button>
       <button type="button" className={activeView === "swing-trade" ? "active" : ""} aria-current={activeView === "swing-trade" ? "page" : undefined} onClick={() => setActiveView("swing-trade")}>Swing Trade</button>
     </nav>
+    <div className="ltp-index-shortcuts" role="group" aria-label="Quick select index">
+      {['NIFTY', 'BANKNIFTY', 'SENSEX'].map((item) => (
+        <button
+          key={item}
+          type="button"
+          className={symbol === item ? 'active' : ''}
+          aria-pressed={symbol === item}
+          onClick={() => openSymbolOptionChain(item)}
+        >{item}</button>
+      ))}
+    </div>
     <section className="ltp-option-toolbar">
       <div className="ltp-brand"><span className="ltp-brand-icon">↗</span><div><strong>OPTION CHAIN DATA</strong><small>MARKET INTELLIGENCE TERMINAL</small></div></div>
       <div className="ltp-controls">
