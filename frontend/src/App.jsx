@@ -1101,7 +1101,11 @@ function SettingsPanel() {
   useEffect(() => {
     let active = true;
     api('/settings').then((result) => {
-      if (active) setSettings({ ...defaults, ...(result.settings || {}) });
+      if (active) {
+        const saved = result.settings || {};
+        const savedRefreshSeconds = Number(saved.autoTrenderRefreshSeconds ?? 60);
+        setSettings({ ...defaults, ...saved, autoTrenderRefreshSeconds: String(savedRefreshSeconds === 5 ? 60 : savedRefreshSeconds) });
+      }
     }).catch((e) => {
       if (active) { setSettings(defaults); setError('Could not load saved settings from MySQL: ' + e.message); }
     }).finally(() => { if (active) setLoading(false); });
@@ -1808,7 +1812,7 @@ export default function App({ user = null, onSignOut }) {
   }, [selectedLiveIntradayTime]);
 
   const refresh = useCallback(async () => {
-    // Prevent overlapping 1-second polls from returning out of order and
+    // Prevent overlapping refreshes from returning out of order and
     // overwriting the currently selected index with an older index response.
     if (refreshInFlight.current) return;
     refreshInFlight.current = true;
@@ -1844,7 +1848,8 @@ export default function App({ user = null, onSignOut }) {
     if (results[resultOffset + 2].status === 'fulfilled') {
       const saved = results[resultOffset + 2].value.settings || {};
       const configuredMinutes = Number(saved.autoTrenderIntradayMinutes ?? 3);
-      const configuredRefreshSeconds = Number(saved.autoTrenderRefreshSeconds ?? 60);
+      const savedRefreshSeconds = Number(saved.autoTrenderRefreshSeconds ?? 60);
+      const configuredRefreshSeconds = savedRefreshSeconds === 5 ? 60 : savedRefreshSeconds;
       setMins([1, 3, 5, 10, 15, 30, 60].includes(configuredMinutes) ? configuredMinutes : 3);
       setAutoTrenderRefreshSeconds(Number.isInteger(configuredRefreshSeconds) && configuredRefreshSeconds >= 5 && configuredRefreshSeconds <= 300 ? configuredRefreshSeconds : 60);
       setAutotrendSettings({
