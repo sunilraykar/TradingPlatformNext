@@ -512,34 +512,37 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
 
 function AllIndicesDashboard({ mins, settings, kiteIndexQuotes, refreshSeconds }) {
   const [series, setSeries] = useState(() => Object.fromEntries(DEFAULT_INDICES.map((symbol) => [symbol, { rows: [], loading: true, error: '' }])));
-  const inFlight = useRef(false);
   useEffect(() => {
     let cancelled = false;
+    let busy = false;
     const load = async () => {
-      if (inFlight.current || !isAutoTrenderMarketWindowOpen()) return;
-      inFlight.current = true;
+      if (busy || !isAutoTrenderMarketWindowOpen()) return;
+      busy = true;
       try {
-        const results = await Promise.allSettled(DEFAULT_INDICES.map((symbol) => api(`/autotrender/indices/${symbol}/intraday?mins=${mins}`)));
-        if (!cancelled) {
-          setSeries((current) => {
-            const next = { ...current };
-            results.forEach((result, index) => {
-              const symbol = DEFAULT_INDICES[index];
-              if (result.status === 'fulfilled') {
-                const payload = result.value;
-                const rawRows = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.rows) ? payload.rows : [];
-                next[symbol] = { rows: buildIntradayRows(rawRows, settings), loading: false, error: '' };
-              } else {
-                next[symbol] = { ...current[symbol], loading: false, error: result.reason?.message || 'Unable to load index data' };
-              }
-            });
-            return next;
-          });
-        }
+        // Fetch all four indices concurrently, but publish each result as soon
+        // as its own API request completes instead of waiting for the slowest.
+        await Promise.all(DEFAULT_INDICES.map(async (symbol) => {
+          try {
+            const payload = await api(`/autotrender/indices/${symbol}/intraday?mins=${mins}`);
+            if (cancelled) return;
+            const rawRows = Array.isArray(payload?.data) ? payload.data : Array.isArray(payload?.rows) ? payload.rows : [];
+            setSeries((current) => ({
+              ...current,
+              [symbol]: { rows: buildIntradayRows(rawRows, settings), loading: false, error: '' },
+            }));
+          } catch (error) {
+            if (cancelled) return;
+            setSeries((current) => ({
+              ...current,
+              [symbol]: { ...current[symbol], loading: false, error: error?.message || 'Unable to load index data' },
+            }));
+          }
+        }));
       } finally {
-        inFlight.current = false;
+        busy = false;
       }
     };
+    // Initial request is immediate and is never scheduled behind refreshSeconds.
     load();
     const timer = window.setInterval(load, Math.max(5, Number(refreshSeconds) || 60) * 1000);
     return () => { cancelled = true; window.clearInterval(timer); };
