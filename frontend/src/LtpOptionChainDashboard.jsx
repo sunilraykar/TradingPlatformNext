@@ -341,10 +341,10 @@ export default function LtpOptionChainDashboard() {
 
   const loadChain = useCallback(async (showLoading = true) => {
     if (!expiry) return;
-    const requestId = ++chainRequestId.current;
-    // Never overlap full-chain requests. If a request is still running at the
-    // next poll, its response is ignored and the following 2-second tick retries.
+    // Never overlap full-chain requests. If a request is still running at
+    // the next poll, skip that tick and let the current response complete.
     if (chainFetchBusy.current) return;
+    const requestId = ++chainRequestId.current;
     chainFetchBusy.current = true;
     if (showLoading) setLoading(true);
     setError('');
