@@ -2029,3 +2029,61 @@
   .ltp-option-chain .ltp-workspace { align-items: stretch !important; }
   .ltp-option-chain .ltp-chart-panel { height: auto !important; }
 }
+
+
+/* Rectangular quick-select buttons centered in the open overview toolbar space. */
+.ltp-overview-row .ltp-index-shortcuts {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: center;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  z-index: 3;
+  pointer-events: auto;
+}
+.ltp-index-shortcuts button {
+  min-width: 92px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid #586575;
+  border-radius: 3px;
+  background: #303b49;
+  color: #e5edf6;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .25px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ltp-index-shortcuts button:hover {
+  border-color: #f47716;
+  background: #414d5c;
+}
+.ltp-index-shortcuts button.active {
+  border-color: #ff8058;
+  background: #e95b35;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.22);
+}
+@media (max-width: 1500px) {
+  .ltp-overview-row .ltp-index-shortcuts {
+    grid-column: 1;
+    grid-row: 2;
+    justify-self: start;
+    position: relative;
+    margin-top: 4px;
+  }
+}
+@media (max-width: 760px) {
+  .ltp-overview-row .ltp-index-shortcuts {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    justify-self: center;
+    flex-wrap: wrap;
+  }
+  .ltp-index-shortcuts button { min-width: 84px; }
+}
