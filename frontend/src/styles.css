@@ -1620,4 +1620,59 @@ select,input,textarea{
   .app-shell--all-indices .all-indices-card { min-height: 300px; }
 }
 
-/* Active and Closed trade windows remain visible below the four-index charts. */
+//* Keep all four index charts in the initial viewport; let trade panels extend the page vertically. */
+.app-shell--all-indices {
+  height: auto;
+  min-height: 100dvh;
+  overflow: visible;
+}
+.app-shell--all-indices .all-indices-dashboard {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.app-shell--all-indices .all-indices-grid {
+  flex: 0 0 auto;
+  width: 100%;
+  height: max(520px, calc(100dvh - 150px));
+  min-height: 520px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+.app-shell--all-indices .dashboard-day-trades {
+  display: grid !important;
+  flex: 0 0 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto;
+  align-items: start;
+  min-height: 0;
+  margin: 12px 0 20px;
+  overflow: visible;
+}
+.app-shell--all-indices .dashboard-day-trades .autotrend-active-trades {
+  height: auto;
+  min-height: 340px;
+  max-height: 420px;
+}
+.app-shell--all-indices .dashboard-day-trades .autotrend-active-trades-list {
+  min-height: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+@media (max-width: 900px) {
+  .app-shell--all-indices .all-indices-grid {
+    height: max(500px, calc(100dvh - 150px));
+    min-height: 500px;
+  }
+}
+@media (max-width: 760px) {
+  .app-shell--all-indices .all-indices-grid {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+  }
+  .app-shell--all-indices .all-indices-card { min-height: 300px; }
+  .app-shell--all-indices .dashboard-day-trades {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
