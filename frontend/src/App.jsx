@@ -2264,7 +2264,6 @@ export default function App({ user = null, onSignOut }) {
         {user?.role !== 'VIEWER' && <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>}
         {user?.role === 'SUPER_ADMIN' && <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>}
       </nav>
-      {user && <span className="app-user-identity" title={user.email}>{user.email} · {String(user.role || '').replaceAll('_', ' ')}</span>}
         <div className="topbar-right">
           <div className="theme-switch" role="group" aria-label="Appearance">
             <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => setTheme('light')} title="Use light theme">☀ Light</button>
@@ -2277,7 +2276,14 @@ export default function App({ user = null, onSignOut }) {
           </>}
           <span className={`status-pill ${auth?.authenticated ? 'online' : 'offline'}`}><i />{auth?.authenticated ? 'AutoTrender connected' : 'AutoTrender not connected'}</span>
           <span className={`status-pill ${websocketStatus?.connected ? 'online' : 'offline'}`} title={websocketStatus?.reason || ('Kite WebSocket: ' + (websocketStatus?.state || 'checking'))}><i />WS {websocketStatus?.connected ? 'Connected' : websocketStatus?.state === 'login_required' ? 'Disconnected' : (websocketStatus?.state || 'Checking')}</span>
-          <button type="button" className="status-pill app-signout-button" onClick={onSignOut}>Sign out</button>
+          {user && <details className="app-account-menu">
+            <summary title={user.email}>Account <span aria-hidden="true">▾</span></summary>
+            <div className="app-account-menu-popover">
+              <strong>{user.email}</strong>
+              <span>{String(user.role || '').replaceAll('_', ' ')}</span>
+              <button type="button" onClick={onSignOut}>Sign out</button>
+            </div>
+          </details>}
         </div>
       </header>
 
@@ -2287,7 +2293,10 @@ export default function App({ user = null, onSignOut }) {
           <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => setShowAllIndices(true)}>DASHBOARD</button>
           {DEFAULT_INDICES.map((item) => <button key={item} className={!showAllIndices && index === item ? 'selected' : ''} onClick={() => { setIndex(item); setShowAllIndices(false); }}>{item}</button>)}
         </div>
-        <div className="interval-select">Refresh Interval: <strong>{mins} min</strong></div>
+        <div className="autotrend-refresh-meta" aria-label="Chart and refresh settings">
+          <span>Chart window <strong>{mins} min</strong></span>
+          <span>Auto refresh <strong>{autoTrenderRefreshSeconds}s</strong></span>
+        </div>
         <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
       </section>
 
