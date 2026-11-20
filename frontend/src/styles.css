@@ -2713,3 +2713,73 @@ select,input,textarea{
 .app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong.index-price-value {
   font-size: 10.5px !important;
 }
+
+
+/* Trade Terminal filter controls: restore the original button groups without changing filter state or behaviour. */
+.trade-date-filter-panel {
+  grid-template-columns: 210px 235px 140px 205px 205px 260px 260px !important;
+  gap: 8px !important;
+}
+.trade-date-filter-panel .trade-show-all-group {
+  grid-column: 2;
+  flex-wrap: nowrap !important;
+}
+.trade-date-filter-panel .trade-show-all-group > .trade-filter-button {
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+  font-size: 9px !important;
+}
+.trade-date-filter-panel .trade-underlying-filter {
+  grid-column: 6;
+  align-items: flex-start !important;
+}
+.trade-date-filter-panel .trade-symbol-letter-filter {
+  grid-column: 7;
+  align-items: flex-start !important;
+}
+.trade-date-filter-panel .trade-underlying-filter .trade-filter-buttons,
+.trade-date-filter-panel .trade-symbol-letter-filter .trade-filter-buttons {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 3px !important;
+  width: 100% !important;
+}
+.trade-date-filter-panel .trade-underlying-filter .trade-filter-button,
+.trade-date-filter-panel .trade-symbol-letter-filter .trade-filter-button {
+  min-width: 23px;
+  min-height: 24px !important;
+  height: 24px !important;
+  padding: 3px 6px !important;
+  font-size: 9px !important;
+}
+@media (max-width: 1450px) {
+  .trade-date-filter-panel {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    row-gap: 9px !important;
+  }
+  .trade-date-filter-panel .trade-date-navigator,
+  .trade-date-filter-panel .trade-show-all-group {
+    grid-column: span 2;
+  }
+  .trade-date-filter-panel .trade-underlying-filter,
+  .trade-date-filter-panel .trade-symbol-letter-filter {
+    grid-column: span 2;
+  }
+  .trade-date-filter-panel .trade-underlying-filter .trade-filter-buttons,
+  .trade-date-filter-panel .trade-symbol-letter-filter .trade-filter-buttons {
+    flex-wrap: wrap !important;
+  }
+}
+@media (max-width: 760px) {
+  .trade-date-filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .trade-date-filter-panel .trade-date-navigator,
+  .trade-date-filter-panel .trade-show-all-group,
+  .trade-date-filter-panel .trade-underlying-filter,
+  .trade-date-filter-panel .trade-symbol-letter-filter {
+    grid-column: span 2;
+  }
+}
