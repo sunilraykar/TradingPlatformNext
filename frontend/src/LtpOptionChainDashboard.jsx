@@ -103,10 +103,7 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
       return <g key={r.time || i} className={rising ? 'ltp-candle up' : 'ltp-candle down'}><line x1={x} x2={x} y1={y(r.high)} y2={y(r.low)} /><rect x={x - body / 2} y={top} width={body} height={Math.max(1.5, bottom - top)} rx="1" /></g>;
     })}
     {livePrice !== null && livePrice !== undefined && <g className="ltp-live-price"><line x1={L} x2={W - R} y1={y(livePrice)} y2={y(livePrice)} /><rect x={W - R + 4} y={y(livePrice) - 13} width="120" height="25" rx="6" /><text x={W - R + 64} y={y(livePrice) + 4} textAnchor="middle">SPOT {fmt(livePrice, 2)}</text></g>}
-    {rows.length > 0 && Array.from(new Set([0, Math.floor((rows.length - 1) / 4), Math.floor((rows.length - 1) / 2), Math.floor(3 * (rows.length - 1) / 4), rows.length - 1])).map((index) => <text key={index} x={L + index * step + step / 2} y={H - 18} textAnchor="middle" className="ltp-chart-axis">{timeLabel(rows[index].time)}</text>)}
     {rows.length === 0 && <text x={L + plotW / 2} y={H - 13} textAnchor="middle" className="ltp-chart-axis">Waiting for intraday candles</text>}
-    {rows.length > 0 && <text x={L} y={H - 3} className="ltp-chart-axis">{timeLabel(firstTime)}</text>}
-    {rows.length > 0 && <text x={W - R} y={H - 3} textAnchor="end" className="ltp-chart-axis">{timeLabel(lastTime)}</text>}
   </svg></div>;
 }
 
