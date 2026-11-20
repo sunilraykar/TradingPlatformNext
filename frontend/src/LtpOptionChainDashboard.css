@@ -1913,3 +1913,62 @@
   width: 76px !important;
   min-width: 76px !important;
 }
+
+
+/* Compact filter toolbar: remove branding, size the container to its controls, align right. */
+.ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
+  width: fit-content !important;
+  max-width: 100% !important;
+  min-height: 58px !important;
+  margin-left: auto !important;
+  justify-self: end !important;
+  flex: 0 0 auto !important;
+  flex-wrap: nowrap !important;
+  gap: 0 !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-option-toolbar .ltp-brand {
+  display: none !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls {
+  width: auto !important;
+  flex: 0 0 auto !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label:nth-child(1) select {
+  width: 150px !important;
+  min-width: 150px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label:nth-child(2) select {
+  width: 140px !important;
+  min-width: 140px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label:nth-child(3) select {
+  width: 110px !important;
+  min-width: 110px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls .ltp-lot-size {
+  width: 86px !important;
+  min-width: 86px !important;
+  flex: 0 0 86px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls .ltp-lot-size input {
+  width: 76px !important;
+  min-width: 76px !important;
+}
+@media (max-width: 760px) {
+  .ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
+    width: 100% !important;
+    margin-left: 0 !important;
+    justify-self: stretch !important;
+    flex-wrap: wrap !important;
+  }
+  .ltp-option-chain .ltp-overview-row .ltp-controls {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+}
