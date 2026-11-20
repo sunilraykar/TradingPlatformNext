@@ -1574,3 +1574,6 @@ select,input,textarea{
   .app-shell--all-indices .all-indices-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
   .app-shell--all-indices .all-indices-card { min-height: 300px; }
 }
+
+/* Keep the four-index overview focused on the four live index panels; trade tables remain in the single-index workspace. */
+.app-shell--all-indices .dashboard-day-trades { display: none !important; }
