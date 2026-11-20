@@ -73,9 +73,10 @@ export default function LightweightOptionChart({ candles = [], livePrice, levels
         scaleMargins: { top: 0.1, bottom: 0.1 },
       },
       timeScale: {
-        visible: true,
+        visible: false,
+        borderVisible: false,
         borderColor: '#52677e',
-        timeVisible: true,
+        timeVisible: false,
         secondsVisible: false,
         rightOffset: 4,
         barSpacing: 9,
