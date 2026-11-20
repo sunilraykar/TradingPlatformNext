@@ -1482,12 +1482,39 @@ select,input,textarea{
   overflow: hidden;
 }
 .app-shell--all-indices .all-indices-grid {
-  flex: 1 1 auto;
-  height: 100%;
+  flex: 0 0 52%;
+  height: 52%;
   min-height: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+.app-shell--all-indices .dashboard-day-trades {
+  display: grid !important;
+  flex: 1 1 48%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  margin: 8px 0 0;
+  overflow: hidden;
+}
+.app-shell--all-indices .dashboard-day-trades .autotrend-active-trades {
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  padding: 8px 10px;
+  overflow: hidden;
+}
+.app-shell--all-indices .dashboard-day-trades .autotrend-active-trades-list {
+  min-height: 0;
+  max-height: none;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+.app-shell--all-indices .dashboard-day-trades .autotrend-trade-total-pnl {
+  font-size: 18px;
+  padding: 4px 8px;
 }
 .app-shell--all-indices .all-indices-card {
   display: flex;
@@ -1567,13 +1594,30 @@ select,input,textarea{
   .app-shell--all-indices .topbar { flex-wrap: wrap; height: auto; min-height: 56px; padding: 7px 0; }
   .app-shell--all-indices > .control-panel { flex-wrap: wrap; height: auto; flex-basis: auto; }
   .app-shell--all-indices .all-indices-dashboard { overflow: visible; }
-  .app-shell--all-indices .all-indices-grid { grid-template-rows: none; }
-  .app-shell--all-indices .all-indices-card { min-height: 280px; }
+  .app-shell--all-indices .all-indices-grid {
+    flex: 0 0 auto;
+    height: auto;
+    grid-template-rows: none;
+  }
+  .app-shell--all-indices .dashboard-day-trades {
+    flex: 0 0 auto;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    overflow: visible;
+  }
+  .app-shell--all-indices .dashboard-day-trades .autotrend-active-trades {
+    min-height: 280px;
+    height: auto;
+  }
+  .app-shell--all-indices .dashboard-day-trades .autotrend-active-trades-list {
+    min-height: 180px;
+    max-height: 260px;
+  }
+  .app-shell--all-indices .all-indices-card { min-height: 240px; }
 }
 @media (max-width: 600px) {
   .app-shell--all-indices .all-indices-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
   .app-shell--all-indices .all-indices-card { min-height: 300px; }
 }
 
-/* Keep the four-index overview focused on the four live index panels; trade tables remain in the single-index workspace. */
-.app-shell--all-indices .dashboard-day-trades { display: none !important; }
+/* Active and Closed trade windows remain visible below the four-index charts. */
