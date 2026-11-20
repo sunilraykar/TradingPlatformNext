@@ -1993,3 +1993,39 @@
 .ltp-option-chain .ltp-overview-row .ltp-controls .ltp-ltp-toggle {
   height: 28px !important;
 }
+
+
+/* Match chart panel height to the full option-chain panel. */
+.ltp-option-chain .ltp-workspace {
+  align-items: stretch !important;
+}
+.ltp-option-chain .ltp-chart-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+.ltp-option-chain .ltp-chart-panel .ltp-lightweight-chart {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  height: auto !important;
+  min-height: 420px !important;
+}
+.ltp-option-chain .ltp-chart-panel .ltp-lightweight-canvas {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-height: 360px !important;
+}
+.ltp-option-chain .ltp-chart-panel .ltp-candle-chart {
+  flex: 1 1 auto !important;
+  min-height: 420px !important;
+}
+.ltp-option-chain .ltp-chart-panel .ltp-candle-chart svg {
+  height: 100% !important;
+  min-height: 420px !important;
+}
+@media (max-width: 1150px) {
+  .ltp-option-chain .ltp-workspace { align-items: stretch !important; }
+  .ltp-option-chain .ltp-chart-panel { height: auto !important; }
+}
