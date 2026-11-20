@@ -1972,3 +1972,24 @@
     flex-wrap: wrap !important;
   }
 }
+
+
+/* Reduce the filter toolbar height while retaining its compact, right-aligned width. */
+.ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
+  min-height: 42px !important;
+  height: auto !important;
+  padding: 4px 8px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label {
+  gap: 2px !important;
+  line-height: 1 !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls select,
+.ltp-option-chain .ltp-overview-row .ltp-controls input {
+  height: 28px !important;
+  padding: 3px 8px !important;
+  line-height: 1.1 !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls .ltp-ltp-toggle {
+  height: 28px !important;
+}
