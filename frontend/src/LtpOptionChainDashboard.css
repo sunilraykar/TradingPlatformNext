@@ -2607,3 +2607,21 @@
   padding-left: 8px !important;
   padding-right: 8px !important;
 }
+
+
+/* Keep the clicked reversal row and its LTP popup above neighbouring table rows. */
+.ltp-option-chain .ltp-option-table tbody tr:has(.ltp-reversal-popover) {
+  position: relative;
+  z-index: 40 !important;
+}
+.ltp-option-chain .ltp-option-table tbody tr:has(.ltp-reversal-popover) td:has(.ltp-reversal-popover) {
+  position: relative;
+  z-index: 41 !important;
+  overflow: visible !important;
+}
+.ltp-option-chain .ltp-reversal-wrap:has(.ltp-reversal-popover) {
+  z-index: 42 !important;
+}
+.ltp-option-chain .ltp-reversal-popover {
+  z-index: 1000 !important;
+}
