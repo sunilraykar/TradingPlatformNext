@@ -1857,3 +1857,31 @@
 .ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putOi-second { background: #dce9ff !important; color: #263f65 !important; }
 .ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putOiChg-first { background: #b9e6a2 !important; color: #1b3c12 !important; }
 .ltp-option-chain .ltp-option-table tbody tr td.ltp-rank-putOiChg-second { background: #dff2d2 !important; color: #2b4820 !important; }
+
+
+/* Restore original-size Option Chain filters after compact toolbar styling. */
+.ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
+  min-height: 58px !important;
+  padding: 8px 12px !important;
+  gap: 10px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls {
+  align-items: flex-end !important;
+  gap: 8px !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls label {
+  gap: 4px !important;
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls select,
+.ltp-option-chain .ltp-overview-row .ltp-controls input {
+  height: 34px !important;
+  padding: 5px 9px !important;
+  font-size: 12px !important;
+  line-height: 1.25 !important;
+}
+.ltp-option-chain .ltp-overview-row .ltp-controls .ltp-lot-size {
+  min-width: 70px !important;
+  flex: 0 1 76px !important;
+}
