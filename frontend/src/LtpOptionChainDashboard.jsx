@@ -62,7 +62,7 @@ function CandleChart({ candles, livePrice, levels, priceMode }) {
     time: item.time, open: n(item.open), high: n(item.high), low: n(item.low), close: n(item.close),
   })).filter((item) => [item.open, item.high, item.low, item.close].every((v) => v !== null)), [candles]);
 
-  const W = 760, H = 650, L = 82, R = 128, T = 28, B = 52;
+  const W = 760, H = 500, L = 82, R = 128, T = 24, B = 42;
   const validLevels = levels.map((level) => ({ ...level, numericValue: n(level.value) })).filter((level) => level.numericValue !== null);
   const values = rows.flatMap((r) => [r.high, r.low]).concat(validLevels.map((l) => l.numericValue));
   if (livePrice !== null && livePrice !== undefined) values.push(livePrice);
