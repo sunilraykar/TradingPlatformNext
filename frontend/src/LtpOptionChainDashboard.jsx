@@ -497,9 +497,7 @@ export default function LtpOptionChainDashboard() {
         <label><span>PRICE</span><select value={priceMode} onChange={(e) => setPriceMode(e.target.value)}><option value="SPOT">SPOT</option><option value="FUTURE">FUTURE</option></select></label>
         <label className="ltp-lot-size"><span>LOT SIZE</span><input type="number" min="1" value={lotSize} onChange={(e) => setLotSize(Number(e.target.value) || 1)} /></label>
         <button type="button" className={'ltp-ltp-toggle ' + (showOptionLtp ? 'active' : '')} aria-pressed={showOptionLtp} onClick={() => setShowOptionLtp((value) => !value)}>{showOptionLtp ? 'Hide LTP' : 'Show LTP'}</button>
-        <button type="button" className="ltp-refresh" onClick={() => loadChain()} disabled={loading || !auth.authenticated}>{loading ? 'Loading…' : '↻ Refresh'}</button>
       </div>
-      <div className={'ltp-feed-status ' + (feedConnected ? 'connected' : '')}><i />{feedConnected ? 'KITE LIVE' : 'KITE FEED'}</div>
     </section>
 
     {!auth.authenticated && <section className="ltp-auth-banner"><div><strong>APIPLATFORM connection required</strong><small>Uses the credentials already configured in backend/.env. Tokens remain on the backend.</small></div><button type="button" onClick={login} disabled={loggingIn}>{loggingIn ? 'Connecting…' : 'Connect APIPLATFORM'}</button></section>}
