@@ -273,15 +273,11 @@ export default function LtpOptionChainDashboard() {
   const pain = useMemo(() => maxPain(rows), [rows]);
   const instrumentMap = useMemo(() => new Map(instruments.map((item) => [String(Number(item.strike)) + ':' + item.side, item])), [instruments]);
 
-  const visibleRows = useMemo(() => {
-    const ordered = rows.slice().sort((a, b) => (n(a.strike) || 0) - (n(b.strike) || 0));
-    if (ordered.length <= 21 || underlying === null) return ordered;
-    let center = 0;
-    ordered.forEach((item, index) => {
-      if (Math.abs((n(item.strike) || 0) - underlying) < Math.abs((n(ordered[center].strike) || 0) - underlying)) center = index;
-    });
-    return ordered.slice(Math.max(0, center - 11), Math.min(ordered.length, center + 12));
-  }, [rows, underlying]);
+  // Display the complete returned option chain; the page handles vertical scrolling.
+  const visibleRows = useMemo(
+    () => rows.slice().sort((a, b) => (n(a.strike) || 0) - (n(b.strike) || 0)),
+    [rows]
+  );
 
   const maxima = useMemo(() => {
     const rankValues = (field, absolute = false) => [...new Set(rows
