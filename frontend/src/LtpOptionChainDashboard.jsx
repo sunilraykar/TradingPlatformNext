@@ -601,8 +601,7 @@ export default function LtpOptionChainDashboard() {
       </article>
 
       <aside className="ltp-chart-panel">
-        <div className="ltp-panel-heading"><div><span>INTRADAY PRICE ACTION</span><h2>{symbol} · {priceMode}</h2></div><div className="ltp-chart-heading-actions"><small>5-minute candles</small></div></div>
-        <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong><span className={feedConnected ? 'positive' : 'neutral'}>{feedConnected ? '● Live from Kite WebSocket' : '○ Waiting for Kite ticks'}</span></div>
+        <div className="ltp-chart-quote"><strong>{fmt(underlying)}</strong></div>
         <LightweightOptionChart key={symbol + ':' + priceMode} candles={candles} livePrice={underlying} levels={[
           // Keep target numbering in ascending target order: T1 is the nearer target,
           // T2 is the farther/higher target. Supports retain the reference mapping.
