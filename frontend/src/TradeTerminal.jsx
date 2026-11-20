@@ -537,7 +537,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       </div>
     </div>}
     {closeTrade && <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCloseTrade(null); }}>
-      <div className="panel trade-create-form trade-create-modal" role="dialog" aria-modal="true" aria-labelledby="close-trade-title">
+      <div className="panel trade-create-form trade-create-modal trade-close-modal" role="dialog" aria-modal="true" aria-labelledby="close-trade-title">
         <div className="trade-modal-heading"><div><h2 id="close-trade-title">Close paper trade</h2><p>{closeTrade.instrument_symbol} · {fmt(closeTrade.quantity)} units</p></div><button className="button secondary" type="button" onClick={() => setCloseTrade(null)}>✕</button></div>
         <div className="trade-close-order-choices">
           <span className="trade-filter-label">Exit order type</span>
