@@ -2570,3 +2570,25 @@
     max-width: none !important;
   }
 }
+
+
+/* Tighten Market Intelligence view tabs and align buttons cleanly in their frame. */
+.ltp-overview-row .ltp-section-tabs {
+  width: max-content !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 6px !important;
+  align-items: center !important;
+  align-self: center !important;
+  justify-self: start !important;
+}
+.ltp-overview-row .ltp-section-tabs button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  vertical-align: middle;
+}
