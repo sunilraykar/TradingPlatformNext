@@ -1547,10 +1547,12 @@ select,input,textarea{
   flex-direction: column;
 }
 .app-shell--all-indices .all-indices-card .price-vwap-chart {
-  flex: 1 1 auto;
-  min-height: 76px;
-  height: clamp(76px, 13vh, 118px);
-  max-height: 118px;
+  /* Keep the SVG plot and its Y-axis on the same vertical scale. */
+  display: block;
+  flex: 1 1 180px;
+  min-height: 145px;
+  height: 180px;
+  max-height: none;
 }
 .app-shell--all-indices .all-indices-card .chart-axis { top: 10px; bottom: 22px; font-size: 7px; }
 .app-shell--all-indices .all-indices-card .price-vwap-times { flex: 0 0 auto; padding-top: 2px; font-size: 6px; }
