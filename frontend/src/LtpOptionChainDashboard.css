@@ -2373,3 +2373,76 @@
   color: inherit !important;
   text-decoration-color: currentColor;
 }
+
+
+/* Laptop-width option chain: preserve all nine columns and show complete headings. */
+@media (min-width: 761px) and (max-width: 1900px) {
+  .ltp-option-chain .ltp-option-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+  }
+
+  .ltp-option-chain .ltp-option-table thead th {
+    padding: 6px 3px !important;
+    font-size: 9px !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+    vertical-align: middle;
+  }
+
+  .ltp-option-chain .ltp-option-table thead th:nth-child(1),
+  .ltp-option-chain .ltp-option-table thead th:nth-child(2),
+  .ltp-option-chain .ltp-option-table thead th:nth-child(8),
+  .ltp-option-chain .ltp-option-table thead th:nth-child(9) {
+    width: 10.5%;
+  }
+
+  .ltp-option-chain .ltp-option-table thead th:nth-child(3),
+  .ltp-option-chain .ltp-option-table thead th:nth-child(7) {
+    width: 12%;
+  }
+
+  .ltp-option-chain .ltp-option-table thead th:nth-child(4),
+  .ltp-option-chain .ltp-option-table thead th:nth-child(6) {
+    width: 11%;
+  }
+
+  .ltp-option-chain .ltp-option-table thead th:nth-child(5) {
+    width: 11%;
+  }
+
+  .ltp-option-chain .ltp-option-table tbody td {
+    padding: 4px 3px !important;
+    font-size: 10px !important;
+    line-height: 1.12 !important;
+  }
+
+  .ltp-option-chain .ltp-option-table tbody td strong {
+    font-size: 10px !important;
+  }
+
+  .ltp-option-chain .ltp-option-table tbody td small {
+    font-size: 8px !important;
+  }
+
+  .ltp-option-chain .ltp-option-table .ltp-reversal {
+    max-width: 100% !important;
+    padding: 3px 3px !important;
+    font-size: 8px !important;
+    white-space: normal;
+  }
+
+  .ltp-option-chain .ltp-option-table .ltp-rank-badge {
+    padding: 1px 3px;
+    font-size: 8px;
+  }
+
+  .ltp-option-chain .ltp-option-table tbody td .ltp-metric-emphasis {
+    text-decoration-thickness: 1px;
+    text-underline-offset: 1px;
+  }
+}
