@@ -1997,3 +1997,168 @@ select,input,textarea{
   .app-shell--all-indices .application-tabs button { font-size: 11px; }
   .app-shell--all-indices .status-pill { font-size: 9px; }
 }
+
+
+/* Trade Terminal filter layout repair: keep date separate and allow filter groups to wrap cleanly. */
+.trade-column-presets .trade-filter-label {
+  font-size: 14px !important;
+}
+.trade-column-presets .trade-filter-button {
+  font-size: 15px !important;
+  min-height: 38px;
+  padding: 7px 13px;
+}
+.trade-date-filter-panel {
+  display: grid !important;
+  grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.6fr) !important;
+  align-items: center !important;
+  column-gap: 18px !important;
+  row-gap: 12px !important;
+  padding: 14px 16px !important;
+  min-width: 0;
+}
+.trade-date-filter-panel .trade-date-navigator {
+  grid-column: 1;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 76px !important;
+  justify-content: center;
+  gap: 10px !important;
+  padding: 8px 12px !important;
+  margin: 0 !important;
+  border: 1px solid var(--line, #29354c) !important;
+  border-radius: 9px !important;
+  background: var(--surface-inset, rgba(12,20,33,.35)) !important;
+}
+.trade-date-filter-panel .trade-date-navigator-label {
+  min-width: 0 !important;
+  flex: 1 1 auto;
+  gap: 5px !important;
+}
+.trade-date-filter-panel .trade-date-navigator-label > span {
+  font-size: 11px !important;
+  line-height: 1.2;
+}
+.trade-date-filter-panel .trade-date-navigator-label > strong {
+  font-size: clamp(14px, 1.15vw, 18px) !important;
+  line-height: 1.25;
+  white-space: normal !important;
+}
+.trade-date-filter-panel .trade-date-nav-button {
+  width: 34px !important;
+  height: 36px !important;
+  flex: 0 0 34px !important;
+  font-size: 22px !important;
+}
+.trade-date-filter-panel .trade-terminal-filters {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  align-items: start !important;
+  gap: 12px 10px !important;
+  width: 100%;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+.trade-date-filter-panel .trade-filter-group {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  flex: initial !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  max-width: 100%;
+}
+.trade-date-filter-panel .trade-show-all-group {
+  grid-column: span 2;
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.trade-date-filter-panel .trade-filter-label {
+  font-size: 12px !important;
+  line-height: 1.2;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.trade-date-filter-panel .trade-filter-buttons {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center;
+  gap: 5px !important;
+  min-width: 0;
+  max-width: 100%;
+}
+.trade-date-filter-panel .trade-filter-button {
+  min-height: 32px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.trade-date-filter-panel .trade-symbol-letter-filter {
+  grid-column: 1 / -1;
+}
+.trade-date-filter-panel .trade-symbol-letter-filter .trade-filter-buttons {
+  flex-wrap: wrap !important;
+}
+.trade-date-filter-panel .trade-terminal-count {
+  grid-column: 1 / -1;
+  margin: 0 !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+@media (max-width: 1200px) {
+  .trade-date-filter-panel {
+    grid-template-columns: minmax(250px, 0.7fr) minmax(0, 1.5fr) !important;
+    column-gap: 12px !important;
+  }
+  .trade-date-filter-panel .trade-terminal-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .trade-date-filter-panel .trade-show-all-group {
+    grid-column: 1 / -1;
+  }
+  .trade-date-filter-panel .trade-symbol-letter-filter {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 850px) {
+  .trade-date-filter-panel {
+    grid-template-columns: minmax(0, 1fr) !important;
+    row-gap: 12px !important;
+  }
+  .trade-date-filter-panel .trade-date-navigator,
+  .trade-date-filter-panel .trade-terminal-filters {
+    grid-column: 1;
+  }
+  .trade-date-filter-panel .trade-date-navigator {
+    grid-row: auto;
+  }
+  .trade-date-filter-panel .trade-terminal-filters {
+    grid-row: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+@media (max-width: 520px) {
+  .trade-date-filter-panel .trade-terminal-filters {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .trade-date-filter-panel .trade-show-all-group,
+  .trade-date-filter-panel .trade-symbol-letter-filter {
+    grid-column: 1;
+  }
+  .trade-date-filter-panel .trade-date-navigator-label > strong {
+    font-size: 14px !important;
+  }
+}
