@@ -157,18 +157,6 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
   // Match the reference option-chain emphasis rule: values above 75% of
   // their column maximum use 900 weight; all other values use 500.
   const percentageWeight = (percentage) => percentage !== null && percentage > 75 ? 900 : 500;
-  const rankLabel = (key, value, absolute = false) => {
-    const ranked = maxima.top[key] || [];
-    const rankValue = absolute ? Math.abs(value) : value;
-    if (!rankValue || !ranked.length) return '';
-    if (rankValue === ranked[0]) return '1st Highest';
-    if (rankValue === ranked[1]) return '2nd Highest';
-    return '';
-  };
-  const rankBadge = (key, value, absolute = false) => {
-    const label = rankLabel(key, value, absolute);
-    return label ? <em className={'ltp-rank-badge ' + (label === '1st Highest' ? 'first' : 'second')}>{label}</em> : null;
-  };
   const reversal = (side, value, quote) => {
     const isOpen = activeLtp === side;
     const ltp = n(quote && quote.last_price);
@@ -181,15 +169,15 @@ function OptionRow({ row, spot, quotes, instruments, maxima }) {
     </span>;
   };
   return <tr className={isAtm ? 'ltp-atm-row' : ''}>
-    <td className={(callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : '') + rankClass('callOiChg', callChg, true)}><strong className={percentageWeight(callChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callChg, 0)}</strong><small className={percentageWeight(callChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small>{rankBadge('callOiChg', callChg, true)}</td>
-    <td className={rankClass('callOi', callOi)}><strong className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callOi, 0)}</strong><small className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small>{rankBadge('callOi', callOi)}</td>
-    <td className={rankClass('callVol', callVol)}><strong className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callVol, 0)}</strong><small className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small>{rankBadge('callVol', callVol)}</td>
+    <td className={(callChg > 0 ? 'positive' : callChg < 0 ? 'negative' : '') + rankClass('callOiChg', callChg, true)}><strong className={percentageWeight(callChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callChg, 0)}</strong><small className={percentageWeight(callChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callChgPct === null ? '' : fmt(callChgPct, 2) + '%'}</small></td>
+    <td className={rankClass('callOi', callOi)}><strong className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callOi, 0)}</strong><small className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small></td>
+    <td className={rankClass('callVol', callVol)}><strong className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callVol, 0)}</strong><small className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small></td>
     <td>{reversal('CALL', row.calReversal, cq)}</td>
     <td className="ltp-strike-cell"><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</td>
     <td>{reversal('PUT', row.putReversal, pq)}</td>
-    <td className={rankClass('putVol', putVol)}><strong className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putVol, 0)}</strong><small className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small>{rankBadge('putVol', putVol)}</td>
-    <td className={rankClass('putOi', putOi)}><strong className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putOi, 0)}</strong><small className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small>{rankBadge('putOi', putOi)}</td>
-    <td className={(putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : '') + rankClass('putOiChg', putChg, true)}><strong className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putChg, 0)}</strong><small className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small>{rankBadge('putOiChg', putChg, true)}</td>
+    <td className={rankClass('putVol', putVol)}><strong className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putVol, 0)}</strong><small className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small></td>
+    <td className={rankClass('putOi', putOi)}><strong className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putOi, 0)}</strong><small className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small></td>
+    <td className={(putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : '') + rankClass('putOiChg', putChg, true)}><strong className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putChg, 0)}</strong><small className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small></td>
   </tr>;
 }
 
