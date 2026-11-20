@@ -1367,14 +1367,7 @@ select,input,textarea{
 }
 
 
-/* Dashboard only: double text in the green-highlighted price/VWAP, Y-axis and signal-summary areas. */
-.all-indices-card .all-indices-card-heading>div{font-size:20px!important}
-.all-indices-card .all-indices-card-heading>div span{font-size:16px!important}
-.all-indices-card .all-indices-card-heading>div strong{font-size:20px!important}
-.all-indices-card .chart-axis{font-size:16px!important}
-.all-indices-card .price-vwap-summary>span[aria-hidden="true"]{font-size:36px!important}
-.all-indices-card .price-vwap-summary>span:not([aria-hidden="true"])>span{font-size:20px!important}
-.all-indices-card .price-vwap-summary>span:not([aria-hidden="true"])>strong{font-size:24px!important}
+/* Dashboard typography is sized within each card; avoid global !important rules that distort chart geometry. */
 
 
 /* Match Historical Data intraday table typography to the current Live Data Intraday Table. */
@@ -2490,5 +2483,155 @@ select,input,textarea{
   }
   .trade-date-filter-panel .trade-filter-buttons {
     flex-wrap: wrap !important;
+  }
+}
+
+
+/* AutoTrender chart layout repair: reserve separate vertical lanes for plot, legend and signal summary. */
+.app-shell--all-indices .all-indices-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+.app-shell--all-indices .all-indices-card-heading {
+  flex: 0 0 auto;
+}
+.app-shell--all-indices .all-indices-card-heading > div {
+  gap: 8px;
+  font-size: 11px !important;
+}
+.app-shell--all-indices .all-indices-card-heading > div span {
+  font-size: 9px !important;
+}
+.app-shell--all-indices .all-indices-card-heading > div strong {
+  font-size: 13px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics {
+  flex: 0 0 auto;
+  margin: 2px 0 3px !important;
+  padding: 2px 4px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics > div > div {
+  font-size: 9px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong {
+  font-size: 14px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-top-metrics strong.index-price-value {
+  font-size: 15px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-wrap {
+  position: relative;
+  display: flex;
+  flex: 1 1 120px;
+  flex-direction: column;
+  min-height: 110px;
+  overflow: hidden;
+  padding: 2px 6px 0 38px;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-chart {
+  display: block;
+  flex: 1 1 0;
+  width: 100%;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: none;
+  overflow: hidden;
+}
+.app-shell--all-indices .all-indices-card .chart-axis {
+  top: 8px;
+  bottom: 23px;
+  font-size: 9px !important;
+  line-height: 1.1;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-times {
+  flex: 0 0 auto;
+  padding-top: 3px;
+  padding-bottom: 0;
+  margin: 0;
+  font-size: 7px;
+  line-height: 1.1;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-legend {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 7px;
+  margin: 3px 0 0;
+  padding: 2px 3px;
+  background: var(--surface-raised, #303740);
+  font-size: 8px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-legend span {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 3px;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-legend i {
+  flex: 0 0 auto;
+  transform: scale(.85);
+}
+.app-shell--all-indices .all-indices-card .price-vwap-bottom-actions {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex: 0 0 auto;
+  min-height: 44px;
+  align-items: center;
+  margin-top: 3px !important;
+  padding: 4px 6px !important;
+  gap: 4px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-around;
+  min-width: 0;
+  gap: 3px !important;
+  padding: 1px !important;
+  overflow: hidden;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span[aria-hidden="true"] {
+  flex: 0 0 auto;
+  font-size: 11px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) {
+  flex: 1 1 0;
+  min-width: 0 !important;
+  gap: 2px !important;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) > span {
+  font-size: 9px !important;
+  line-height: 1.15 !important;
+  white-space: nowrap;
+}
+.app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) > strong {
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+  white-space: nowrap;
+}
+@media (max-width: 1150px) {
+  .app-shell--all-indices .all-indices-card .price-vwap-legend {
+    gap: 4px;
+    font-size: 7px;
+  }
+  .app-shell--all-indices .all-indices-card .price-vwap-summary > span[aria-hidden="true"] {
+    font-size: 9px !important;
+  }
+  .app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) > span {
+    font-size: 8px !important;
+  }
+  .app-shell--all-indices .all-indices-card .price-vwap-summary > span:not([aria-hidden="true"]) > strong {
+    font-size: 10px !important;
   }
 }
