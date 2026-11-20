@@ -2593,3 +2593,17 @@
   margin: 0 !important;
   vertical-align: middle;
 }
+
+
+/* Center index shortcut labels and use a slightly smaller, cleaner type size. */
+.ltp-option-chain .ltp-index-shortcuts button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  letter-spacing: 0 !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
