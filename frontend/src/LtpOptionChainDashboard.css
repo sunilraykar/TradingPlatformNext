@@ -2835,3 +2835,91 @@
     flex-wrap: wrap !important;
   }
 }
+
+
+/* One aligned horizontal strip: six contract/index buttons plus four equal filter fields. */
+.ltp-option-chain .ltp-contract-index-row {
+  display: grid !important;
+  grid-template-columns: repeat(10, minmax(110px, 1fr)) !important;
+  align-items: end !important;
+  justify-items: stretch !important;
+  gap: 8px !important;
+  width: 100% !important;
+  min-width: 1120px !important;
+  box-sizing: border-box !important;
+  overflow: visible !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts,
+.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts,
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {
+  display: contents !important;
+}
+.ltp-option-chain .ltp-contract-index-row .ltp-atm-contract {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 5px !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  font-size: 10px !important;
+}
+.ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  flex: initial !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 5px !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  font-size: 10px !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls label {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-end !important;
+  align-items: stretch !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  flex: initial !important;
+  margin: 0 !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls label select,
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls label input {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  font-size: 11px !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls .ltp-lot-size {
+  width: 100% !important;
+  min-width: 0 !important;
+  flex: initial !important;
+}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls .ltp-lot-size input {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+@media (max-width: 1150px) {
+  .ltp-option-chain .ltp-contract-index-row {
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+  }
+}
