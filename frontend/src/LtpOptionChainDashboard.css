@@ -52,7 +52,7 @@
 .ltp-chart-quote{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10.4px;border-bottom:1px solid #e0e4e8}
 .ltp-chart-quote strong{font-family:Consolas,monospace;font-size:18px;color:#1c2937}.ltp-chart-quote span{font-size:9px}
 .ltp-chart-quote .positive,.ltp-intelligence-strip .positive{color:#17833b}.ltp-chart-quote .negative,.ltp-intelligence-strip .negative{color:#c52f39}.ltp-chart-quote .neutral{color:#788494}
-.ltp-candle-chart{width:100%;padding:8px 5px 0}.ltp-candle-chart svg{display:block;width:100%;height:auto;min-height:240px;max-height:410px}
+.ltp-candle-chart{width:100%;padding:6.4px 4px 0}.ltp-candle-chart svg{display:block;width:100%;height:auto;min-height:240px;max-height:410px}
 .ltp-chart-grid{stroke:#e7eaee;stroke-width:1}.ltp-chart-axis{fill:#697586;font-family:Consolas,monospace;font-size:10px}
 .ltp-candle line{stroke-width:1.3}.ltp-candle rect{stroke-width:.6}.ltp-candle.up line,.ltp-candle.up rect{stroke:#27a94e}.ltp-candle.up rect{fill:#35b95d}.ltp-candle.down line,.ltp-candle.down rect{stroke:#e04d54}.ltp-candle.down rect{fill:#ef646a}
 .ltp-level-line{stroke-width:1.2;stroke-dasharray:5 3}.ltp-level-line.resistance,.ltp-level-line.resistance-risk{stroke:#e44343}.ltp-level-line.support,.ltp-level-line.support-risk{stroke:#24a64d}.ltp-level-line.max-pain{stroke:#ed9d20}
@@ -66,7 +66,7 @@
 .ltp-intelligence-strip .ltp-intelligence-title{background:#273443}.ltp-intelligence-title span{color:#c3cfdb!important}.ltp-intelligence-title strong{color:#fff;font-family:Arial,sans-serif;font-size:12px}
 .ltp-footer{padding:9.6px 1.6px 0;color:#778292;font-size:9px}
 @media(max-width:1150px){.ltp-market-strip{grid-template-columns:repeat(4,minmax(0,1fr))}.ltp-workspace{grid-template-columns:minmax(0,1fr)}.ltp-table-scroll{max-height:520px}.ltp-intelligence-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ltp-intelligence-title{grid-column:span 2}}
-@media(max-width:650px){.ltp-option-chain{padding:8px}.ltp-option-toolbar{align-items:flex-start}.ltp-controls{width:100%;flex:1 1 100%}.ltp-controls label{flex:1}.ltp-controls select{width:100%;min-width:0}.ltp-market-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ltp-market-strip>div:first-child{grid-column:span 2}.ltp-direction-banner{align-items:flex-start;flex-direction:column;gap:4px}.ltp-intelligence-strip{grid-template-columns:1fr}.ltp-intelligence-title{grid-column:auto}.ltp-panel-heading{align-items:flex-start}.ltp-panel-heading>small{white-space:normal;text-align:right}.ltp-table-scroll{max-height:470px;min-height:300px}.ltp-auth-banner{align-items:flex-start;flex-direction:column}}
+@media(max-width:650px){.ltp-option-chain{padding:6.4px}.ltp-option-toolbar{align-items:flex-start}.ltp-controls{width:100%;flex:1 1 100%}.ltp-controls label{flex:1}.ltp-controls select{width:100%;min-width:0}.ltp-market-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ltp-market-strip>div:first-child{grid-column:span 2}.ltp-direction-banner{align-items:flex-start;flex-direction:column;gap:4px}.ltp-intelligence-strip{grid-template-columns:1fr}.ltp-intelligence-title{grid-column:auto}.ltp-panel-heading{align-items:flex-start}.ltp-panel-heading>small{white-space:normal;text-align:right}.ltp-table-scroll{max-height:470px;min-height:300px}.ltp-auth-banner{align-items:flex-start;flex-direction:column}}
 
 /* Full-width intraday chart, risk bands and spot marker in the strike column. */
 .ltp-candle-chart{padding:6.4px 3.2px 1.6px;min-height:300px}
@@ -135,7 +135,7 @@
 .ltp-direction-banner strong{font-size:15px;font-weight:800;color:#15191f}
 .ltp-direction-banner small{font-size:12px;color:#28251f}
 .ltp-market-strip{background:#425166;border-color:#425166;gap:1px}
-.ltp-market-strip>div{background:#263445;padding:12px 11px}
+.ltp-market-strip>div{background:#263445;padding:9.6px 8.8px}
 .ltp-market-strip>div:first-child{background:#34465b}
 .ltp-market-strip span{color:#bdcadd;font-size:10px;letter-spacing:.45px}
 .ltp-market-strip strong{color:#fff;font-size:15px;font-weight:750}
@@ -145,7 +145,7 @@
 .ltp-option-panel,.ltp-chart-panel{
   background:#202b38;border:1px solid #3d4b5c;box-shadow:0 2px 8px #0005;
 }
-.ltp-panel-heading{background:#263445;border-bottom:1px solid #435266;padding:12px 14px}
+.ltp-panel-heading{background:#263445;border-bottom:1px solid #435266;padding:9.6px 11.2px}
 .ltp-panel-heading span{color:#b9c8d9;font-size:10px;letter-spacing:.65px}
 .ltp-panel-heading h2{color:#f5f8fc;font-size:16px;font-weight:750}
 .ltp-panel-heading>small{color:#c1cedd;font-size:11px}
@@ -210,7 +210,7 @@
 .ltp-chart-empty small{font-size:13px;color:#c4d0de}
 .ltp-chart-footer{border-color:#435266;color:#c4d0de;font-size:10px}
 .ltp-intelligence-strip{background:#435266;border-color:#435266}
-.ltp-intelligence-strip>div{background:#263445;padding:12px}
+.ltp-intelligence-strip>div{background:#263445;padding:9.6px}
 .ltp-intelligence-strip>div>span{color:#c1cedd;font-size:10px}
 .ltp-intelligence-strip strong{color:#fff;font-size:14px}
 .ltp-intelligence-strip small{color:#c4d0de;font-size:10px}
@@ -243,7 +243,7 @@
 
 
 /* RS_Status strength chips aligned along the live SPOT divider. */
-.ltp-spot-marker-row td{height:46px!important;padding:4px 8px!important}
+.ltp-spot-marker-row td{height:46px!important;padding:3.2px 6.4px!important}
 .ltp-rs-indicators{display:flex;align-items:center;justify-content:space-evenly;gap:8px;min-width:0}
 .ltp-rs-chip{
   display:grid;grid-template-columns:auto auto;align-items:center;justify-content:center;
@@ -260,7 +260,7 @@
 .ltp-rs-put .ltp-rs-chip:nth-child(2){border-color:#d59b45}
 @media(max-width:900px){
   .ltp-rs-indicators{gap:3px;flex-wrap:wrap}
-  .ltp-rs-chip{min-width:88px;padding:3px 5px}
+  .ltp-rs-chip{min-width:88px;padding:2.4px 4px}
 }
 
 
@@ -320,14 +320,14 @@
 }
 @media(max-width:900px){
   .ltp-table-scroll{max-height:calc(100vh - 280px)}
-  .ltp-option-table th{padding:5px 3px}
-  .ltp-option-table td{padding:3px 3px}
+  .ltp-option-table th{padding:4px 2.4px}
+  .ltp-option-table td{padding:2.4px 2.4px}
 }
 
 
 /* Hide the secondary strike-shift detail under each SPOT strength chip. */
 .ltp-rs-chip small{display:none!important}
-.ltp-rs-chip{grid-template-columns:auto auto;min-width:88px;padding:3px 8px}
+.ltp-rs-chip{grid-template-columns:auto auto;min-width:88px;padding:2.4px 6.4px}
 
 
 /* Distinct first/second-place highlights for each numeric option-chain column. */
@@ -764,7 +764,7 @@
 .ltp-chart-zone.resistance-zone{fill:#f34e5a18;stroke:#ff687466}
 .ltp-chart-zone.support-zone{fill:#22cf8018;stroke:#35dc8a66}
 .ltp-chart-legend{display:none!important}
-.ltp-chart-footer{display:flex;justify-content:space-between;gap:8px;padding:7px 12px}
+.ltp-chart-footer{display:flex;justify-content:space-between;gap:8px;padding:5.6px 9.6px}
 @media(max-width:1150px){
   .ltp-workspace{grid-template-columns:minmax(0,1fr)!important}
   .ltp-chart-panel{min-height:520px}
@@ -848,8 +848,8 @@
   gap:3px!important;
   padding:3.2px!important;
 }
-.ltp-intelligence-group h3{font-size:9px!important;padding:2px!important}
-.ltp-intelligence-group>div{padding:3px 2px!important}
+.ltp-intelligence-group h3{font-size:9px!important;padding:1.6px!important}
+.ltp-intelligence-group>div{padding:2.4px 1.6px!important}
 .ltp-intelligence-group>div>span{font-size:7px!important}
 .ltp-intelligence-group>div>strong{font-size:9px!important}
 .ltp-intelligence-group>div>small{font-size:8px!important}
@@ -1131,7 +1131,7 @@
 
 
 /* Compact the Lightweight chart's T1/T2/S1/S2 reference labels. */
-.ltp-lightweight-level-key{font-size:8px!important;gap:4px 9px!important;padding:4px 3px 1px!important}
+.ltp-lightweight-level-key{font-size:8px!important;gap:4px 9px!important;padding:3.2px 2.4px 0.8px!important}
 .ltp-lightweight-level-key a{font-size:8px!important}
 
 
