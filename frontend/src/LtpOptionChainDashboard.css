@@ -1,39 +1,39 @@
 /* LTP Calculator-inspired option-chain workspace. Scoped to this screen. */
-.ltp-option-chain{width:100%;min-height:calc(100vh - 80px);padding:14px 16px 22px;background:#f3f4f6;color:#172033;font-family:Arial,Helvetica,sans-serif}
-.ltp-option-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:10px 14px;background:#273343;color:#fff;border-radius:7px;box-shadow:0 2px 8px #14203320}
+.ltp-option-chain{width:100%;min-height:calc(100vh - 80px);padding:11.2px 12.8px 17.6px;background:#f3f4f6;color:#172033;font-family:Arial,Helvetica,sans-serif}
+.ltp-option-toolbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:8px 11.2px;background:#273343;color:#fff;border-radius:7px;box-shadow:0 2px 8px #14203320}
 .ltp-brand{display:flex;align-items:center;gap:10px;min-width:190px}
 .ltp-brand-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:7px;background:#f47716;color:#fff;font-size:22px;font-weight:800}
 .ltp-brand strong,.ltp-brand small{display:block}.ltp-brand strong{font-size:13px;letter-spacing:.6px}.ltp-brand small{font-size:9px;color:#b9c4d2;margin-top:3px;letter-spacing:1px}
 .ltp-controls{display:flex;align-items:end;gap:8px;flex:1;flex-wrap:wrap}
 .ltp-controls label{display:flex;flex-direction:column;gap:4px;color:#c7d1dd;font-size:9px;font-weight:700;letter-spacing:.6px}
-.ltp-controls select,.ltp-controls input{height:30px;min-width:104px;padding:4px 8px;border:1px solid #aeb7c2;border-radius:4px;background:#fff;color:#1b2634;font-size:12px}
+.ltp-controls select,.ltp-controls input{height:30px;min-width:104px;padding:3.2px 6.4px;border:1px solid #aeb7c2;border-radius:4px;background:#fff;color:#1b2634;font-size:12px}
 .ltp-controls .ltp-lot-size input{width:76px;min-width:76px}
-.ltp-refresh{height:30px;padding:0 13px;border:1px solid #ffb347;border-radius:4px;background:#f47716;color:#fff;font-size:11px;font-weight:700}
+.ltp-refresh{height:30px;padding:0 10.4px;border:1px solid #ffb347;border-radius:4px;background:#f47716;color:#fff;font-size:11px;font-weight:700}
 .ltp-refresh:disabled{opacity:.55;cursor:wait}
 .ltp-feed-status{display:flex;align-items:center;gap:7px;color:#f6d38a;font-size:10px;font-weight:800;white-space:nowrap}
 .ltp-feed-status i{width:8px;height:8px;border-radius:50%;background:#eab54c}
 .ltp-feed-status.connected{color:#8ce3a7}.ltp-feed-status.connected i{background:#36c56c;box-shadow:0 0 0 3px #36c56c25}
-.ltp-auth-banner,.ltp-error{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0;padding:10px 14px;border:1px solid #d8a94b;border-radius:6px;background:#fff8e7}
+.ltp-auth-banner,.ltp-error{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:10px 0;padding:8px 11.2px;border:1px solid #d8a94b;border-radius:6px;background:#fff8e7}
 .ltp-auth-banner strong,.ltp-auth-banner small{display:block}.ltp-auth-banner strong{font-size:12px}.ltp-auth-banner small{margin-top:3px;color:#687487;font-size:10px}
-.ltp-auth-banner button{padding:7px 12px;border:0;border-radius:4px;background:#f47716;color:#fff;font-size:11px;font-weight:700}
+.ltp-auth-banner button{padding:5.6px 9.6px;border:0;border-radius:4px;background:#f47716;color:#fff;font-size:11px;font-weight:700}
 .ltp-error{justify-content:flex-start;border-color:#e8a2a2;background:#fff0f0;color:#a42e2e;font-size:11px}
-.ltp-direction-banner{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:10px 0 7px;padding:9px 12px;border:1px solid #e6c347;border-radius:5px;background:#ffdf55;color:#272727;text-align:center}
+.ltp-direction-banner{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap;margin:10px 0 7px;padding:7.2px 9.6px;border:1px solid #e6c347;border-radius:5px;background:#ffdf55;color:#272727;text-align:center}
 .ltp-direction-banner span{font-size:9px;font-weight:800;letter-spacing:.8px}.ltp-direction-banner strong{font-size:14px}.ltp-direction-banner small{font-size:11px;font-weight:700}
 .ltp-market-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;margin-bottom:10px;overflow:hidden;border:1px solid #cdd4dc;border-radius:5px;background:#cdd4dc}
-.ltp-market-strip>div{display:flex;min-width:0;flex-direction:column;justify-content:center;gap:5px;padding:9px 10px;background:#fff}
+.ltp-market-strip>div{display:flex;min-width:0;flex-direction:column;justify-content:center;gap:5px;padding:7.2px 8px;background:#fff}
 .ltp-market-strip>div:first-child{background:#263443;color:#fff}
 .ltp-market-strip span{color:#687487;font-size:8px;font-weight:800;letter-spacing:.5px}.ltp-market-strip strong{overflow:hidden;color:#172033;font-family:Consolas,monospace;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
 .ltp-market-strip>div:first-child span{color:#c1ccd9}.ltp-market-strip>div:first-child strong{color:#fff;font-size:20px}.ltp-market-price small{font-size:9px;color:#9daaba}
 .ltp-workspace{display:grid;grid-template-columns:minmax(0,1.72fr) minmax(330px,.78fr);gap:10px;align-items:stretch}
 .ltp-option-panel,.ltp-chart-panel{min-width:0;border:1px solid #cbd2da;border-radius:5px;background:#fff;box-shadow:0 1px 4px #1b273515}
-.ltp-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-bottom:1px solid #d8dde3}
+.ltp-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 9.6px;border-bottom:1px solid #d8dde3}
 .ltp-panel-heading span{color:#778292;font-size:8px;font-weight:800;letter-spacing:.8px}.ltp-panel-heading h2{margin:3px 0 0;color:#1d2938;font-size:14px}.ltp-panel-heading>small{color:#788494;font-size:9px;white-space:nowrap}
 .ltp-table-scroll{max-height:calc(100vh - 370px);min-height:360px;overflow:auto}
 .ltp-option-table{width:100%;min-width:840px;border-collapse:separate;border-spacing:0;font-family:Arial,Helvetica,sans-serif;font-variant-numeric:tabular-nums}
-.ltp-option-table th{position:sticky;top:0;z-index:2;padding:9px 7px;border-bottom:1px solid #bbc4cd;background:#e9edf1;color:#3e4a58;font-size:8px;font-weight:800;text-align:right;white-space:nowrap}
+.ltp-option-table th{position:sticky;top:0;z-index:2;padding:7.2px 5.6px;border-bottom:1px solid #bbc4cd;background:#e9edf1;color:#3e4a58;font-size:8px;font-weight:800;text-align:right;white-space:nowrap}
 .ltp-option-table th:nth-child(-n+4){background:#e8f1e9;color:#2d5b3a}.ltp-option-table th:nth-child(n+6){background:#f4e8e8;color:#8b3b3b}
 .ltp-option-table th.ltp-strike-head{background:#f47716;color:#fff;text-align:center}
-.ltp-option-table td{padding:7px 7px;border-bottom:1px solid #d7dce1;background:#f8f9fa;color:#273444;font-family:Consolas,monospace;font-size:10px;text-align:right;white-space:nowrap}
+.ltp-option-table td{padding:5.6px 5.6px;border-bottom:1px solid #d7dce1;background:#f8f9fa;color:#273444;font-family:Consolas,monospace;font-size:10px;text-align:right;white-space:nowrap}
 .ltp-option-table tbody tr:nth-child(even) td{background:#eef1f4}.ltp-option-table tbody tr:hover td{background:#e2edf8}
 .ltp-option-table td:nth-child(5){text-align:center}.ltp-option-table td.ltp-strike-cell{position:sticky;left:0;z-index:1;background:#f47716!important;color:#fff;font-weight:800}
 .ltp-strike-cell strong{font-size:11px}.ltp-strike-cell small{display:block;color:#fff3a2;font-family:Arial,sans-serif;font-size:7px}
@@ -41,15 +41,15 @@
 .ltp-option-table td.ltp-max-cell{background:#fff400!important;color:#151515;font-weight:800}
 .ltp-option-table td.positive{color:#16803a}.ltp-option-table td.negative{color:#d12d37}
 .ltp-option-table td small{display:block;margin-top:2px;font-family:Arial,sans-serif;font-size:8px;opacity:.85}
-.ltp-reversal{display:inline-block;max-width:90px;overflow:hidden;padding:3px 5px;border-radius:3px;background:#e8ebef;color:#566170;font-family:Arial,sans-serif;font-size:8px;text-overflow:ellipsis}
+.ltp-reversal{display:inline-block;max-width:90px;overflow:hidden;padding:2.4px 4px;border-radius:3px;background:#e8ebef;color:#566170;font-family:Arial,sans-serif;font-size:8px;text-overflow:ellipsis}
 .ltp-reversal.positive{background:#dff2e4;color:#19703a}.ltp-reversal.negative{background:#f9e1e1;color:#b12b32}
 .ltp-option-table tfoot td{position:sticky;bottom:0;z-index:2;background:#e5e9ed;color:#3b4653;font-size:9px;font-weight:800}
 .ltp-option-table tfoot td.ltp-strike-head{background:#f47716;color:#fff;text-align:center}
-.ltp-empty-cell{padding:30px!important;text-align:center!important;color:#758092!important}
-.ltp-table-legend,.ltp-chart-legend{display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding:9px 12px;color:#647184;font-size:9px}
+.ltp-empty-cell{padding:24px!important;text-align:center!important;color:#758092!important}
+.ltp-table-legend,.ltp-chart-legend{display:flex;align-items:center;gap:13px;flex-wrap:wrap;padding:7.2px 9.6px;color:#647184;font-size:9px}
 .ltp-table-legend span,.ltp-chart-legend span{display:flex;align-items:center;gap:5px}.ltp-table-legend i{display:inline-block;width:10px;height:10px;border:1px solid #c6cdd5;border-radius:2px}.ltp-table-legend i.atm{background:#fff6c8}.ltp-table-legend i.max{background:#fff400}
 .ltp-chart-panel{display:flex;flex-direction:column}
-.ltp-chart-quote{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 13px;border-bottom:1px solid #e0e4e8}
+.ltp-chart-quote{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 10.4px;border-bottom:1px solid #e0e4e8}
 .ltp-chart-quote strong{font-family:Consolas,monospace;font-size:18px;color:#1c2937}.ltp-chart-quote span{font-size:9px}
 .ltp-chart-quote .positive,.ltp-intelligence-strip .positive{color:#17833b}.ltp-chart-quote .negative,.ltp-intelligence-strip .negative{color:#c52f39}.ltp-chart-quote .neutral{color:#788494}
 .ltp-candle-chart{width:100%;padding:8px 5px 0}.ltp-candle-chart svg{display:block;width:100%;height:auto;min-height:240px;max-height:410px}
@@ -59,17 +59,17 @@
 .ltp-level-label{font-family:Arial,sans-serif;font-size:9px;font-weight:700}.ltp-level-label.resistance,.ltp-level-label.resistance-risk{fill:#d13737}.ltp-level-label.support,.ltp-level-label.support-risk{fill:#218c43}.ltp-level-label.max-pain{fill:#b67811}
 .ltp-chart-empty{display:flex;min-height:260px;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#778494;text-align:center}.ltp-chart-empty strong{font-size:12px}.ltp-chart-empty small{max-width:230px;font-size:10px;line-height:1.5}
 .ltp-chart-legend i{display:inline-block;width:15px;height:2px}.ltp-chart-legend i.resistance{background:#e44343}.ltp-chart-legend i.support{background:#24a64d}.ltp-chart-legend i.max-pain{background:#ed9d20}
-.ltp-chart-footer{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:auto;padding:9px 12px;border-top:1px solid #e0e4e8;color:#788494;font-size:8px}
+.ltp-chart-footer{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:auto;padding:7.2px 9.6px;border-top:1px solid #e0e4e8;color:#788494;font-size:8px}
 .ltp-intelligence-strip{display:grid;grid-template-columns:1.35fr repeat(4,minmax(0,1fr));gap:1px;margin-top:10px;overflow:hidden;border:1px solid #cbd2da;border-radius:5px;background:#cbd2da}
-.ltp-intelligence-strip>div{display:flex;min-width:0;flex-direction:column;justify-content:center;gap:5px;padding:10px 12px;background:#fff}
+.ltp-intelligence-strip>div{display:flex;min-width:0;flex-direction:column;justify-content:center;gap:5px;padding:8px 9.6px;background:#fff}
 .ltp-intelligence-strip>div>span{color:#778292;font-size:8px;font-weight:800;letter-spacing:.5px}.ltp-intelligence-strip strong{color:#273444;font-family:Consolas,monospace;font-size:13px}.ltp-intelligence-strip small{color:#7c8795;font-size:9px}
 .ltp-intelligence-strip .ltp-intelligence-title{background:#273443}.ltp-intelligence-title span{color:#c3cfdb!important}.ltp-intelligence-title strong{color:#fff;font-family:Arial,sans-serif;font-size:12px}
-.ltp-footer{padding:12px 2px 0;color:#778292;font-size:9px}
+.ltp-footer{padding:9.6px 1.6px 0;color:#778292;font-size:9px}
 @media(max-width:1150px){.ltp-market-strip{grid-template-columns:repeat(4,minmax(0,1fr))}.ltp-workspace{grid-template-columns:minmax(0,1fr)}.ltp-table-scroll{max-height:520px}.ltp-intelligence-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ltp-intelligence-title{grid-column:span 2}}
 @media(max-width:650px){.ltp-option-chain{padding:8px}.ltp-option-toolbar{align-items:flex-start}.ltp-controls{width:100%;flex:1 1 100%}.ltp-controls label{flex:1}.ltp-controls select{width:100%;min-width:0}.ltp-market-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.ltp-market-strip>div:first-child{grid-column:span 2}.ltp-direction-banner{align-items:flex-start;flex-direction:column;gap:4px}.ltp-intelligence-strip{grid-template-columns:1fr}.ltp-intelligence-title{grid-column:auto}.ltp-panel-heading{align-items:flex-start}.ltp-panel-heading>small{white-space:normal;text-align:right}.ltp-table-scroll{max-height:470px;min-height:300px}.ltp-auth-banner{align-items:flex-start;flex-direction:column}}
 
 /* Full-width intraday chart, risk bands and spot marker in the strike column. */
-.ltp-candle-chart{padding:8px 4px 2px;min-height:300px}
+.ltp-candle-chart{padding:6.4px 3.2px 1.6px;min-height:300px}
 .ltp-candle-chart svg{width:100%;height:auto;min-height:300px;max-height:none;overflow:visible}
 .ltp-chart-zone.resistance-zone{fill:rgba(226,65,65,.10);stroke:rgba(226,65,65,.45);stroke-width:1}
 .ltp-chart-zone.support-zone{fill:rgba(37,166,77,.10);stroke:rgba(37,166,77,.45);stroke-width:1}
@@ -78,7 +78,7 @@
 .ltp-live-price line{stroke:#e32636;stroke-width:1.8}
 .ltp-live-price rect{fill:#e32636}
 .ltp-live-price text{fill:#fff;font-family:Consolas,monospace;font-size:9px;font-weight:800}
-.ltp-spot-marker-row td{height:27px;padding:3px 7px!important;border-top:2px solid #ed2734!important;border-bottom:2px solid #ed2734!important;background:#fff!important;color:#d92331!important;font-size:8px!important;font-weight:800}
+.ltp-spot-marker-row td{height:27px;padding:2.4px 5.6px!important;border-top:2px solid #ed2734!important;border-bottom:2px solid #ed2734!important;background:#fff!important;color:#d92331!important;font-size:8px!important;font-weight:800}
 .ltp-spot-marker-row td:first-child{text-align:left!important}
 .ltp-spot-marker-row td:last-child{text-align:right!important}
 .ltp-spot-marker-row td span{opacity:.7}
@@ -87,7 +87,7 @@
 .ltp-spot-marker-cell b{font-size:10px}
 
 /* Improve readability of chart annotations at the dashboard's split-panel width. */
-.ltp-candle-chart{padding:12px 8px 6px;min-height:360px}
+.ltp-candle-chart{padding:9.6px 6.4px 4.8px;min-height:360px}
 .ltp-candle-chart svg{min-height:360px}
 .ltp-chart-axis{font-size:15px;font-weight:600}
 .ltp-level-label{font-size:13px;font-weight:800;stroke-width:3px}
@@ -129,7 +129,7 @@
 .ltp-feed-status{font-size:11px}
 .ltp-direction-banner{
   background:#f5d94e;border:1px solid #f8e27b;color:#191d24;
-  min-height:42px;padding:10px 14px;
+  min-height:42px;padding:8px 11.2px;
 }
 .ltp-direction-banner span{font-size:10px;color:#34302a}
 .ltp-direction-banner strong{font-size:15px;font-weight:800;color:#15191f}
@@ -152,14 +152,14 @@
 .ltp-table-scroll{background:#202b38}
 .ltp-option-table{font-family:Inter,"Segoe UI",Arial,sans-serif;font-variant-numeric:tabular-nums}
 .ltp-option-table th{
-  padding:11px 8px;background:#344456;color:#f1f5fa;
+  padding:8.8px 6.4px;background:#344456;color:#f1f5fa;
   border-bottom:1px solid #56677b;font-size:11px;font-weight:800;
 }
 .ltp-option-table th:nth-child(-n+4){background:#244b3b;color:#c9f5dc}
 .ltp-option-table th:nth-child(n+6){background:#56343b;color:#ffd6d9}
 .ltp-option-table th.ltp-strike-head{background:#f47716;color:#fff}
 .ltp-option-table td{
-  padding:9px 8px;background:#202c39;color:#f0f4f9;
+  padding:7.2px 6.4px;background:#202c39;color:#f0f4f9;
   border-bottom:1px solid #3b4857;font-family:Inter,"Segoe UI",Arial,sans-serif;
   font-size:12px;font-weight:600;
 }
@@ -174,14 +174,14 @@
 .ltp-option-table td.positive,.ltp-table-legend .positive{color:#5ee49a!important}
 .ltp-option-table td.negative,.ltp-table-legend .negative{color:#ff7d85!important}
 .ltp-option-table td small{font-size:10px;color:#d5deea;opacity:1}
-.ltp-reversal{max-width:110px;padding:4px 6px;background:#465466;color:#f1f5f9;font-size:10px;font-weight:750}
+.ltp-reversal{max-width:110px;padding:3.2px 4.8px;background:#465466;color:#f1f5f9;font-size:10px;font-weight:750}
 .ltp-reversal.positive{background:#174c36;color:#a8f4c5}
 .ltp-reversal.negative{background:#642e36;color:#ffd0d4}
 .ltp-option-table tfoot td{background:#354456;color:#fff;font-size:11px}
 .ltp-option-table tfoot td.ltp-strike-head{background:#f47716;color:#fff}
 .ltp-spot-marker-row td{
   background:#452b35!important;color:#fff!important;border-color:#ff6875!important;
-  font-size:10px!important;padding:6px 8px!important;
+  font-size:10px!important;padding:4.8px 6.4px!important;
 }
 .ltp-spot-marker-row td.ltp-spot-marker-cell{background:#662f3c!important;color:#fff!important}
 .ltp-spot-marker-cell b{font-size:12px}
@@ -247,7 +247,7 @@
 .ltp-rs-indicators{display:flex;align-items:center;justify-content:space-evenly;gap:8px;min-width:0}
 .ltp-rs-chip{
   display:grid;grid-template-columns:auto auto;align-items:center;justify-content:center;
-  gap:1px 7px;min-width:105px;padding:3px 9px;border:1px solid #7f91a5;
+  gap:1px 7px;min-width:105px;padding:2.4px 7.2px;border:1px solid #7f91a5;
   border-radius:5px;background:#f8fafc;color:#17212d!important;opacity:1!important;
   box-shadow:0 1px 3px #0003;font-size:10px!important;line-height:1.2
 }
@@ -271,12 +271,12 @@
   scrollbar-gutter:stable;
 }
 .ltp-option-table th{
-  padding:5px 4px;
+  padding:4px 3.2px;
   font-size:9px;
   line-height:1.15;
 }
 .ltp-option-table td{
-  padding:3px 4px;
+  padding:2.4px 3.2px;
   font-size:10px;
   line-height:1.12;
 }
@@ -291,30 +291,30 @@
 .ltp-option-table .ltp-strike-cell strong{font-size:10px}
 .ltp-option-table .ltp-strike-cell small{font-size:7px}
 .ltp-reversal{
-  padding:2px 4px;
+  padding:1.6px 3.2px;
   font-size:7px;
   line-height:1.1;
 }
 .ltp-spot-marker-row td{
   height:34px!important;
-  padding:2px 5px!important;
+  padding:1.6px 4px!important;
 }
 .ltp-rs-chip{
   grid-template-columns:auto auto;
   gap:0 5px;
   min-width:88px;
-  padding:2px 6px;
+  padding:1.6px 4.8px;
   font-size:9px!important;
 }
 .ltp-rs-chip b{font-size:9px}
 .ltp-rs-chip strong{font-size:10px}
 .ltp-rs-chip small{font-size:7px!important}
 .ltp-option-table tfoot td{
-  padding:4px;
+  padding:3.2px;
   font-size:8px;
   line-height:1.1;
 }
-.ltp-table-legend{padding:5px 8px;font-size:8px}
+.ltp-table-legend{padding:4px 6.4px;font-size:8px}
 @media(max-height:850px){
   .ltp-table-scroll{max-height:calc(100vh - 215px)}
 }
@@ -422,14 +422,14 @@
   font-size:12px!important;
   line-height:1.25!important;
   font-weight:900!important;
-  padding:7px 5px!important;
+  padding:5.6px 4px!important;
   color:#fff!important;
 }
 .ltp-option-chain .ltp-option-table tbody td{
   font-size:12px!important;
   line-height:1.2!important;
   font-weight:800!important;
-  padding:4px 5px!important;
+  padding:3.2px 4px!important;
   color:#f7faff!important;
 }
 .ltp-option-chain .ltp-option-table tbody td strong{
@@ -477,7 +477,7 @@
 
 .ltp-option-chain .ltp-option-table .ltp-reversal{
   display:inline-block!important;
-  padding:3px 5px!important;
+  padding:2.4px 4px!important;
   font-size:9px!important;
   line-height:1.2!important;
   font-weight:900!important;
@@ -514,11 +514,11 @@
 
 /* Compact, center-aligned dashboard header area above the option-chain rows. */
 .ltp-option-chain{
-  padding:6px 12px 14px!important;
+  padding:4.8px 9.6px 11.2px!important;
 }
 .ltp-option-toolbar{
   min-height:44px;
-  padding:5px 10px!important;
+  padding:4px 8px!important;
   gap:10px!important;
   justify-content:center;
   align-items:center;
@@ -548,7 +548,7 @@
 .ltp-controls select,.ltp-controls input{
   height:27px!important;
   min-width:88px;
-  padding:2px 6px!important;
+  padding:1.6px 4.8px!important;
   font-size:11px!important;
 }
 .ltp-controls .ltp-lot-size input{
@@ -557,7 +557,7 @@
 }
 .ltp-refresh{
   height:27px!important;
-  padding:0 10px;
+  padding:0 8px;
 }
 .ltp-feed-status{
   margin-left:4px;
@@ -566,7 +566,7 @@
 .ltp-direction-banner{
   min-height:29px!important;
   margin:5px 0 5px!important;
-  padding:4px 9px!important;
+  padding:3.2px 7.2px!important;
   gap:9px!important;
   justify-content:center!important;
   align-items:center!important;
@@ -583,7 +583,7 @@
   justify-content:center;
   gap:3px!important;
   min-height:54px;
-  padding:5px 7px!important;
+  padding:4px 5.6px!important;
   text-align:center;
 }
 .ltp-market-strip span{
@@ -598,7 +598,7 @@
 .ltp-market-price small{font-size:9px!important}
 .ltp-panel-heading{
   min-height:40px;
-  padding:5px 10px!important;
+  padding:4px 8px!important;
   justify-content:center!important;
   text-align:center;
 }
@@ -635,7 +635,7 @@
 /* Put the resistance/support intelligence directly below the chart, grouped by side. */
 .ltp-chain-count{
   display:flex;justify-content:flex-end;align-items:center;min-height:20px;
-  padding:0 8px 3px;color:#d7e2ef;font-size:10px;font-weight:750;
+  padding:0 6.4px 2.4px;color:#d7e2ef;font-size:10px;font-weight:750;
 }
 .ltp-intelligence-groups{
   display:grid;grid-template-columns:1fr 1fr;gap:7px;
@@ -643,18 +643,18 @@
 }
 .ltp-intelligence-group{
   display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;
-  min-width:0;padding:7px;border:1px solid #526276;border-radius:5px;
+  min-width:0;padding:5.6px;border:1px solid #526276;border-radius:5px;
   background:#293849;text-align:center;align-items:stretch;
 }
 .ltp-intelligence-group h3{
-  grid-column:1/-1;margin:0;padding:3px 4px;border-radius:3px;
+  grid-column:1/-1;margin:0;padding:2.4px 3.2px;border-radius:3px;
   color:#fff;font-size:10px;font-weight:900;letter-spacing:.6px;
 }
 .ltp-intelligence-group.resistance-group h3{background:#713c45}
 .ltp-intelligence-group.support-group h3{background:#245b45}
 .ltp-intelligence-group>div{
   display:flex;flex-direction:column;justify-content:center;align-items:center;
-  gap:3px;min-width:0;padding:4px 3px;background:#202c39;border-radius:3px;
+  gap:3px;min-width:0;padding:3.2px 2.4px;background:#202c39;border-radius:3px;
 }
 .ltp-intelligence-group>div>span{color:#d3dfec;font-size:8px;font-weight:800;letter-spacing:.25px}
 .ltp-intelligence-group>div>strong{color:#fff;font-size:11px;font-weight:900;overflow-wrap:anywhere}
@@ -688,7 +688,7 @@
 .ltp-chart-panel>.ltp-panel-heading{
   min-height:48px;
   justify-content:space-between!important;
-  padding:8px 16px!important;
+  padding:6.4px 12.8px!important;
   border-bottom:1px solid #40536a;
   background:linear-gradient(90deg,#26394e,#1c2b3d);
 }
@@ -716,7 +716,7 @@
   justify-content:space-between;
   gap:12px;
   min-height:62px;
-  padding:8px 16px;
+  padding:6.4px 12.8px;
   background:#172638;
   border-bottom:1px solid #354a60;
 }
@@ -734,7 +734,7 @@
 .ltp-candle-chart{
   flex:1 1 auto;
   min-height:500px;
-  padding:8px 8px 4px;
+  padding:6.4px 6.4px 3.2px;
   background:linear-gradient(180deg,#101e2e,#142438);
 }
 .ltp-candle-chart svg{
@@ -794,20 +794,20 @@
 }
 .ltp-chart-panel>.ltp-panel-heading{
   min-height:38px!important;
-  padding:5px 9px!important;
+  padding:4px 7.2px!important;
 }
 .ltp-chart-panel>.ltp-panel-heading>div{align-items:flex-start!important}
 .ltp-chart-panel>.ltp-panel-heading h2{font-size:14px!important}
 .ltp-chart-quote{
   min-height:48px!important;
-  padding:5px 10px!important;
+  padding:4px 8px!important;
 }
 .ltp-chart-quote strong{font-size:21px!important}
 .ltp-candle-chart{
   flex:1 1 auto;
   min-width:0;
   min-height:0!important;
-  padding:4px 3px!important;
+  padding:3.2px 2.4px!important;
   overflow:hidden;
 }
 .ltp-candle-chart svg{
@@ -835,7 +835,7 @@
   flex-wrap:wrap;
   justify-content:space-between;
   gap:3px 8px;
-  padding:4px 7px!important;
+  padding:3.2px 5.6px!important;
   font-size:8px!important;
 }
 .ltp-intelligence-groups{
@@ -846,7 +846,7 @@
 .ltp-intelligence-group{
   grid-template-columns:repeat(2,minmax(0,1fr))!important;
   gap:3px!important;
-  padding:4px!important;
+  padding:3.2px!important;
 }
 .ltp-intelligence-group h3{font-size:9px!important;padding:2px!important}
 .ltp-intelligence-group>div{padding:3px 2px!important}
@@ -924,7 +924,7 @@
   gap:6px 12px!important;
   min-height:42px!important;
   margin:5px 7px 6px!important;
-  padding:7px 10px!important;
+  padding:5.6px 8px!important;
   border:1px solid #8e7830;
   border-radius:5px;
   background:linear-gradient(90deg,#f4d94f,#ffe979)!important;
@@ -951,13 +951,13 @@
 
 /* Lightweight Charts toggle and responsive canvas, preserving the 65:35 workspace. */
 .ltp-chart-heading-actions{display:flex;align-items:center;gap:10px}
-.ltp-chart-toggle{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid #52677e;border-radius:6px;background:#142438}
-.ltp-chart-toggle button{border:0;border-radius:4px;padding:5px 9px;background:transparent;color:#dce8f5;font-size:11px;font-weight:850;cursor:pointer}
+.ltp-chart-toggle{display:inline-flex;align-items:center;gap:2px;padding:2.4px;border:1px solid #52677e;border-radius:6px;background:#142438}
+.ltp-chart-toggle button{border:0;border-radius:4px;padding:4px 7.2px;background:transparent;color:#dce8f5;font-size:11px;font-weight:850;cursor:pointer}
 .ltp-chart-toggle button.active{background:#f36a22;color:#fff;box-shadow:0 1px 4px #0005}
-.ltp-lightweight-chart{position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:440px;padding:6px 7px 4px;background:#142438}
+.ltp-lightweight-chart{position:relative;display:flex;flex-direction:column;flex:1 1 auto;min-height:440px;padding:4.8px 5.6px 3.2px;background:#142438}
 .ltp-lightweight-canvas{position:relative;z-index:1;flex:1 1 auto;width:100%;height:clamp(440px,calc(100vh - 430px),620px);min-height:440px}
-.ltp-lightweight-empty{position:absolute;z-index:2;top:45%;left:50%;transform:translate(-50%,-50%);padding:7px 11px;border:1px solid #52677e;border-radius:5px;background:#142438dd;color:#f4f8fd;font-size:12px;font-weight:850;pointer-events:none}
-.ltp-lightweight-level-key{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 12px;padding:6px 3px 2px;color:#dce8f5;font-size:10px;font-weight:850}
+.ltp-lightweight-empty{position:absolute;z-index:2;top:45%;left:50%;transform:translate(-50%,-50%);padding:5.6px 8.8px;border:1px solid #52677e;border-radius:5px;background:#142438dd;color:#f4f8fd;font-size:12px;font-weight:850;pointer-events:none}
+.ltp-lightweight-level-key{display:flex;flex-wrap:wrap;justify-content:center;gap:5px 12px;padding:4.8px 2.4px 1.6px;color:#dce8f5;font-size:10px;font-weight:850}
 .ltp-lightweight-level-key .t1{color:#ff7885}
 .ltp-lightweight-level-key .t2{color:#ffc06a}
 .ltp-lightweight-level-key .s1{color:#55e89d}
@@ -986,7 +986,7 @@
   margin: 0;
   flex-wrap: nowrap;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 6.4px 8px;
 }
 .ltp-overview-row .ltp-brand {
   flex: 0 0 auto;
@@ -1013,7 +1013,7 @@
 }
 .ltp-overview-row .ltp-market-strip > div {
   min-width: 0;
-  padding: 7px 5px;
+  padding: 5.6px 4px;
   gap: 4px;
   text-align: center;
 }
@@ -1049,7 +1049,7 @@
 }
 .ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
   min-height: 0;
-  padding: 4px 8px;
+  padding: 3.2px 6.4px;
   gap: 7px;
 }
 .ltp-option-chain .ltp-overview-row .ltp-brand {
@@ -1083,14 +1083,14 @@
 .ltp-option-chain .ltp-overview-row .ltp-controls input,
 .ltp-option-chain .ltp-overview-row .ltp-refresh {
   height: 25px;
-  padding-top: 2px;
-  padding-bottom: 2px;
+  padding-top: 1.6px;
+  padding-bottom: 1.6px;
   font-size: 11px;
 }
 .ltp-option-chain .ltp-overview-row .ltp-controls select,
 .ltp-option-chain .ltp-overview-row .ltp-controls input {
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: 4.8px;
+  padding-right: 4.8px;
 }
 .ltp-option-chain .ltp-overview-row .ltp-feed-status {
   gap: 5px;
@@ -1101,7 +1101,7 @@
   height: 6px;
 }
 .ltp-option-chain .ltp-overview-row .ltp-market-strip > div {
-  padding: 4px 4px;
+  padding: 3.2px 3.2px;
   gap: 2px;
 }
 .ltp-option-chain .ltp-overview-row .ltp-market-strip > div > span {
@@ -1122,10 +1122,10 @@
 }
 @media (max-width: 1500px) {
   .ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
-    padding: 5px 8px;
+    padding: 4px 6.4px;
   }
   .ltp-option-chain .ltp-overview-row .ltp-market-strip > div {
-    padding: 5px 4px;
+    padding: 4px 3.2px;
   }
 }
 
@@ -1145,14 +1145,14 @@
   align-self: stretch;
   gap: 6px;
   min-width: 0;
-  padding: 5px 8px;
+  padding: 4px 6.4px;
   border: 1px solid var(--border, #344356);
   border-radius: 8px;
   background: var(--panel, #1b2634);
 }
 .ltp-section-tabs button {
   min-height: 30px;
-  padding: 0 15px;
+  padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
@@ -1182,15 +1182,15 @@
 
 /* IDaddy Swing live table */
 .ltp-swing-panel{width:100%;min-width:0;background:#202b39;border:1px solid #3b4a5d;border-radius:8px;color:#e8eef6;overflow:hidden;box-shadow:0 3px 12px #0002}
-.ltp-swing-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px 18px;background:#263547;border-bottom:1px solid #3b4a5d}
+.ltp-swing-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14.4px;background:#263547;border-bottom:1px solid #3b4a5d}
 .ltp-swing-heading span{font-size:10px;font-weight:800;letter-spacing:1.1px;color:#91a8c0}
 .ltp-swing-heading h2{font-size:18px;margin:4px 0 0;color:#f4f7fb}
 .ltp-swing-live{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;color:#36dc91;white-space:nowrap}
 .ltp-swing-live i,.ltp-swing-live i:before{display:block;width:8px;height:8px;border-radius:50%;background:#28d987}
 .ltp-swing-live i:before{content:"";opacity:.3;transform:scale(2.2)}
-.ltp-swing-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:#1d2937;border-bottom:1px solid #3b4a5d}
+.ltp-swing-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12.8px;background:#1d2937;border-bottom:1px solid #3b4a5d}
 .ltp-swing-tabs{display:flex;gap:8px}
-.ltp-swing-tabs button{border:1px solid #536276;border-radius:5px;padding:8px 16px;background:#2b3949;color:#c8d4e2;font-size:12px;font-weight:800;cursor:pointer}
+.ltp-swing-tabs button{border:1px solid #536276;border-radius:5px;padding:6.4px 12.8px;background:#2b3949;color:#c8d4e2;font-size:12px;font-weight:800;cursor:pointer}
 .ltp-swing-tabs button b{margin-left:7px;opacity:.85}
 .ltp-swing-tabs button.bullish.active{background:#159b61;border-color:#27d68a;color:#fff}
 .ltp-swing-tabs button.bearish.active{background:#b83f50;border-color:#ef6676;color:#fff}
@@ -1199,21 +1199,21 @@
 .ltp-swing-table-wrap{width:100%;max-height:calc(100vh - 280px);min-height:360px;overflow:auto}
 .ltp-swing-table{width:100%;border-collapse:collapse;table-layout:auto;font-size:12px;text-align:center;white-space:nowrap}
 .ltp-swing-table thead{position:sticky;top:0;z-index:2;background:#159b61;color:#fff}
-.ltp-swing-table th{padding:11px 10px;font-size:10px;letter-spacing:.35px;font-weight:800}
-.ltp-swing-table td{padding:8px 10px;border-bottom:1px solid #3d4958;color:#e3eaf2;font-variant-numeric:tabular-nums}
+.ltp-swing-table th{padding:8.8px 8px;font-size:10px;letter-spacing:.35px;font-weight:800}
+.ltp-swing-table td{padding:6.4px 8px;border-bottom:1px solid #3d4958;color:#e3eaf2;font-variant-numeric:tabular-nums}
 .ltp-swing-table tbody tr:nth-child(odd){background:#293746}
 .ltp-swing-table tbody tr:nth-child(even){background:#202d3b}
 .ltp-swing-table tbody tr:hover{background:#35485c}
 .ltp-swing-table td.time{color:#c1ccda;font-size:11px}
 .ltp-swing-table td.symbol{color:#65aaff;font-weight:800}
 .ltp-swing-table td.cmp{font-weight:800;color:#f2f6fb}
-.ltp-swing-status{display:inline-block;min-width:58px;padding:3px 7px;border-radius:4px;background:#465365;color:#e3eaf2;font-size:10px;font-weight:800}
+.ltp-swing-status{display:inline-block;min-width:58px;padding:2.4px 5.6px;border-radius:4px;background:#465365;color:#e3eaf2;font-size:10px;font-weight:800}
 .ltp-swing-status.strong{background:#135e45;color:#6ff0b0}
 .ltp-swing-status.wtb{background:#175b72;color:#80dfff}
 .ltp-swing-status.wtt{background:#69501c;color:#ffda7c}
 .ltp-swing-stars{display:inline-grid;place-items:center;min-width:23px;height:22px;border-radius:4px;background:#34475c;color:#ffd76b;font-weight:800}
 .ltp-swing-empty{height:150px;text-align:center;color:#aab8c8!important}
-.ltp-swing-footnote{padding:9px 14px;border-top:1px solid #3b4a5d;color:#a9b8c9;font-size:10px}
+.ltp-swing-footnote{padding:7.2px 11.2px;border-top:1px solid #3b4a5d;color:#a9b8c9;font-size:10px}
 @media(max-width:900px){.ltp-swing-heading,.ltp-swing-toolbar{align-items:flex-start;flex-direction:column}.ltp-swing-refresh-meta{align-items:flex-start}.ltp-swing-table-wrap{max-height:calc(100vh - 320px)}}
 
 /* Swing Trade table: center every data column, except the left-aligned symbol. */
@@ -1221,7 +1221,7 @@
 .ltp-swing-table td { text-align: center !important; }
 .ltp-swing-table th:first-child,
 .ltp-swing-table td.symbol { text-align: left !important; }
-.ltp-swing-table td.symbol { padding-left: 18px; }
+.ltp-swing-table td.symbol { padding-left: 14.4px; }
 
 .ltp-swing-symbol-link{display:inline;padding:0;border:0;background:transparent;color:#65aaff;font:inherit;font-weight:800;text-align:left;cursor:pointer;text-decoration:none}
 .ltp-swing-symbol-link:hover,.ltp-swing-symbol-link:focus-visible{color:#9bc9ff;text-decoration:underline;outline:none}
@@ -1231,7 +1231,7 @@
 .ltp-option-chain .ltp-option-table .ltp-reversal{
   font-size:12px!important;
   line-height:1.25!important;
-  padding:4px 7px!important;
+  padding:3.2px 5.6px!important;
   max-width:130px;
 }
 .ltp-option-chain .ltp-option-table .ltp-option-price{
@@ -1244,7 +1244,7 @@
 }
 .ltp-option-chain .ltp-ltp-toggle{
   height:30px;
-  padding:0 10px;
+  padding:0 8px;
   border:1px solid #60758c;
   border-radius:4px;
   background:#34465a;
@@ -1267,7 +1267,7 @@
    Preserve semantic call/put, ATM, rank and price-level colors. */
 .ltp-option-chain {
   min-height: calc(100vh - 50px);
-  padding: 6px 0 14px !important;
+  padding: 4.8px 0 11.2px !important;
   background: transparent !important;
   color: var(--text) !important;
   font-family: var(--font-ui, Inter, sans-serif) !important;
@@ -1379,7 +1379,7 @@
   color: #ffd0d0 !important;
 }
 @media (max-width: 760px) {
-  .ltp-option-chain { padding: 6px 0 12px !important; }
+  .ltp-option-chain { padding: 4.8px 0 9.6px !important; }
 }
 
 
@@ -1457,7 +1457,7 @@
 
 /* Market Intelligence refinement pass — match AutoTrender Dashboard proportions and density. */
 .ltp-option-chain {
-  padding: 6px 10px 14px !important;
+  padding: 4.8px 8px 11.2px !important;
   background: transparent !important;
   color: #e7edf5 !important;
   font-family: 'DM Sans', 'Segoe UI', sans-serif !important;
@@ -1476,14 +1476,14 @@
   min-width: 0;
   width: 100%;
   margin: 0;
-  padding: 4px;
+  padding: 3.2px;
   border: 1px solid #48515d !important;
   border-radius: 9px !important;
   background: #303740 !important;
 }
 .ltp-overview-row .ltp-section-tabs button {
   min-height: 34px;
-  padding: 7px 12px;
+  padding: 5.6px 9.6px;
   border: 1px solid transparent !important;
   border-radius: 6px !important;
   background: transparent !important;
@@ -1507,7 +1507,7 @@
   min-height: 48px;
   height: auto;
   gap: 9px;
-  padding: 6px 10px;
+  padding: 4.8px 8px;
   border: 1px solid #48515d !important;
   border-radius: 9px !important;
   background: #303740 !important;
@@ -1558,7 +1558,7 @@
   min-width: 0;
   max-width: 100%;
   height: 29px;
-  padding: 3px 7px;
+  padding: 2.4px 5.6px;
   border: 1px solid #56616e !important;
   border-radius: 5px !important;
   background: #252d36 !important;
@@ -1573,7 +1573,7 @@
 .ltp-overview-row .ltp-refresh {
   flex: 0 0 auto;
   height: 29px;
-  padding: 0 9px;
+  padding: 0 7.2px;
   border-radius: 5px;
   font-size: 10px;
   white-space: nowrap;
@@ -1619,7 +1619,7 @@
 .ltp-option-panel { overflow: hidden; }
 .ltp-chain-count {
   min-height: 20px;
-  padding: 1px 9px 3px;
+  padding: 0.8px 7.2px 2.4px;
   color: #d4dce5 !important;
   font-size: 10px !important;
 }
@@ -1633,7 +1633,7 @@
   font-family: 'DM Sans', 'Segoe UI', sans-serif !important;
 }
 .ltp-option-table th {
-  padding: 8px 6px !important;
+  padding: 6.4px 4.8px !important;
   font-size: 10px !important;
   line-height: 1.2;
   background: #343d47 !important;
@@ -1645,7 +1645,7 @@
 .ltp-option-table th.ltp-strike-head,
 .ltp-option-table tfoot td.ltp-strike-head { background: #ed653f !important; color: #fff !important; }
 .ltp-option-table td {
-  padding: 6px 6px !important;
+  padding: 4.8px 4.8px !important;
   font-size: 11px !important;
   line-height: 1.15;
   border-color: #48525e !important;
@@ -1679,18 +1679,18 @@
 .ltp-option-table td.ltp-rank-putOiChg-first { background: #b1d89b !important; color: #1b3c12 !important; }
 .ltp-option-table td.ltp-rank-putOiChg-second { background: #d6e9c9 !important; color: #2b4820 !important; }
 .ltp-option-table tfoot td {
-  padding: 6px !important;
+  padding: 4.8px !important;
   background: #3b4652 !important;
   color: #edf2f7 !important;
   font-size: 9px !important;
   border-color: #56616e !important;
 }
 .ltp-option-table tfoot td strong { font-size: 11px !important; }
-.ltp-spot-marker-row td { padding: 4px 5px !important; background: #49333a !important; color: #f5dfe2 !important; font-size: 9px !important; }
+.ltp-spot-marker-row td { padding: 3.2px 4px !important; background: #49333a !important; color: #f5dfe2 !important; font-size: 9px !important; }
 .ltp-spot-marker-row td.ltp-spot-marker-cell { background: #70402e !important; color: #fff !important; }
 .ltp-spot-marker-cell b { font-size: 11px !important; }
-.ltp-reversal { max-width: 100px; padding: 3px 5px !important; font-size: 9px !important; line-height: 1.15; }
-.ltp-table-legend { padding: 7px 9px !important; gap: 10px; color: #c7d1dc !important; font-size: 9px !important; }
+.ltp-reversal { max-width: 100px; padding: 2.4px 4px !important; font-size: 9px !important; line-height: 1.15; }
+.ltp-table-legend { padding: 5.6px 7.2px !important; gap: 10px; color: #c7d1dc !important; font-size: 9px !important; }
 
 /* Compact chart composition so scenario and resistance/support remain in view. */
 .ltp-chart-panel {
@@ -1699,42 +1699,42 @@
   overflow: hidden;
   background: #303740 !important;
 }
-.ltp-chart-panel > .ltp-panel-heading { min-height: 43px; padding: 7px 10px !important; background: #343d47 !important; border-color: #515c68 !important; }
+.ltp-chart-panel > .ltp-panel-heading { min-height: 43px; padding: 5.6px 8px !important; background: #343d47 !important; border-color: #515c68 !important; }
 .ltp-chart-panel .ltp-panel-heading span { font-size: 9px !important; color: #c9b89e !important; }
 .ltp-chart-panel .ltp-panel-heading h2 { font-size: 14px !important; color: #f3f5f7 !important; }
 .ltp-chart-heading-actions { gap: 7px; }
 .ltp-chart-heading-actions small { font-size: 9px !important; color: #d1d9e1 !important; }
-.ltp-chart-toggle { padding: 2px; border-color: #56616e; background: #252d36; }
-.ltp-chart-toggle button { padding: 4px 7px; font-size: 9px; }
+.ltp-chart-toggle { padding: 1.6px; border-color: #56616e; background: #252d36; }
+.ltp-chart-toggle button { padding: 3.2px 5.6px; font-size: 9px; }
 .ltp-chart-toggle button.active { background: #f15b3a; }
-.ltp-chart-quote { min-height: 42px; padding: 5px 10px !important; background: #303740 !important; border-color: #515c68 !important; }
+.ltp-chart-quote { min-height: 42px; padding: 4px 8px !important; background: #303740 !important; border-color: #515c68 !important; }
 .ltp-chart-quote strong { font-size: 22px !important; color: #f4f6f8 !important; }
 .ltp-chart-quote span { font-size: 10px !important; }
 .ltp-lightweight-chart {
   flex: 0 0 auto !important;
   min-height: 0 !important;
   height: clamp(285px, calc(100vh - 565px), 360px) !important;
-  padding: 3px 5px 2px !important;
+  padding: 2.4px 4px 1.6px !important;
   background: #303740 !important;
 }
 .ltp-lightweight-canvas { width: 100% !important; height: 100% !important; min-height: 0 !important; }
-.ltp-candle-chart { min-height: 0 !important; padding: 4px 5px 2px !important; background: #303740 !important; }
+.ltp-candle-chart { min-height: 0 !important; padding: 3.2px 4px 1.6px !important; background: #303740 !important; }
 .ltp-candle-chart svg { display: block; width: 100%; height: auto !important; min-height: 0 !important; max-height: none !important; }
-.ltp-chart-scenario { min-height: 36px !important; margin: 4px 6px !important; padding: 5px 8px !important; gap: 4px 8px !important; }
+.ltp-chart-scenario { min-height: 36px !important; margin: 4px 6px !important; padding: 4px 6.4px !important; gap: 4px 8px !important; }
 .ltp-chart-panel .ltp-chart-scenario span { font-size: 9px !important; }
 .ltp-chart-panel .ltp-chart-scenario strong { font-size: 12px !important; }
 .ltp-chart-panel .ltp-chart-scenario small { font-size: 9px !important; }
-.ltp-chart-panel .ltp-chart-footer { padding: 4px 8px !important; font-size: 8px !important; }
+.ltp-chart-panel .ltp-chart-footer { padding: 3.2px 6.4px !important; font-size: 8px !important; }
 .ltp-chart-panel .ltp-intelligence-groups { grid-template-columns: 1fr 1fr !important; gap: 5px !important; margin: 5px !important; }
 .ltp-chart-panel .ltp-intelligence-group {
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 3px !important;
-  padding: 5px !important;
+  padding: 4px !important;
   background: #343d47 !important;
   border-color: #515c68 !important;
 }
-.ltp-chart-panel .ltp-intelligence-group h3 { padding: 3px !important; font-size: 10px !important; }
-.ltp-chart-panel .ltp-intelligence-group > div { padding: 4px 3px !important; background: #252d36 !important; }
+.ltp-chart-panel .ltp-intelligence-group h3 { padding: 2.4px !important; font-size: 10px !important; }
+.ltp-chart-panel .ltp-intelligence-group > div { padding: 3.2px 2.4px !important; background: #252d36 !important; }
 .ltp-chart-panel .ltp-intelligence-group > div > span { font-size: 8px !important; }
 .ltp-chart-panel .ltp-intelligence-group > div > strong { font-size: 10px !important; }
 .ltp-chart-panel .ltp-intelligence-group > div > small { font-size: 8px !important; }
@@ -1750,7 +1750,7 @@
   .ltp-lightweight-chart { height: 420px !important; }
 }
 @media (max-width: 760px) {
-  .ltp-option-chain { padding: 6px 8px 12px !important; }
+  .ltp-option-chain { padding: 4.8px 6.4px 9.6px !important; }
   .ltp-overview-row .ltp-section-tabs { justify-content: flex-start; }
   .ltp-overview-row .ltp-option-toolbar { flex-wrap: wrap; }
   .ltp-overview-row .ltp-controls { flex-wrap: wrap; }
@@ -1806,7 +1806,7 @@
 }
 .ltp-option-chain .ltp-option-table .ltp-rs-chip {
   min-width: 0 !important;
-  padding: 4px 8px !important;
+  padding: 3.2px 6.4px !important;
   border: 1px solid #667586 !important;
   border-radius: 5px !important;
   background: #26313d !important;
@@ -1862,7 +1862,7 @@
 /* Restore original-size Option Chain filters after compact toolbar styling. */
 .ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
   min-height: 58px !important;
-  padding: 8px 12px !important;
+  padding: 6.4px 9.6px !important;
   gap: 10px !important;
 }
 .ltp-option-chain .ltp-overview-row .ltp-controls {
@@ -1877,7 +1877,7 @@
 .ltp-option-chain .ltp-overview-row .ltp-controls select,
 .ltp-option-chain .ltp-overview-row .ltp-controls input {
   height: 34px !important;
-  padding: 5px 9px !important;
+  padding: 4px 7.2px !important;
   font-size: 12px !important;
   line-height: 1.25 !important;
 }
@@ -1978,7 +1978,7 @@
 .ltp-option-chain .ltp-overview-row .ltp-option-toolbar {
   min-height: 42px !important;
   height: auto !important;
-  padding: 4px 8px !important;
+  padding: 3.2px 6.4px !important;
 }
 .ltp-option-chain .ltp-overview-row .ltp-controls label {
   gap: 2px !important;
@@ -1987,7 +1987,7 @@
 .ltp-option-chain .ltp-overview-row .ltp-controls select,
 .ltp-option-chain .ltp-overview-row .ltp-controls input {
   height: 28px !important;
-  padding: 3px 8px !important;
+  padding: 2.4px 6.4px !important;
   line-height: 1.1 !important;
 }
 .ltp-option-chain .ltp-overview-row .ltp-controls .ltp-ltp-toggle {
@@ -2047,7 +2047,7 @@
 .ltp-index-shortcuts button {
   min-width: 92px;
   height: 32px;
-  padding: 0 14px;
+  padding: 0 11.2px;
   border: 1px solid #586575;
   border-radius: 3px;
   background: #303b49;
@@ -2161,7 +2161,7 @@
   min-width: 128px;
   max-width: 190px;
   height: 32px;
-  padding: 0 9px;
+  padding: 0 7.2px;
   border: 1px solid #64748b;
   border-radius: 4px;
   background: #273443;
@@ -2187,12 +2187,12 @@
   z-index: 10000;
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: 14.4px;
   background: rgba(5, 10, 18, .72);
 }
 .ltp-option-chain .ltp-order-dialog {
   width: min(420px, 100%);
-  padding: 18px;
+  padding: 14.4px;
   border: 1px solid #526174;
   border-radius: 9px;
   background: #202a36;
@@ -2210,7 +2210,7 @@
 }
 .ltp-option-chain .ltp-order-heading h2 { margin: 0; font-size: 17px; }
 .ltp-option-chain .ltp-order-heading button { border: 0; background: transparent; color: #dbe5ef; font-size: 25px; cursor: pointer; }
-.ltp-option-chain .ltp-order-quote { margin: 14px 0; padding: 10px; border-radius: 5px; background: #2b3949; }
+.ltp-option-chain .ltp-order-quote { margin: 14px 0; padding: 8px; border-radius: 5px; background: #2b3949; }
 .ltp-option-chain .ltp-order-quote strong { font-size: 20px; color: #f6ca72; }
 .ltp-option-chain .ltp-order-directions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 .ltp-option-chain .ltp-order-directions button,
@@ -2218,8 +2218,8 @@
 .ltp-option-chain .ltp-order-directions .buy.active { background: #167b52; border-color: #2ac98a; color: white; }
 .ltp-option-chain .ltp-order-directions .sell.active { background: #9a3540; border-color: #f0717d; color: white; }
 .ltp-option-chain .ltp-order-dialog > label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.ltp-option-chain .ltp-order-dialog > label input { width: 110px; height: 34px; padding: 5px 8px; border: 1px solid #64748b; border-radius: 4px; background: #17212c; color: white; }
-.ltp-option-chain .ltp-order-quantity { padding: 9px 0; border-top: 1px solid #425064; }
+.ltp-option-chain .ltp-order-dialog > label input { width: 110px; height: 34px; padding: 4px 6.4px; border: 1px solid #64748b; border-radius: 4px; background: #17212c; color: white; }
+.ltp-option-chain .ltp-order-quantity { padding: 7.2px 0; border-top: 1px solid #425064; }
 .ltp-option-chain .ltp-order-quantity strong { font-size: 16px; }
 .ltp-option-chain .ltp-order-error { margin: 10px 0; color: #ff929b; font-size: 12px; }
 .ltp-option-chain .ltp-order-actions { margin-top: 15px; }
@@ -2250,7 +2250,7 @@
   min-width: 232px !important;
   max-width: 232px !important;
   height: 38px !important;
-  padding: 0 11px !important;
+  padding: 0 8.8px !important;
   gap: 9px !important;
   justify-content: space-between !important;
   border-width: 2px !important;
@@ -2331,7 +2331,7 @@
   display: inline-block;
   width: fit-content;
   margin: 3px auto 0;
-  padding: 2px 5px;
+  padding: 1.6px 4px;
   border: 1px solid transparent;
   border-radius: 4px;
   font-size: 9px;
@@ -2383,7 +2383,7 @@
   }
 
   .ltp-option-chain .ltp-option-table thead th {
-    padding: 6px 3px !important;
+    padding: 4.8px 2.4px !important;
     font-size: 9px !important;
     line-height: 1.15 !important;
     white-space: normal !important;
@@ -2416,7 +2416,7 @@
   }
 
   .ltp-option-chain .ltp-option-table tbody td {
-    padding: 4px 3px !important;
+    padding: 3.2px 2.4px !important;
     font-size: 10px !important;
     line-height: 1.12 !important;
   }
@@ -2431,13 +2431,13 @@
 
   .ltp-option-chain .ltp-option-table .ltp-reversal {
     max-width: 100% !important;
-    padding: 3px 3px !important;
+    padding: 2.4px 2.4px !important;
     font-size: 8px !important;
     white-space: normal;
   }
 
   .ltp-option-chain .ltp-option-table .ltp-rank-badge {
-    padding: 1px 3px;
+    padding: 0.8px 2.4px;
     font-size: 8px;
   }
 
@@ -2456,8 +2456,8 @@
 .ltp-option-chain .ltp-overview-row .ltp-controls label.ltp-expiry-field select {
   width: 104px !important;
   min-width: 104px !important;
-  padding-left: 5px !important;
-  padding-right: 4px !important;
+  padding-left: 4px !important;
+  padding-right: 3.2px !important;
 }
 .ltp-option-chain .ltp-overview-row .ltp-controls label.ltp-price-field select {
   width: 110px !important;
@@ -2471,8 +2471,8 @@
 .ltp-option-chain .ltp-overview-row .ltp-controls .ltp-lot-size input {
   width: 38px !important;
   min-width: 38px !important;
-  padding-left: 4px !important;
-  padding-right: 2px !important;
+  padding-left: 3.2px !important;
+  padding-right: 1.6px !important;
 }
 .ltp-option-chain .ltp-reversal-wrap {
   position: relative;
@@ -2502,7 +2502,7 @@
   gap: 5px;
   width: max-content;
   max-width: 130px;
-  padding: 4px 6px;
+  padding: 3.2px 4.8px;
   border: 1px solid #64748b;
   border-radius: 5px;
   background: #111c2a;
@@ -2537,7 +2537,7 @@
   min-width: 186px !important;
   max-width: 186px !important;
   height: 30px !important;
-  padding: 0 9px !important;
+  padding: 0 7.2px !important;
   gap: 7px !important;
   font-size: 9px !important;
 }
@@ -2576,7 +2576,7 @@
   width: max-content !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  padding: 3px !important;
+  padding: 2.4px !important;
   margin: 0 !important;
   gap: 6px !important;
   display: flex !important;
@@ -2604,8 +2604,8 @@
   font-size: 10px !important;
   line-height: 1 !important;
   letter-spacing: 0 !important;
-  padding-left: 8px !important;
-  padding-right: 8px !important;
+  padding-left: 6.4px !important;
+  padding-right: 6.4px !important;
 }
 
 
@@ -2630,7 +2630,7 @@
 .ltp-option-chain .ltp-reversal-popover .ltp-reversal-ltp-action {
   border: 0;
   border-radius: 3px;
-  padding: 1px 3px;
+  padding: 0.8px 2.4px;
   background: transparent;
   color: #67e8f9;
   font: inherit;
@@ -2660,7 +2660,7 @@
   width: 100%;
   box-sizing: border-box;
   margin: 8px 0 10px;
-  padding: 0 4px;
+  padding: 0 3.2px;
 }
 .ltp-option-chain .ltp-contract-index-row .ltp-atm-contracts {
   width: 100%;
@@ -2724,7 +2724,7 @@
   width: 100%;
   box-sizing: border-box;
   margin: 8px 0 10px !important;
-  padding: 0 4px !important;
+  padding: 0 3.2px !important;
 }
 .ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts {
   width: 100% !important;
@@ -2751,7 +2751,7 @@
   min-width: 0 !important;
   flex: 1 1 0 !important;
   height: 40px !important;
-  padding: 0 8px !important;
+  padding: 0 6.4px !important;
   white-space: nowrap;
 }
 .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {
@@ -2864,7 +2864,7 @@
   max-width: none !important;
   height: 40px !important;
   min-height: 40px !important;
-  padding: 0 5px !important;
+  padding: 0 4px !important;
   margin: 0 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -2881,7 +2881,7 @@
   min-width: 0 !important;
   height: 40px !important;
   min-height: 40px !important;
-  padding: 0 5px !important;
+  padding: 0 4px !important;
   margin: 0 !important;
   white-space: nowrap !important;
   font-size: 10px !important;
@@ -2920,7 +2920,7 @@
 @media (max-width: 1150px) {
   .ltp-option-chain .ltp-contract-index-row {
     overflow-x: auto !important;
-    padding-bottom: 4px !important;
+    padding-bottom: 3.2px !important;
   }
 }
 
