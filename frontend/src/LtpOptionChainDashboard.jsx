@@ -547,7 +547,7 @@ export default function LtpOptionChainDashboard() {
 
     </div>
 
-    {activeView !== "swing-trade" && <div className="ltp-contract-index-row" aria-label="Option chain contract shortcuts">
+    {activeView === "option-chain" && <div className="ltp-contract-index-row" aria-label="Option chain contract shortcuts">
       <div className="ltp-atm-contracts" aria-label="ATM put contract">
         <button type="button" className="ltp-atm-contract put" onClick={() => openAtmOrder(atmPut)} disabled={!atmPut || !quoteForInstrument(atmPut)}>
           <strong>{atmPut?.tradingsymbol || '—'}</strong>
