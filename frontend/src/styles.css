@@ -3190,6 +3190,7 @@ select,input,textarea{
 .app-shell .kite-disabled,
 .app-shell .signal-tag,
 .app-shell .application-tabs,
-.app-shell .theme-switch {
+.app-shell .theme-switch,
+.app-shell .telegram-status {
   border-radius: 4px !important;
 }
