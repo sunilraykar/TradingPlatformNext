@@ -2923,3 +2923,9 @@
     padding-bottom: 4px !important;
   }
 }
+
+
+/* Defensive visibility guard: option-only shortcuts must never show in Swing Trade. */
+.ltp-option-chain[data-active-view="swing-trade"] .ltp-contract-index-row {
+  display: none !important;
+}
