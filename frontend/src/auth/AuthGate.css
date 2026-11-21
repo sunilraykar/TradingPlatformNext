@@ -38,4 +38,4 @@
 .user-status{font-size:10px;padding:3.2px 5.6px;border-radius:5px;background:#263750;color:#dbeafe}
 .user-status.active{background:#14372f;color:#bbf7d0}
 .user-status.disabled{background:#4b1f2a;color:#fecdd3}
-@media(max-width:640px){.auth-toolbar{padding:0 10px}.auth-toolbar>div{gap:8px;flex-direction:column;align-items:flex-start}.auth-toolbar small{font-size:9px}.auth-toolbar nav{gap:4px}.user-access-page{padding:16px}.user-invite-form{align-items:stretch;flex-direction:column}.user-invite-form button{width:100%}}
+@media(max-width:640px){.auth-toolbar{padding:0 8px}.auth-toolbar>div{gap:8px;flex-direction:column;align-items:flex-start}.auth-toolbar small{font-size:9px}.auth-toolbar nav{gap:4px}.user-access-page{padding:12.8px}.user-invite-form{align-items:stretch;flex-direction:column}.user-invite-form button{width:100%}}
