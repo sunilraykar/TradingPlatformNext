@@ -534,7 +534,7 @@ export default function LtpOptionChainDashboard() {
     ? (n(selectedQuote.last_price) - n(selectedQuote.ohlc.close)) / n(selectedQuote.ohlc.close) * 100 : null;
   const total = (field) => visibleRows.reduce((sum, row) => sum + (n(row[field]) || 0), 0);
 
-  return <section className="ltp-option-chain">
+  return <section className="ltp-option-chain" data-active-view={activeView}>
     <div className="ltp-overview-row">
     <nav className="ltp-section-tabs" aria-label="Market Intelligence view">
       <button type="button" className={activeView === "option-chain" ? "active" : ""} aria-current={activeView === "option-chain" ? "page" : undefined} onClick={() => setActiveView("option-chain")}>Option Chain</button>
@@ -547,7 +547,7 @@ export default function LtpOptionChainDashboard() {
 
     </div>
 
-    {activeView === "option-chain" && <div className="ltp-contract-index-row" aria-label="Option chain contract shortcuts">
+    {activeView !== "swing-trade" && <div className="ltp-contract-index-row" aria-label="Option chain contract shortcuts">
       <div className="ltp-atm-contracts" aria-label="ATM put contract">
         <button type="button" className="ltp-atm-contract put" onClick={() => openAtmOrder(atmPut)} disabled={!atmPut || !quoteForInstrument(atmPut)}>
           <strong>{atmPut?.tradingsymbol || '—'}</strong>
@@ -571,7 +571,8 @@ export default function LtpOptionChainDashboard() {
       </div>
     </div>}
 
-    {activeView === "swing-trade" ? <SwingTradePanel onSymbolSelect={openSymbolOptionChain} /> : <section className="ltp-workspace">
+    {activeView === "swing-trade" ? <SwingTradePanel onSymbolSelect={openSymbolOptionChain} /> : <>
+    <section className="ltp-workspace">
       <article className="ltp-option-panel">
         <div className="ltp-table-scroll"><table className="ltp-option-table">
           <thead><tr><th>CALL OI CHG</th><th>CALL OI</th><th>CALL VOLUME</th><th>CALL REVERSAL</th><th className="ltp-strike-head">STRIKE</th><th>PUT REVERSAL</th><th>PUT VOLUME</th><th>PUT OI</th><th>PUT OI CHG</th></tr></thead>
@@ -649,7 +650,8 @@ export default function LtpOptionChainDashboard() {
           </article>
         </section>
       </aside>
-    </section>}
+    </section>
+    </>}
 
     {orderDraft && <div className="ltp-order-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !orderSaving) setOrderDraft(null); }}>
       <form className="ltp-order-dialog" onSubmit={submitAtmPaperOrder}>
