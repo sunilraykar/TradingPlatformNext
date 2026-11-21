@@ -72,15 +72,15 @@ th, .calculated-table th, .historical-intraday-table-panel .kite-data-table th {
   font-size: var(--font-size-label) !important;
   line-height: 1.3;
   font-weight: var(--font-weight-semibold);
-  padding-top: 9px;
-  padding-bottom: 9px;
+  padding-top: 7.2px;
+  padding-bottom: 7.2px;
 }
 td, .calculated-table td, .historical-intraday-table-panel .kite-data-table td {
   font-size: var(--font-size-body) !important;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
-  padding-top: 9px;
-  padding-bottom: 9px;
+  padding-top: 7.2px;
+  padding-bottom: 7.2px;
 }
 
 /* Numeric data remains monospaced and aligned across rows and cards. */
