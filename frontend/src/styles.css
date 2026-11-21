@@ -3170,3 +3170,13 @@ select,input,textarea{
   }
 }
 
+
+/* Keep the global application navigation visible while dashboard content scrolls. */
+.app-shell > .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+  isolation: isolate;
+  background: var(--nav-bg, #222831);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .28);
+}
