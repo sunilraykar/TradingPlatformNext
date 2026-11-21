@@ -3180,3 +3180,16 @@ select,input,textarea{
   background: var(--nav-bg, #222831);
   box-shadow: 0 3px 10px rgba(0, 0, 0, .28);
 }
+
+
+/* Replace capsule-shaped controls and status chips with consistent rectangular styling. */
+.app-shell button,
+.app-shell .status-pill,
+.app-shell .trade-filter-button,
+.app-shell .kite-enabled,
+.app-shell .kite-disabled,
+.app-shell .signal-tag,
+.app-shell .application-tabs,
+.app-shell .theme-switch {
+  border-radius: 4px !important;
+}
