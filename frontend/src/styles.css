@@ -3194,3 +3194,10 @@ select,input,textarea{
 .app-shell .telegram-status {
   border-radius: 4px !important;
 }
+
+
+/* Higher-specificity correction for Trade Terminal's Show All Open/Closed controls. */
+.app-shell .trade-date-filter-panel .trade-terminal-filters .trade-show-all-group > .trade-filter-button,
+.app-shell .trade-date-filter-panel .trade-terminal-filters .trade-filter-buttons > .trade-filter-button {
+  border-radius: 4px !important;
+}
