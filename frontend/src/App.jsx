@@ -226,15 +226,15 @@ function PriceVwapChart({ rows, levels = [], entryStartTime = '10:00', entryEndT
   const hoveredBuffer = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined && hoveredRow.vwap !== 0 ? ((hoveredRow.price - hoveredRow.vwap) / hoveredRow.vwap) * 100 : null;
   const hoveredGap = hoveredRow?.price !== null && hoveredRow?.price !== undefined && hoveredRow?.vwap !== null && hoveredRow?.vwap !== undefined ? hoveredRow.price - hoveredRow.vwap : null;
   return <>
-    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '8px 0 14px', padding: '10px 14px', border: 'none', borderRadius: '0', background: 'transparent' }} aria-label="Intraday price action and market summary">
-      {showHeading && <div style={{ flex: '0 0 220px', minWidth: '180px' }}><div className="eyebrow">{headingEyebrow}</div><h2 style={{ margin: '5px 0 0', fontSize: '18px' }}>Future Price &amp; VWAP</h2></div>}
+    <div className="price-vwap-top-metrics" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'nowrap', gap: '12px', width: '100%', boxSizing: 'border-box', margin: '2px 0 8px', padding: '6px 8px', border: 'none', borderRadius: '0', background: 'transparent' }} aria-label="Intraday price action and market summary">
+      
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '1 1 auto', minWidth: 0 }}>
-      <div style={{ minWidth: '150px', padding: '0 18px', textAlign: 'center' }}>
+      <div style={{ minWidth: '110px', padding: '0 10px', textAlign: 'center' }}>
         <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>PRICE</div>
         <strong className={'index-price-value ' + indexChangeDirection} style={{ display: 'block', marginTop: '4px', fontSize: '18px' }}>{formatHoverNumber(summaryPrice, 2)}</strong>
         {summary?.dayChangePercent != null && <strong className={indexChangeDirection} style={{ display: 'block', marginTop: '2px', fontSize: '12px' }}>{number(summary.dayChangePercent)}%{summary.dayChangeAbsolute == null ? '' : ` (${summary.dayChangeAbsolute > 0 ? '+' : ''}${number(summary.dayChangeAbsolute)})`}</strong>}
       </div>
-      <div style={{ minWidth: '130px', padding: '0 18px', textAlign: 'center', borderLeft: '1px solid var(--border-color, #263449)' }}>
+      <div style={{ minWidth: '105px', padding: '0 10px', textAlign: 'center', borderLeft: '1px solid var(--border-color, #263449)' }}>
         <div style={{ color: 'var(--muted, #8da0bb)', fontSize: '10px' }}>CALL STRENGTH</div>
         <strong style={{ display: 'block', marginTop: '4px', fontSize: '18px', color: '#34d399' }}>{callStrength == null ? '—' : `${number(callStrength)}%`}</strong>
       </div>
