@@ -3201,3 +3201,84 @@ select,input,textarea{
 .app-shell .trade-date-filter-panel .trade-terminal-filters .trade-filter-buttons > .trade-filter-button {
   border-radius: 4px !important;
 }
+
+
+/* AutoTrender live chart and active-trades layout refinement. */
+@media (min-width: 1101px) {
+  .price-vwap-workspace {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 4fr);
+    align-items: stretch;
+  }
+  .price-vwap-workspace .price-vwap-panel,
+  .price-vwap-workspace .autotrend-active-trades {
+    height: 100%;
+    min-height: 0;
+  }
+}
+.price-vwap-workspace .price-vwap-chart {
+  height: 225px;
+}
+.price-vwap-workspace .autotrend-active-trades {
+  max-height: none;
+  overflow: hidden;
+}
+.price-vwap-workspace .autotrend-active-trades-list {
+  min-height: 0;
+  max-height: none;
+  flex: 1 1 auto;
+  overflow: auto;
+}
+.price-vwap-workspace .autotrend-trades-table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-size: 10px;
+}
+.price-vwap-workspace .autotrend-trades-table th {
+  padding: 5px 2px;
+  font-size: 9px;
+  letter-spacing: 0;
+  text-align: center;
+}
+.price-vwap-workspace .autotrend-trades-table td {
+  padding: 6px 2px;
+  font-size: 10px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.price-vwap-workspace .autotrend-trades-table th:first-child,
+.price-vwap-workspace .autotrend-trades-table td:first-child {
+  width: 31%;
+  text-align: left;
+}
+.price-vwap-workspace .autotrend-trades-table th:nth-child(2),
+.price-vwap-workspace .autotrend-trades-table td:nth-child(2),
+.price-vwap-workspace .autotrend-trades-table th:nth-child(3),
+.price-vwap-workspace .autotrend-trades-table td:nth-child(3),
+.price-vwap-workspace .autotrend-trades-table th:nth-child(4),
+.price-vwap-workspace .autotrend-trades-table td:nth-child(4),
+.price-vwap-workspace .autotrend-trades-table th:nth-child(5),
+.price-vwap-workspace .autotrend-trades-table td:nth-child(5),
+.price-vwap-workspace .autotrend-trades-table th:nth-child(6),
+.price-vwap-workspace .autotrend-trades-table td:nth-child(6) {
+  width: 13.8%;
+}
+.price-vwap-workspace .autotrend-trades-table td:first-child {
+  font-size: 9px;
+}
+.price-vwap-workspace .autotrend-trades-table .autotrend-trade-status {
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.price-vwap-workspace .autotrend-trades-table .autotrend-trade-status.open {
+  color: var(--green, #34d399);
+}
+.price-vwap-workspace .autotrend-trades-table .autotrend-trade-status.closed {
+  color: var(--muted, #94a3b8);
+}
+@media (max-width: 1100px) {
+  .price-vwap-workspace .price-vwap-chart { height: 225px; }
+  .price-vwap-workspace .autotrend-active-trades { max-height: 520px; }
+}
