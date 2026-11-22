@@ -507,6 +507,13 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
   const renderTradeDetails = () => {
     if (!selectedTrade) return null;
     const trade = selectedTrade;
+    const entryPrice = Number(trade.average_entry_price ?? trade.entry_price);
+    const exitPrice = Number(trade.average_exit_price ?? trade.exit_price);
+    const tradeQuantity = Number(trade.quantity);
+    const calculatedRealizedPnl = Number.isFinite(entryPrice) && Number.isFinite(exitPrice) && Number.isFinite(tradeQuantity)
+      ? (exitPrice - entryPrice) * tradeQuantity * (String(trade.direction || 'BUY').toUpperCase() === 'SELL' ? -1 : 1)
+      : null;
+    const realizedPnl = trade.net_realized_pnl ?? trade.gross_realized_pnl ?? trade.realized_pnl ?? calculatedRealizedPnl;
     const detailItems = [
       ['Underlying', trade.underlying], ['Instrument', trade.instrument_symbol],
       ['Exchange', trade.exchange], ['Mode', trade.execution_mode],
@@ -518,11 +525,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
       ['Last price', trade.last_price ?? trade.average_exit_price ?? trade.exit_price],
       ['Stop loss', trade.stop_loss], ['Target', trade.target],
       ['Exit price', trade.average_exit_price ?? trade.exit_price],
-      ['Realized P&L', trade.net_realized_pnl ?? trade.gross_realized_pnl ?? trade.realized_pnl ??
-        (trade.average_entry_price ?? trade.entry_price) != null && (trade.average_exit_price ?? trade.exit_price) != null && trade.quantity != null
-          ? ((Number(trade.average_exit_price ?? trade.exit_price) - Number(trade.average_entry_price ?? trade.entry_price)) *
-              Number(trade.quantity) * (String(trade.direction || 'BUY').toUpperCase() === 'SELL' ? -1 : 1))
-          : null],
+      ['Realized P&L', realizedPnl],
       ['Unrealized P&L', String(trade.status || '').toUpperCase() === 'CLOSED' ? 'Not applicable — trade closed' : trade.unrealized_pnl],
       ['Exit reason', trade.exit_reason], ['Exit method', trade.exit_method],
       ['Created', trade.created_at ? new Date(trade.created_at).toLocaleString() : '—'],
