@@ -3418,6 +3418,20 @@ select,input,textarea{
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
+.autotrend-compact-pnl.positive {
+  background: rgba(22, 163, 74, .12);
+  border: 1px solid rgba(34, 197, 94, .28);
+}
+.autotrend-compact-pnl.positive strong { color: #22c55e; }
+.autotrend-compact-pnl.negative {
+  background: rgba(220, 38, 38, .12);
+  border: 1px solid rgba(248, 113, 113, .28);
+}
+.autotrend-compact-pnl.negative strong { color: #f87171; }
+.autotrend-compact-pnl.neutral {
+  border: 1px solid var(--border-color, rgba(148,163,184,.2));
+}
+.autotrend-compact-pnl.neutral strong { color: var(--text, #e5edf8); }
 .autotrend-compact-meta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
