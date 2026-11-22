@@ -3282,3 +3282,41 @@ select,input,textarea{
   .price-vwap-workspace .price-vwap-chart { height: 225px; }
   .price-vwap-workspace .autotrend-active-trades { max-height: 520px; }
 }
+
+
+/* Live single-index chart: compact top metrics; heading intentionally omitted. */
+.price-vwap-workspace .price-vwap-top-metrics {
+  gap: 6px !important;
+  margin: 2px 0 8px !important;
+  padding: 5px 6px !important;
+  min-height: 58px;
+}
+.price-vwap-workspace .price-vwap-top-metrics > div {
+  min-width: 0 !important;
+  padding-left: 7px !important;
+  padding-right: 7px !important;
+}
+.price-vwap-workspace .price-vwap-top-metrics > div > div {
+  font-size: 9px !important;
+  line-height: 1.15 !important;
+  letter-spacing: .25px;
+}
+.price-vwap-workspace .price-vwap-top-metrics strong {
+  font-size: 14px !important;
+  line-height: 1.2 !important;
+}
+.price-vwap-workspace .price-vwap-top-metrics strong.index-price-value {
+  font-size: 16px !important;
+}
+.price-vwap-workspace .price-vwap-top-metrics > .chart-contract-entry {
+  padding: 5px 7px !important;
+}
+.price-vwap-workspace .chart-enter-card {
+  min-width: 76px;
+  min-height: 42px;
+  padding: 4px 6px;
+  gap: 3px;
+}
+.price-vwap-workspace .chart-enter-card strong {
+  font-size: 13px !important;
+}
