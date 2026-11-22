@@ -126,7 +126,7 @@ def _evaluate_trade(trade: dict[str, Any], row: dict[str, Any], now: datetime) -
     if state.get("last_source_timestamp") == reading["timestamp"]:
         return {}, None
 
-    previous = state.get("last_reading") if isinstance(state.get("last_reading"), dict) else {}
+    previous = state.get("last_valid_reading") if isinstance(state.get("last_valid_reading"), dict) else {}
     counters = dict(state.get("counters") or {})
     for name in ("strength", "dominance", "pcr"):
         counters[name] = int(counters.get(name) or 0)
@@ -134,36 +134,43 @@ def _evaluate_trade(trade: dict[str, Any], row: dict[str, Any], now: datetime) -
     vwap_signal = reading["vwap_signal"]
     option_signal = reading["option_signal"]
     reason = None
-    if vwap_signal in {"BUY", "SELL"} and vwap_signal != direction:
+    if vwap_signal in {"BUY", "SELL"} and option_signal in {"BUY", "SELL"} and vwap_signal != option_signal:
+        reason = "AUTOTRENDER_DIRECTIONAL_SIGNAL_MISMATCH"
+    elif vwap_signal in {"BUY", "SELL"} and vwap_signal != direction:
         reason = "AUTOTRENDER_VWAP_SIGNAL_REVERSAL"
     elif option_signal in {"BUY", "SELL"} and option_signal != direction:
         reason = "AUTOTRENDER_OPTION_SIGNAL_REVERSAL"
-    elif vwap_signal in {"BUY", "SELL"} and option_signal in {"BUY", "SELL"} and vwap_signal != option_signal:
-        reason = "AUTOTRENDER_DIRECTIONAL_SIGNAL_MISMATCH"
 
     previous_strength = _number(previous.get("strength_advantage"))
     current_strength = reading["strength_advantage"]
-    if current_strength is not None and previous_strength is not None:
-        adverse_strength = current_strength < previous_strength
-        counters["strength"] = counters["strength"] + 1 if adverse_strength else 0
-    # The first valid observation seeds the comparison; it is not a decline.
+    if current_strength is not None:
+        if previous_strength is not None:
+            adverse_strength = current_strength < previous_strength
+            counters["strength"] = counters["strength"] + 1 if adverse_strength else 0
+        previous["strength_advantage"] = current_strength
+    # Invalid observations neither increment nor reset a counter/baseline.
 
     previous_diff = _number(previous.get("diff"))
     current_diff = reading["diff"]
-    if current_diff is not None and previous_diff is not None:
-        # BUY dominance is stronger as Diff becomes more negative.
-        # SELL dominance is stronger as Diff becomes more positive.
-        adverse_dominance = current_diff > previous_diff if direction == "BUY" else current_diff < previous_diff
-        counters["dominance"] = counters["dominance"] + 1 if adverse_dominance else 0
+    if current_diff is not None:
+        if previous_diff is not None:
+            # BUY dominance is stronger as Diff becomes more negative.
+            # SELL dominance is stronger as Diff becomes more positive.
+            adverse_dominance = current_diff > previous_diff if direction == "BUY" else current_diff < previous_diff
+            counters["dominance"] = counters["dominance"] + 1 if adverse_dominance else 0
+        previous["diff"] = current_diff
 
     previous_pcr = _number(previous.get("pcr"))
     current_pcr = reading["pcr"]
-    if current_pcr is not None and previous_pcr is not None:
-        adverse_pcr = current_pcr < previous_pcr if direction == "BUY" else current_pcr > previous_pcr
-        counters["pcr"] = counters["pcr"] + 1 if adverse_pcr else 0
+    if current_pcr is not None:
+        if previous_pcr is not None:
+            adverse_pcr = current_pcr < previous_pcr if direction == "BUY" else current_pcr > previous_pcr
+            counters["pcr"] = counters["pcr"] + 1 if adverse_pcr else 0
+        previous["pcr"] = current_pcr
 
     state = {
         "last_source_timestamp": reading["timestamp"],
+        "last_valid_reading": previous,
         "last_reading": reading,
         "counters": counters,
         "updated_at": now.astimezone(IST).isoformat(),
