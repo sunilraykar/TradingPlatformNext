@@ -47,6 +47,7 @@ class Evaluation:
     reason: str
     strength_difference: float | None = None
     vwap_difference_percent: float | None = None
+    entry_signal_snapshot: dict[str, Any] | None = None
 
 
 def evaluate_signal(
@@ -99,4 +100,28 @@ def evaluate_signal(
         return Evaluation(False, None, "PCR_DIRECTION_CONDITION_FAILED", strength_difference, vwap_difference)
     if direction == "SELL" and pcr >= put_pcr:
         return Evaluation(False, None, "PCR_DIRECTION_CONDITION_FAILED", strength_difference, vwap_difference)
-    return Evaluation(True, direction, "ELIGIBLE", strength_difference, vwap_difference)
+
+    price_vwap_difference = price - vwap
+    entry_signal_snapshot = {
+        "call_strength": call,
+        "put_strength": put,
+        "call_strength_percentage": call_pct,
+        "put_strength_percentage": put_pct,
+        "strength_difference": strength_difference,
+        "signed_strength_difference": signed_strength_difference,
+        "strength_difference_threshold": strength_threshold,
+        "market_price": price,
+        "vwap_price": vwap,
+        "price_vwap_difference": price_vwap_difference,
+        "price_vwap_difference_percent": (price_vwap_difference / price) * 100,
+        "vwap_difference_percent": vwap_difference,
+        "vwap_price_difference_buffer": abs(vwap_price_difference_buffer),
+        "vwap_signal": vwap_signal,
+        "option_signal": option_signal,
+        "directional_signals_match": vwap_signal == option_signal,
+        "pcr": pcr,
+        "call_pcr_threshold": call_pcr,
+        "put_pcr_threshold": put_pcr,
+        "signal_direction": direction,
+    }
+    return Evaluation(True, direction, "ELIGIBLE", strength_difference, vwap_difference, entry_signal_snapshot)
