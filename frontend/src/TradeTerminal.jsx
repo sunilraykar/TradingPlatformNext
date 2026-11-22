@@ -91,6 +91,30 @@ const formatTradeDuration = (trade, now = Date.now()) => {
       ? `${hours}h ${minutes}m ${seconds}s`
       : `${minutes}m ${seconds}s`;
 };
+const autoTrenderSnapshotColumns = [
+  ['call_strength', 'Call Strength'],
+  ['call_strength_percentage', 'Call Strength %'],
+  ['put_strength', 'Put Strength'],
+  ['put_strength_percentage', 'Put Strength %'],
+  ['strength_difference', 'Strength Difference'],
+  ['signed_strength_difference', 'Signed Strength Difference'],
+  ['strength_difference_threshold', 'Strength Difference Threshold'],
+  ['market_price', 'Market Price'],
+  ['vwap_price', 'VWAP Price'],
+  ['price_vwap_difference', 'Price / VWAP Difference'],
+  ['price_vwap_difference_percent', 'Price / VWAP Difference %'],
+  ['vwap_difference_percent', 'Absolute VWAP Difference %'],
+  ['vwap_price_difference_buffer', 'VWAP Difference Buffer'],
+  ['vwap_signal', 'VWAP Signal'],
+  ['option_signal', 'Option Signal'],
+  ['directional_signals_match', 'Signals Match'],
+  ['pcr', 'PCR'],
+  ['call_pcr_threshold', 'Call PCR Threshold'],
+  ['put_pcr_threshold', 'Put PCR Threshold'],
+  ['signal_direction', 'Signal Direction'],
+  ['signal_timestamp', 'Signal Timestamp'],
+  ['signal_evaluated_at', 'Evaluated At'],
+];
 const trailCount = (trade, field) => {
   const candidates = field === 'target'
     ? [trade.target_trail_count, trade.target_trailings, trade.target_trail_count_total, trade.target_trail_count]
@@ -277,6 +301,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
     });
   const tradesMatchingOtherFilters = tradesMatchingBaseFilters;
   const visibleTrades = tradesMatchingOtherFilters;
+  const showAutoTrenderSnapshotColumns = columnPreset === 'AutoTrender' && sourceFilter === 'AUTOTRENDER';
 
   const create = async (event) => {
     event.preventDefault(); setSaving(true); setError('');
@@ -659,9 +684,9 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
       
     </div>
     </section>
-    <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr>{([... [['execution_mode','Mode'],['underlying','Underlying'],['instrument_symbol','Instrument'],['direction','Side'],['quantity','Qty'],['average_entry_price','Entry'],...(columnPreset === 'Detailed' ? [['duration','Duration']] : []),['last_price','Last price'],['stop_loss','SL'],['target','Target'],['display_pnl','P&L'],['average_exit_price','Exit price'],['status','Status']], ...(columnPreset === 'Basic' ? [['trailing_strategy','Trailing Strategy']] : columnPreset === 'AutoTrender' ? [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy']] : [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy'],['updated_at','Updated']])]).map(([key,label]) => <th key={key}><button type="button" className="trade-sort-header" onClick={() => toggleSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button></th>)}<th>Action</th></tr></thead><tbody>
-      {displayedTrades.map((trade) => { return <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].includes(String(trade.underlying || '').trim().toUpperCase()) ? <button type="button" className="trade-symbol-link" title={`Open ${String(trade.underlying).toUpperCase()} in AutoTrender`} onClick={() => onUnderlyingSelect?.(trade.underlying)}>{fmt(trade.underlying)}</button> : fmt(trade.underlying)}</td><td><button type="button" className="trade-symbol-link" onClick={() => setDetailsTrade(trade)}>{fmt(trade.instrument_symbol)}</button></td><td>{fmt(trade.direction)}</td><td>{fmt(trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td>{columnPreset === 'Detailed' && <td title={`Entry: ${trade.entry_time || trade.created_at || 'unknown'}; End: ${isTerminalStatus(trade.status) ? (trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at || 'unknown') : 'now'}`}>{formatTradeDuration(trade, durationNow)}</td>}<td>{fmt(trade.last_price)}</td><td><span className="trade-trail-value">{fmt(trade.stop_loss)}{trailCount(trade, 'stop_loss') > 0 && <sub title={`Stop-loss trailed ${trailCount(trade, 'stop_loss')} times`}>{trailCount(trade, 'stop_loss')}</sub>}</span></td><td><span className="trade-trail-value">{fmt(trade.target)}{trailCount(trade, 'target') > 0 && <sub title={`Target trailed ${trailCount(trade, 'target')} times`}>{trailCount(trade, 'target')}</sub>}</span></td><td className={trade.display_pnl === null ? 'holding-pnl-zero' : trade.display_pnl > 0 ? 'holding-pnl-positive' : trade.display_pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero'}>{formatPnl(trade.display_pnl)}</td><td>{fmt(trade.average_exit_price ?? trade.exit_price)}</td><td>{fmt(trade.status)}</td>{(columnPreset === 'Basic' ? [trade.trailing_strategy] : columnPreset === 'AutoTrender' ? [trade.source, trade.strategy, trade.trailing_strategy] : [trade.source, trade.strategy, trade.trailing_strategy, trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—']).map((value,index) => <td key={index}>{fmt(value)}</td>)}<td>{trade.execution_mode === 'PAPER' && !isTerminalStatus(trade.status) && <><button type="button" className="button secondary trade-close-button" onClick={() => openEditDialog(trade)}>Edit</button><button type="button" className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button></>}</td></tr> })}
-      {!displayedTrades.length && <tr><td colSpan={columnPreset === 'Basic' ? 14 : columnPreset === 'AutoTrender' ? 16 : 18} className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or sync live positions.'}</td></tr>}
+    <section className="panel trade-terminal-table-panel"><div className="table-scroll trade-terminal-table-scroll"><table className="kite-data-table trade-terminal-table"><thead><tr>{([... [['execution_mode','Mode'],['underlying','Underlying'],['instrument_symbol','Instrument'],['direction','Side'],['quantity','Qty'],['average_entry_price','Entry'],...(columnPreset === 'Detailed' ? [['duration','Duration']] : []),['last_price','Last price'],['stop_loss','SL'],['target','Target'],['display_pnl','P&L'],['average_exit_price','Exit price'],['status','Status']], ...(columnPreset === 'Basic' ? [['trailing_strategy','Trailing Strategy']] : columnPreset === 'AutoTrender' ? [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy']] : [['source','Source'],['strategy','Strategy'],['trailing_strategy','Trailing Strategy'],['updated_at','Updated']])]).map(([key,label]) => <th key={key}><button type="button" className="trade-sort-header" onClick={() => toggleSort(key)}>{label}{sortConfig.key === key ? (sortConfig.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button></th>)}{showAutoTrenderSnapshotColumns && autoTrenderSnapshotColumns.map(([key,label]) => <th key={key} title={label}>{label}</th>)}<th>Action</th></tr></thead><tbody>
+      {displayedTrades.map((trade) => { return <tr key={trade.trade_id}><td><span className={'trade-mode-pill ' + String(trade.execution_mode).toLowerCase()}>{trade.execution_mode}</span></td><td>{['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX'].includes(String(trade.underlying || '').trim().toUpperCase()) ? <button type="button" className="trade-symbol-link" title={`Open ${String(trade.underlying).toUpperCase()} in AutoTrender`} onClick={() => onUnderlyingSelect?.(trade.underlying)}>{fmt(trade.underlying)}</button> : fmt(trade.underlying)}</td><td><button type="button" className="trade-symbol-link" onClick={() => setDetailsTrade(trade)}>{fmt(trade.instrument_symbol)}</button></td><td>{fmt(trade.direction)}</td><td>{fmt(trade.quantity)}</td><td>{fmt(trade.average_entry_price ?? trade.entry_price)}</td>{columnPreset === 'Detailed' && <td title={`Entry: ${trade.entry_time || trade.created_at || 'unknown'}; End: ${isTerminalStatus(trade.status) ? (trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at || 'unknown') : 'now'}`}>{formatTradeDuration(trade, durationNow)}</td>}<td>{fmt(trade.last_price)}</td><td><span className="trade-trail-value">{fmt(trade.stop_loss)}{trailCount(trade, 'stop_loss') > 0 && <sub title={`Stop-loss trailed ${trailCount(trade, 'stop_loss')} times`}>{trailCount(trade, 'stop_loss')}</sub>}</span></td><td><span className="trade-trail-value">{fmt(trade.target)}{trailCount(trade, 'target') > 0 && <sub title={`Target trailed ${trailCount(trade, 'target')} times`}>{trailCount(trade, 'target')}</sub>}</span></td><td className={trade.display_pnl === null ? 'holding-pnl-zero' : trade.display_pnl > 0 ? 'holding-pnl-positive' : trade.display_pnl < 0 ? 'holding-pnl-negative' : 'holding-pnl-zero'}>{formatPnl(trade.display_pnl)}</td><td>{fmt(trade.average_exit_price ?? trade.exit_price)}</td><td>{fmt(trade.status)}</td>{(columnPreset === 'Basic' ? [trade.trailing_strategy] : columnPreset === 'AutoTrender' ? [trade.source, trade.strategy, trade.trailing_strategy] : [trade.source, trade.strategy, trade.trailing_strategy, trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—']).map((value,index) => <td key={index}>{fmt(value)}</td>)}{showAutoTrenderSnapshotColumns && autoTrenderSnapshotColumns.map(([key]) => <td key={key}>{fmt(trade.entry_signal_snapshot?.[key])}</td>)}<td>{trade.execution_mode === 'PAPER' && !isTerminalStatus(trade.status) && <><button type="button" className="button secondary trade-close-button" onClick={() => openEditDialog(trade)}>Edit</button><button type="button" className="button secondary trade-close-button" onClick={() => openCloseDialog(trade)}>Close</button></>}</td></tr> })}
+      {!displayedTrades.length && <tr><td colSpan={(columnPreset === 'Basic' ? 14 : columnPreset === 'AutoTrender' ? 16 : 18) + (showAutoTrenderSnapshotColumns ? autoTrenderSnapshotColumns.length : 0)} className="empty-cell">{loading ? 'Loading canonical trades…' : 'No trades match these filters. Create a paper trade or sync live positions.'}</td></tr>}
     </tbody></table></div></section>
   </section>;
 }
