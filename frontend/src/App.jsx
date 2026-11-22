@@ -514,17 +514,32 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
       ? (exitPrice - entryPrice) * tradeQuantity * (String(trade.direction || 'BUY').toUpperCase() === 'SELL' ? -1 : 1)
       : null;
     const realizedPnl = trade.net_realized_pnl ?? trade.gross_realized_pnl ?? trade.realized_pnl ?? calculatedRealizedPnl;
+    const isClosed = String(trade.status || '').toUpperCase() === 'CLOSED';
+    const pnlValue = isClosed ? realizedPnl : (trade.unrealized_pnl ?? tradePnl(trade));
+    const startedAt = new Date(trade.entry_time || trade.created_at || trade.opened_at || Date.now()).getTime();
+    const endedAt = isClosed
+      ? new Date(trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at || Date.now()).getTime()
+      : Date.now();
+    const elapsedSeconds = Number.isFinite(startedAt) && Number.isFinite(endedAt)
+      ? Math.max(0, Math.floor((endedAt - startedAt) / 1000))
+      : null;
+    const duration = elapsedSeconds === null ? 'Not recorded' : (() => {
+      const days = Math.floor(elapsedSeconds / 86400);
+      const hours = Math.floor((elapsedSeconds % 86400) / 3600);
+      const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+      const seconds = elapsedSeconds % 60;
+      return [days ? days + 'd' : '', hours ? hours + 'h' : '', minutes ? minutes + 'm' : '', (!days && !hours) || seconds ? seconds + 's' : ''].filter(Boolean).join(' ') || '0s';
+    })();
     const detailItems = [
-      ['Underlying', trade.underlying], ['Instrument', trade.instrument_symbol],
-      ['Exchange', trade.exchange], ['Mode', trade.execution_mode],
+      ['Instrument', trade.instrument_symbol],
       ['Source', trade.source], ['Strategy', trade.strategy],
-      ['Direction', trade.direction], ['Status', trade.status],
-      ['Quantity', String(trade.status || '').toUpperCase() === 'CLOSED' ? trade.quantity : (trade.open_quantity ?? trade.quantity)],
+      ['Direction', trade.direction], ['Status', trade.status], ['Duration', duration],
+      ['Quantity', isClosed ? trade.quantity : (trade.open_quantity ?? trade.quantity)],
       ['Entry price', trade.average_entry_price ?? trade.entry_price],
       ['Last price', trade.last_price ?? trade.average_exit_price ?? trade.exit_price],
       ['Stop loss', trade.stop_loss], ['Target', trade.target],
       ['Exit price', trade.average_exit_price ?? trade.exit_price],
-      ['P&L', String(trade.status || '').toUpperCase() === 'CLOSED' ? realizedPnl : (trade.unrealized_pnl ?? tradePnl(trade))],
+      ['P&L', pnlValue],
       ['Exit reason', trade.exit_reason], ['Exit method', trade.exit_method],
       ['Created', trade.created_at ? new Date(trade.created_at).toLocaleString() : '—'],
       ['Updated', trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'],
@@ -548,7 +563,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
       <div className="panel trade-create-form trade-create-modal trade-details-modal" role="dialog" aria-modal="true" aria-labelledby="autotrend-trade-details-title">
         <div className="trade-modal-heading"><div><h2 id="autotrend-trade-details-title">Trade details</h2><p>{trade.exchange || '—'}:{trade.instrument_symbol || '—'} · {trade.execution_mode || '—'} · {String(trade.status || '—').toUpperCase()}</p></div><button className="button secondary" type="button" onClick={() => setSelectedTrade(null)}>✕</button></div>
         <div className="trade-details-grid">
-          {detailItems.map(([label, value]) => <div className="trade-detail-item" key={label}><span>{label}</span><strong>{displayValue(value)}</strong></div>)}
+          {detailItems.map(([label, value]) => <div className={`trade-detail-item${label === 'P&L' && typeof value === 'number' ? (value > 0 ? ' positive' : value < 0 ? ' negative' : '') : ''}`} key={label}><span>{label}</span><strong>{label === 'P&L' && typeof value === 'number' ? value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'exceptZero' }) : displayValue(value)}</strong></div>)}
         </div>
         {String(trade.source || '').trim().toUpperCase() === 'AUTOTRENDER' && snapshot && <section className="trade-details-notes" style={{ marginTop: 18 }}>
           <h3 style={{ margin: '0 0 12px' }}>AutoTrender Entry Signal Snapshot</h3>
