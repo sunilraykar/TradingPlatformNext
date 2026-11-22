@@ -533,7 +533,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
     const detailItems = [
       ['Instrument', trade.instrument_symbol],
       ['Source', trade.source], ['Strategy', trade.strategy],
-      ['Direction', trade.direction], ['Status', trade.status], ['Duration', duration],
+      ['Direction', trade.direction], ['Duration', duration],
       ['Quantity', isClosed ? trade.quantity : (trade.open_quantity ?? trade.quantity)],
       ['Entry price', trade.average_entry_price ?? trade.entry_price],
       ['Last price', trade.last_price ?? trade.average_exit_price ?? trade.exit_price],
