@@ -496,6 +496,36 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
             ['Updated', detailsTrade.updated_at ? new Date(detailsTrade.updated_at).toLocaleString() : '—'],
           ].map(([label, value]) => <div className="trade-detail-item" key={label}><span>{label}</span><strong>{label === 'Calculated P&L' ? formatPnl(value) : fmt(value)}</strong></div>)}
         </div>
+        {sourceFilter === 'AUTOTRENDER' && columnPreset === 'AutoTrender' &&
+          String(detailsTrade.source || '').trim().toUpperCase() === 'AUTOTRENDER' &&
+          detailsTrade.entry_signal_snapshot && typeof detailsTrade.entry_signal_snapshot === 'object' &&
+          <section className="trade-details-notes" style={{ marginTop: 18 }}>
+            <h3 style={{ margin: '0 0 12px' }}>AutoTrender Entry Signal Snapshot</h3>
+            <div className="trade-details-grid">
+              {[
+                ['Call Strength', detailsTrade.entry_signal_snapshot.call_strength],
+                ['Call Strength %', detailsTrade.entry_signal_snapshot.call_strength_percentage == null ? null : fmt(detailsTrade.entry_signal_snapshot.call_strength_percentage) + '%'],
+                ['Put Strength', detailsTrade.entry_signal_snapshot.put_strength],
+                ['Put Strength %', detailsTrade.entry_signal_snapshot.put_strength_percentage == null ? null : fmt(detailsTrade.entry_signal_snapshot.put_strength_percentage) + '%'],
+                ['Strength Difference', detailsTrade.entry_signal_snapshot.strength_difference],
+                ['Strength Difference Threshold', detailsTrade.entry_signal_snapshot.strength_difference_threshold],
+                ['Market Price', detailsTrade.entry_signal_snapshot.market_price],
+                ['VWAP Price', detailsTrade.entry_signal_snapshot.vwap_price],
+                ['Price / VWAP Difference', detailsTrade.entry_signal_snapshot.price_vwap_difference],
+                ['Price / VWAP Difference %', detailsTrade.entry_signal_snapshot.price_vwap_difference_percent == null ? null : fmt(detailsTrade.entry_signal_snapshot.price_vwap_difference_percent) + '%'],
+                ['VWAP Difference Buffer', detailsTrade.entry_signal_snapshot.vwap_price_difference_buffer],
+                ['VWAP Signal', detailsTrade.entry_signal_snapshot.vwap_signal],
+                ['Option Signal', detailsTrade.entry_signal_snapshot.option_signal],
+                ['Signals Match', detailsTrade.entry_signal_snapshot.directional_signals_match],
+                ['PCR', detailsTrade.entry_signal_snapshot.pcr],
+                ['Call PCR Threshold', detailsTrade.entry_signal_snapshot.call_pcr_threshold],
+                ['Put PCR Threshold', detailsTrade.entry_signal_snapshot.put_pcr_threshold],
+                ['Signal Direction', detailsTrade.entry_signal_snapshot.signal_direction],
+                ['Signal Timestamp', detailsTrade.entry_signal_snapshot.signal_timestamp],
+                ['Evaluated At', detailsTrade.entry_signal_snapshot.signal_evaluated_at],
+              ].map(([label, value]) => <div className="trade-detail-item" key={label}><span>{label}</span><strong>{fmt(value)}</strong></div>)}
+            </div>
+          </section>}
         {detailsTrade.notes && <div className="trade-details-notes"><span>Notes</span><p>{detailsTrade.notes}</p></div>}
         {detailsTrade.execution_mode === 'PAPER' && <p className="trade-paper-notice">Paper trade only. Closing a trade records a simulated exit; no broker order is placed.</p>}
       </div>
