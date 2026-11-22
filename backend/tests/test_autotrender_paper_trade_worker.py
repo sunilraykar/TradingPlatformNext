@@ -93,7 +93,11 @@ def test_run_cycle_creates_paper_trade_for_fresh_eligible_signal(monkeypatch):
     }
     monkeypatch.setattr(worker, "_read_settings", lambda: settings)
     monkeypatch.setattr(worker, "_fetch_intraday", lambda index: {"data": [row]})
-    monkeypatch.setattr(worker, "_create_paper_trade", lambda *args: {"trade_id": "paper-123"})
+    monkeypatch.setattr(
+        worker,
+        "_create_paper_trade",
+        lambda *args, **kwargs: {"trade_id": "paper-123"},
+    )
     worker._LAST_SIGNAL_BY_INDEX.clear()
 
     result = worker.run_cycle(now)
@@ -120,7 +124,11 @@ def test_run_cycle_allows_signal_without_recognized_timestamp(monkeypatch):
     monkeypatch.setattr(worker, "_read_settings", lambda: settings)
     monkeypatch.setattr(worker, "_fetch_intraday", lambda index: {"data": [row]})
     created = []
-    monkeypatch.setattr(worker, "_create_paper_trade", lambda *args: created.append(args) or {"trade_id": "paper-fallback"})
+    monkeypatch.setattr(
+        worker,
+        "_create_paper_trade",
+        lambda *args, **kwargs: created.append((args, kwargs)) or {"trade_id": "paper-fallback"},
+    )
     worker._LAST_SIGNAL_BY_INDEX.clear()
 
     result = worker.run_cycle(now)
@@ -128,8 +136,7 @@ def test_run_cycle_allows_signal_without_recognized_timestamp(monkeypatch):
     outcome = result["indices"]["NIFTY"]
     assert outcome["state"] == "paper_trade_created"
     assert outcome["trade_id"] == "paper-fallback"
-    assert created[0][3] == now.replace(second=0, microsecond=0)
-
+    assert created[0][0][3] == now.replace(second=0, microsecond=0)
 
 
 def test_max_signal_age_is_validated_independently_from_poll_interval():
@@ -138,7 +145,6 @@ def test_max_signal_age_is_validated_independently_from_poll_interval():
     assert _max_signal_age_seconds(0) == 1
     assert _max_signal_age_seconds(99999) == 3600
     assert _max_signal_age_seconds("invalid") == 300
-
 
 
 def test_live_quote_timestamp_must_be_present_recent_and_not_future():
