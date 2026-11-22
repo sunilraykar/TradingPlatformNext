@@ -96,7 +96,10 @@ _CACHE_ONLY_FIELDS = {
 
 
 def _persistent_trade_payload(trade: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in trade.items() if key not in _CACHE_ONLY_FIELDS and key not in _LEGACY_TRADE_FIELDS}
+    payload = {key: value for key, value in trade.items() if key not in _CACHE_ONLY_FIELDS and key not in _LEGACY_TRADE_FIELDS}
+    if str(trade.get("source") or "MANUAL").strip().upper() != "AUTOTRENDER":
+        payload.pop("entry_signal_snapshot", None)
+    return payload
 
 
 def _db_row(trade: dict[str, Any]) -> dict[str, Any]:
@@ -407,12 +410,18 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
             if existing.get("idempotency_key") == idempotency_key:
                 return dict(existing)
     now = _now()
+    source = str(payload.get("source") or "MANUAL").strip().upper()
+    # Entry signal snapshots are AutoTrender-only metadata. Strip the field
+    # before the trade enters the shared cache for every other trade source.
+    if source != "AUTOTRENDER":
+        payload = {key: value for key, value in payload.items() if key != "entry_signal_snapshot"}
+
     trade = {
         **payload,
         "trade_id": str(uuid.uuid5(uuid.NAMESPACE_URL, "trading-platform-next:trade:" + idempotency_key)),
         "idempotency_key": idempotency_key,
         "execution_mode": mode,
-        "source": str(payload.get("source") or "MANUAL"),
+        "source": source,
         "strategy": payload.get("strategy"),
         "instrument_symbol": symbol,
         "quantity": quantity,
