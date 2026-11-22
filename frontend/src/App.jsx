@@ -512,11 +512,18 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
       ['Exchange', trade.exchange], ['Mode', trade.execution_mode],
       ['Source', trade.source], ['Strategy', trade.strategy],
       ['Direction', trade.direction], ['Status', trade.status],
-      ['Quantity', trade.quantity], ['Open quantity', trade.open_quantity],
+      ['Quantity', trade.quantity],
+      ['Open quantity', String(trade.status || '').toUpperCase() === 'CLOSED' ? 0 : trade.open_quantity ?? trade.quantity],
       ['Entry price', trade.average_entry_price ?? trade.entry_price],
-      ['Last price', trade.last_price], ['Stop loss', trade.stop_loss],
-      ['Target', trade.target], ['Exit price', trade.average_exit_price ?? trade.exit_price],
-      ['Realized P&L', trade.realized_pnl], ['Unrealized P&L', trade.unrealized_pnl],
+      ['Last price', trade.last_price ?? trade.average_exit_price ?? trade.exit_price],
+      ['Stop loss', trade.stop_loss], ['Target', trade.target],
+      ['Exit price', trade.average_exit_price ?? trade.exit_price],
+      ['Realized P&L', trade.net_realized_pnl ?? trade.gross_realized_pnl ?? trade.realized_pnl ??
+        (trade.average_entry_price ?? trade.entry_price) != null && (trade.average_exit_price ?? trade.exit_price) != null && trade.quantity != null
+          ? ((Number(trade.average_exit_price ?? trade.exit_price) - Number(trade.average_entry_price ?? trade.entry_price)) *
+              Number(trade.quantity) * (String(trade.direction || 'BUY').toUpperCase() === 'SELL' ? -1 : 1))
+          : null],
+      ['Unrealized P&L', String(trade.status || '').toUpperCase() === 'CLOSED' ? 'Not applicable — trade closed' : trade.unrealized_pnl],
       ['Exit reason', trade.exit_reason], ['Exit method', trade.exit_method],
       ['Created', trade.created_at ? new Date(trade.created_at).toLocaleString() : '—'],
       ['Updated', trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'],
@@ -535,7 +542,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
       ['Put PCR Threshold', snapshot?.put_pcr_threshold], ['Signal Direction', snapshot?.signal_direction],
       ['Signal Timestamp', snapshot?.signal_timestamp], ['Evaluated At', snapshot?.signal_evaluated_at],
     ];
-    const displayValue = (value) => value === null || value === undefined || value === '' ? '—' : typeof value === 'boolean' ? (value ? 'Yes' : 'No') : typeof value === 'number' ? number(value) : String(value);
+    const displayValue = (value) => value === null || value === undefined || value === '' ? 'Not recorded' : typeof value === 'boolean' ? (value ? 'Yes' : 'No') : typeof value === 'number' ? number(value) : String(value);
     return <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedTrade(null); }}>
       <div className="panel trade-create-form trade-create-modal trade-details-modal" role="dialog" aria-modal="true" aria-labelledby="autotrend-trade-details-title">
         <div className="trade-modal-heading"><div><h2 id="autotrend-trade-details-title">Trade details</h2><p>{trade.exchange || '—'}:{trade.instrument_symbol || '—'} · {trade.execution_mode || '—'} · {String(trade.status || '—').toUpperCase()}</p></div><button className="button secondary" type="button" onClick={() => setSelectedTrade(null)}>✕</button></div>
