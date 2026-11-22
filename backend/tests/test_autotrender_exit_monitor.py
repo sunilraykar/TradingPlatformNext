@@ -19,6 +19,7 @@ def row(minute, *, call="60", put="40", diff="-100", pcr="1.5",
         vwap="BUY", option="BUY"):
     return {
         "time": f"10:{minute:02d}",
+        "timestamp": f"2026-11-23T10:{minute:02d}:00+05:30",
         "call": call,
         "put": put,
         "diff": {"value": diff},
