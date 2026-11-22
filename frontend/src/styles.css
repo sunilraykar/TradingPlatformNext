@@ -3385,8 +3385,9 @@ select,input,textarea{
 .autotrend-compact-field span,
 .autotrend-compact-pnl > span {
   color: var(--muted, #94a3b8);
-  font-size: 10px;
+  font-size: 18px;
   line-height: 1.2;
+  font-weight: 750;
 }
 .autotrend-compact-summary strong,
 .autotrend-compact-field strong {
