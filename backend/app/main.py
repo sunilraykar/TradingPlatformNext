@@ -33,8 +33,8 @@ from app.providers.kite.registry import (
 from app.services import (
     auto_exit_profitable_trades,
     autotrender_cache_snapshot,
-    autotrender_kite_execution,
     autotrender_exit_monitor,
+    autotrender_kite_execution,
     autotrender_paper_trade_worker,
     kite_trade_notifications,
     live_market_data,
