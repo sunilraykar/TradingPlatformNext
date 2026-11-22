@@ -519,7 +519,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
     const pnlNumber = numericValue(pnlValue);
     const pnlTone = pnlNumber === null ? '' : pnlNumber > 0 ? 'positive' : pnlNumber < 0 ? 'negative' : 'neutral';
     const formattedPnl = pnlNumber === null
-      ? displayValue(pnlValue)
+      ? (pnlValue === null || pnlValue === undefined || pnlValue === '' ? 'Not recorded' : String(pnlValue))
       : `${pnlNumber > 0 ? '+' : pnlNumber < 0 ? '−' : ''}₹${Math.abs(pnlNumber).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const startedAt = new Date(trade.entry_time || trade.created_at || trade.opened_at || Date.now()).getTime();
     const endedAt = isClosed
