@@ -2,7 +2,7 @@
 
 The monitor reads the authenticated AutoTrender intraday feed directly. It does
 not depend on frontend persistence or the Historical Data view. Each source row
-is evaluated once per trade, and all deterioration counters are independent.
+is evaluated once per trade.
 """
 from __future__ import annotations
 
@@ -84,33 +84,25 @@ def _reading(row: dict[str, Any], direction: str, now: datetime) -> dict[str, An
     call = _number(_row_value(row, "call", "Call", "callStrength", "call_strength"))
     put = _number(_row_value(row, "put", "Put", "putStrength", "put_strength"))
     pcr = _number(_row_value(row, "pcr", "PCR", "Pcr"))
-    diff = _number(_row_value(row, "diff", "Diff"))
     vwap_signal = _signal(_row_value(row, "vWapSignal", "vwapSignal", "VWAP Signal"))
     option_signal = _signal(_row_value(row, "optionSignal", "Option Signal"))
 
+    # This is the UI's Call-Put Strength Diff column, not the raw Diff column.
+    # Preserve its displayed sign: Call% - Put%.
     if call is None or put is None or call + put <= 0:
-        strength_advantage = None
+        call_put_strength_diff = None
     else:
         call_pct = call / (call + put) * 100
         put_pct = put / (call + put) * 100
-        strength_advantage = call_pct - put_pct if direction == "BUY" else put_pct - call_pct
+        call_put_strength_diff = call_pct - put_pct
 
     return {
         "timestamp": timestamp.isoformat(),
-        "call": call,
-        "put": put,
-        "strength_advantage": strength_advantage,
-        "diff": diff,
+        "call_put_strength_diff": call_put_strength_diff,
         "pcr": pcr,
         "vwap_signal": vwap_signal,
         "option_signal": option_signal,
     }
-
-
-def _advance_counter(previous: float | None, current: float | None, *, adverse: bool) -> int:
-    if previous is None or current is None:
-        return 0
-    return (1 if adverse else 0)
 
 
 def _evaluate_trade(trade: dict[str, Any], row: dict[str, Any], now: datetime) -> tuple[dict[str, Any], str | None]:
@@ -128,8 +120,14 @@ def _evaluate_trade(trade: dict[str, Any], row: dict[str, Any], now: datetime) -
 
     previous = state.get("last_valid_reading") if isinstance(state.get("last_valid_reading"), dict) else {}
     counters = dict(state.get("counters") or {})
-    for name in ("strength", "dominance", "pcr"):
-        counters[name] = int(counters.get(name) or 0)
+    # The old "dominance" counter tracked raw Diff and the old "strength"
+    # counter duplicated this same UI metric. Start the corrected metric with
+    # a fresh counter/baseline rather than inheriting either incorrect history.
+    if state.get("dominance_metric") != "call_put_strength_diff":
+        previous.pop("call_put_strength_diff", None)
+        counters["call_put_strength_diff"] = 0
+    counters["call_put_strength_diff"] = int(counters.get("call_put_strength_diff") or 0)
+    counters["pcr"] = int(counters.get("pcr") or 0)
 
     vwap_signal = reading["vwap_signal"]
     option_signal = reading["option_signal"]
@@ -141,24 +139,22 @@ def _evaluate_trade(trade: dict[str, Any], row: dict[str, Any], now: datetime) -
     elif option_signal in {"BUY", "SELL"} and option_signal != direction:
         reason = "AUTOTRENDER_OPTION_SIGNAL_REVERSAL"
 
-    previous_strength = _number(previous.get("strength_advantage"))
-    current_strength = reading["strength_advantage"]
-    if current_strength is not None:
-        if previous_strength is not None:
-            adverse_strength = current_strength < previous_strength
-            counters["strength"] = counters["strength"] + 1 if adverse_strength else 0
-        previous["strength_advantage"] = current_strength
-    # Invalid observations neither increment nor reset a counter/baseline.
-
-    previous_diff = _number(previous.get("diff"))
-    current_diff = reading["diff"]
-    if current_diff is not None:
-        if previous_diff is not None:
-            # BUY dominance is stronger as Diff becomes more negative.
-            # SELL dominance is stronger as Diff becomes more positive.
-            adverse_dominance = current_diff > previous_diff if direction == "BUY" else current_diff < previous_diff
-            counters["dominance"] = counters["dominance"] + 1 if adverse_dominance else 0
-        previous["diff"] = current_diff
+    previous_strength_diff = _number(previous.get("call_put_strength_diff"))
+    current_strength_diff = reading["call_put_strength_diff"]
+    if current_strength_diff is not None:
+        if previous_strength_diff is not None:
+            # BUY bullish dominance strengthens as Call-Put Strength Diff falls
+            # (more negative); SELL bearish dominance strengthens as it rises.
+            # Movement in the opposite direction is adverse.
+            adverse = (
+                current_strength_diff > previous_strength_diff
+                if direction == "BUY"
+                else current_strength_diff < previous_strength_diff
+            )
+            counters["call_put_strength_diff"] = (
+                counters["call_put_strength_diff"] + 1 if adverse else 0
+            )
+        previous["call_put_strength_diff"] = current_strength_diff
 
     previous_pcr = _number(previous.get("pcr"))
     current_pcr = reading["pcr"]
@@ -169,6 +165,7 @@ def _evaluate_trade(trade: dict[str, Any], row: dict[str, Any], now: datetime) -
         previous["pcr"] = current_pcr
 
     state = {
+        "dominance_metric": "call_put_strength_diff",
         "last_source_timestamp": reading["timestamp"],
         "last_valid_reading": previous,
         "last_reading": reading,
@@ -176,10 +173,10 @@ def _evaluate_trade(trade: dict[str, Any], row: dict[str, Any], now: datetime) -
         "updated_at": now.astimezone(IST).isoformat(),
     }
     if reason is None:
-        for name in ("strength", "dominance", "pcr"):
-            if counters[name] >= 4:
-                reason = "AUTOTRENDER_" + name.upper() + "_DETERIORATION_4_READINGS"
-                break
+        if counters["call_put_strength_diff"] >= 4:
+            reason = "AUTOTRENDER_DOMINANCE_DETERIORATION_4_READINGS"
+        elif counters["pcr"] >= 4:
+            reason = "AUTOTRENDER_PCR_DETERIORATION_4_READINGS"
     return {"autotrend_exit_monitor": state}, reason
 
 
