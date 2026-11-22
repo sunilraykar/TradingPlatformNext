@@ -51,7 +51,7 @@ def test_sell_dominance_four_adverse_readings_triggers_exit():
     assert apply(tr, row(1, diff="90", pcr="1.0", vwap="SELL", option="SELL")) is None
     assert apply(tr, row(2, diff="80", pcr="1.0", vwap="SELL", option="SELL")) is None
     assert apply(tr, row(3, diff="70", pcr="1.0", vwap="SELL", option="SELL")) is None
-    assert apply(tr, row(4, diff="60", pcr="1.0", vwap="SELL", option="SELL")) == "AUTOTREND_DOMINANCE_DETERIORATION_4_READINGS"
+    assert apply(tr, row(4, diff="60", pcr="1.0", vwap="SELL", option="SELL")) == "AUTOTRENDER_DOMINANCE_DETERIORATION_4_READINGS"
 
 
 def test_favourable_dominance_reading_resets_counter():
