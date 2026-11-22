@@ -281,6 +281,7 @@ def _apply_entry_fill(intent: dict[str, Any]) -> None:
         "broker_order_id": intent.get("broker_order_id"),
         "broker_status": str(intent.get("status") or "COMPLETE"),
         "entry_filled_quantity": filled,
+        "entry_signal_snapshot": payload.get("entry_signal_snapshot"),
         "notes": payload.get("notes"),
     })
     with get_engine().begin() as conn:
