@@ -97,3 +97,30 @@ def test_price_vwap_is_not_an_exit_input():
     source["price"] = {"value": "100"}
     source["vWap"] = {"value": "200"}
     assert apply(tr, source) is None
+
+
+def test_buy_strength_deterioration_requires_four_consecutive_declines():
+    tr = trade("BUY")
+    assert apply(tr, row(0, call="60", put="40", diff="-100", pcr="1.5")) is None
+    assert apply(tr, row(1, call="59", put="41", diff="-100", pcr="1.5")) is None
+    assert apply(tr, row(2, call="58", put="42", diff="-100", pcr="1.5")) is None
+    assert apply(tr, row(3, call="57", put="43", diff="-100", pcr="1.5")) is None
+    assert apply(tr, row(4, call="56", put="44", diff="-100", pcr="1.5")) == "AUTOTRENDER_STRENGTH_DETERIORATION_4_READINGS"
+
+
+def test_buy_pcr_deterioration_requires_four_consecutive_declines():
+    tr = trade("BUY")
+    assert apply(tr, row(0, diff="-100", pcr="1.5")) is None
+    assert apply(tr, row(1, diff="-100", pcr="1.4")) is None
+    assert apply(tr, row(2, diff="-100", pcr="1.3")) is None
+    assert apply(tr, row(3, diff="-100", pcr="1.2")) is None
+    assert apply(tr, row(4, diff="-100", pcr="1.1")) == "AUTOTRENDER_PCR_DETERIORATION_4_READINGS"
+
+
+def test_sell_pcr_deterioration_requires_four_consecutive_increases():
+    tr = trade("SELL")
+    assert apply(tr, row(0, diff="100", pcr="1.0", vwap="SELL", option="SELL")) is None
+    assert apply(tr, row(1, diff="100", pcr="1.1", vwap="SELL", option="SELL")) is None
+    assert apply(tr, row(2, diff="100", pcr="1.2", vwap="SELL", option="SELL")) is None
+    assert apply(tr, row(3, diff="100", pcr="1.3", vwap="SELL", option="SELL")) is None
+    assert apply(tr, row(4, diff="100", pcr="1.4", vwap="SELL", option="SELL")) == "AUTOTRENDER_PCR_DETERIORATION_4_READINGS"
