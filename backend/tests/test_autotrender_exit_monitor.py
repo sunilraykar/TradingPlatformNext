@@ -4,7 +4,7 @@ from zoneinfo import ZoneInfo
 from app.services.autotrender_exit_monitor import _evaluate_trade
 
 IST = ZoneInfo("Asia/Kolkata")
-NOW = datetime(2026, 11, 23, 10, 0, tzinfo=IST)
+NOW = datetime(2026, 11, 23, 10, 10, tzinfo=IST)
 
 
 def trade(direction="BUY"):
