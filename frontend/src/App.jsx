@@ -559,19 +559,20 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
       ['Signal Timestamp', snapshot?.signal_timestamp], ['Evaluated At', snapshot?.signal_evaluated_at],
     ];
     const displayValue = (value) => value === null || value === undefined || value === '' ? 'Not recorded' : typeof value === 'boolean' ? (value ? 'Yes' : 'No') : typeof value === 'number' ? number(value) : String(value);
-    return <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedTrade(null); }}>
-      <div className="panel trade-create-form trade-create-modal trade-details-modal" role="dialog" aria-modal="true" aria-labelledby="autotrend-trade-details-title">
-        <div className="trade-modal-heading"><div><h2 id="autotrend-trade-details-title">Trade details</h2><p>{trade.exchange || '—'}:{trade.instrument_symbol || '—'} · {trade.execution_mode || '—'} · {String(trade.status || '—').toUpperCase()}</p></div><button className="button secondary" type="button" onClick={() => setSelectedTrade(null)}>✕</button></div>
-        <div className="trade-details-grid">
-          {detailItems.map(([label, value]) => <div className={`trade-detail-item${label === 'P&L' && typeof value === 'number' ? (value > 0 ? ' positive' : value < 0 ? ' negative' : '') : ''}`} key={label}><span>{label}</span><strong>{label === 'P&L' && typeof value === 'number' ? value.toLocaleString('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: 'exceptZero' }) : displayValue(value)}</strong></div>)}
+    return <div className="trade-modal-backdrop autotrend-details-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedTrade(null); }}>
+      <div className="panel trade-create-form trade-create-modal trade-details-modal autotrend-compact-details" role="dialog" aria-modal="true" aria-labelledby="autotrend-trade-details-title">
+        <div className="trade-modal-heading"><div><h2 id="autotrend-trade-details-title">Trade Details</h2><p>{trade.instrument_symbol || "—"} · {String(trade.source || "—").toUpperCase()} · {trade.strategy || "—"}</p></div><button className="button secondary" type="button" onClick={() => setSelectedTrade(null)}>✕</button></div>
+        <div className="autotrend-compact-summary">
+          <div><span>Direction</span><strong>{displayValue(trade.direction)}</strong></div>
+          <div><span>Quantity</span><strong>{displayValue(isClosed ? trade.quantity : (trade.open_quantity ?? trade.quantity))}</strong></div>
+          <div><span>Duration</span><strong>{duration}</strong></div>
         </div>
-        {String(trade.source || '').trim().toUpperCase() === 'AUTOTRENDER' && snapshot && <section className="trade-details-notes" style={{ marginTop: 18 }}>
-          <h3 style={{ margin: '0 0 12px' }}>AutoTrender Entry Signal Snapshot</h3>
-          <div className="trade-details-grid">
-            {snapshotItems.map(([label, value]) => <div className="trade-detail-item" key={label}><span>{label}</span><strong>{displayValue(value)}</strong></div>)}
-          </div>
-        </section>}
-        {trade.notes && <div className="trade-details-notes"><span>Notes</span><p>{trade.notes}</p></div>}
+        <section className="autotrend-compact-section"><h3>Price &amp; Execution</h3><div className="autotrend-compact-grid">
+          {[[ "Entry", trade.average_entry_price ?? trade.entry_price ], [ "Exit", trade.average_exit_price ?? trade.exit_price ], [ "Last Price", trade.last_price ?? trade.average_exit_price ?? trade.exit_price ], [ "Stop Loss", trade.stop_loss ], [ "Target", trade.target ], [ "Exit Method", trade.exit_method ]].map(([label, value]) => <div className="autotrend-compact-field" key={label}><span>{label}</span><strong>{displayValue(value)}</strong></div>)}
+        </div></section>
+        <div className={"autotrend-compact-pnl" + (typeof pnlValue === "number" ? (pnlValue > 0 ? " positive" : pnlValue < 0 ? " negative" : "") : "")}><span>P&amp;L</span><strong>{typeof pnlValue === "number" ? pnlValue.toLocaleString("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero" }) : displayValue(pnlValue)}</strong></div>
+        <div className="autotrend-compact-meta"><span>Exit reason: {displayValue(trade.exit_reason)}</span><span>Created: {trade.created_at ? new Date(trade.created_at).toLocaleString("en-IN") : "Not recorded"}</span><span>Updated: {trade.updated_at ? new Date(trade.updated_at).toLocaleString("en-IN") : "Not recorded"}</span></div>
+        {String(trade.source || "").trim().toUpperCase() === "AUTOTRENDER" && snapshot && <details className="autotrend-snapshot-accordion"><summary>Entry Signal Snapshot <span>22 metrics</span></summary><div className="autotrend-compact-grid autotrend-snapshot-grid">{snapshotItems.map(([label, value]) => <div className="autotrend-compact-field" key={label}><span>{label}</span><strong>{displayValue(value)}</strong></div>)}</div></details>}
       </div>
     </div>;
   };
