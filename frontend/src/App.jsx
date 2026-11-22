@@ -323,6 +323,7 @@ function PriceVwapChart({ rows, levels = [], entryStartTime = '10:00', entryEndT
 
 
 function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists = false }) {
+  const [selectedTrade, setSelectedTrade] = useState(null);
   const underlyingKey = (Array.isArray(underlyings) ? underlyings : [underlyings])
     .map((value) => String(value || '').trim().toUpperCase()).filter(Boolean).join('|');
   const [trades, setTrades] = useState([]);
@@ -488,7 +489,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
               const pnl = tradePnl(trade);
               const ltp = trade.last_price ?? trade.exit_price ?? trade.average_exit_price;
               return <tr key={trade.trade_id}>
-                <td title={trade.instrument_symbol || trade.underlying}>{trade.instrument_symbol || trade.underlying || '—'}</td>
+                <td title={trade.instrument_symbol || trade.underlying}><button type="button" className="autotrend-trade-symbol-link" onClick={() => setSelectedTrade(trade)}>{trade.instrument_symbol || trade.underlying || '—'}</button></td>
                 <td>{number(trade.average_entry_price ?? trade.entry_price)}</td>
                 <td>{number(ltp)}</td>
                 <td>{number(trade.target)}</td>
@@ -503,11 +504,56 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
       </div>
     </aside>;
   };
-  if (splitLists) return <section className="dashboard-day-trades" aria-label="Today's active and closed trades">
-    {renderPanel('OPEN', 'Active')}
-    {renderPanel('CLOSED', 'Closed')}
-  </section>;
-  return renderPanel('ALL', selectedDate ? 'Trades' : "Today's");
+  const renderTradeDetails = () => {
+    if (!selectedTrade) return null;
+    const trade = selectedTrade;
+    const detailItems = [
+      ['Underlying', trade.underlying], ['Instrument', trade.instrument_symbol],
+      ['Exchange', trade.exchange], ['Mode', trade.execution_mode],
+      ['Source', trade.source], ['Strategy', trade.strategy],
+      ['Direction', trade.direction], ['Status', trade.status],
+      ['Quantity', trade.quantity], ['Open quantity', trade.open_quantity],
+      ['Entry price', trade.average_entry_price ?? trade.entry_price],
+      ['Last price', trade.last_price], ['Stop loss', trade.stop_loss],
+      ['Target', trade.target], ['Exit price', trade.average_exit_price ?? trade.exit_price],
+      ['Realized P&L', trade.realized_pnl], ['Unrealized P&L', trade.unrealized_pnl],
+      ['Exit reason', trade.exit_reason], ['Exit method', trade.exit_method],
+      ['Created', trade.created_at ? new Date(trade.created_at).toLocaleString() : '—'],
+      ['Updated', trade.updated_at ? new Date(trade.updated_at).toLocaleString() : '—'],
+    ];
+    const snapshot = trade.entry_signal_snapshot && typeof trade.entry_signal_snapshot === 'object' ? trade.entry_signal_snapshot : null;
+    const snapshotItems = [
+      ['Call Strength', snapshot?.call_strength], ['Call Strength %', snapshot?.call_strength_percentage],
+      ['Put Strength', snapshot?.put_strength], ['Put Strength %', snapshot?.put_strength_percentage],
+      ['Strength Difference', snapshot?.strength_difference], ['Signed Strength Difference', snapshot?.signed_strength_difference],
+      ['Strength Difference Threshold', snapshot?.strength_difference_threshold], ['Market Price', snapshot?.market_price],
+      ['VWAP Price', snapshot?.vwap_price], ['Price / VWAP Difference', snapshot?.price_vwap_difference],
+      ['Price / VWAP Difference %', snapshot?.price_vwap_difference_percent], ['Absolute VWAP Difference %', snapshot?.vwap_difference_percent],
+      ['VWAP Difference Buffer', snapshot?.vwap_price_difference_buffer], ['VWAP Signal', snapshot?.vwap_signal],
+      ['Option Signal', snapshot?.option_signal], ['Signals Match', snapshot?.directional_signals_match],
+      ['PCR', snapshot?.pcr], ['Call PCR Threshold', snapshot?.call_pcr_threshold],
+      ['Put PCR Threshold', snapshot?.put_pcr_threshold], ['Signal Direction', snapshot?.signal_direction],
+      ['Signal Timestamp', snapshot?.signal_timestamp], ['Evaluated At', snapshot?.signal_evaluated_at],
+    ];
+    const displayValue = (value) => value === null || value === undefined || value === '' ? '—' : typeof value === 'boolean' ? (value ? 'Yes' : 'No') : typeof value === 'number' ? number(value) : String(value);
+    return <div className="trade-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedTrade(null); }}>
+      <div className="panel trade-create-form trade-create-modal trade-details-modal" role="dialog" aria-modal="true" aria-labelledby="autotrend-trade-details-title">
+        <div className="trade-modal-heading"><div><h2 id="autotrend-trade-details-title">Trade details</h2><p>{trade.exchange || '—'}:{trade.instrument_symbol || '—'} · {trade.execution_mode || '—'} · {String(trade.status || '—').toUpperCase()}</p></div><button className="button secondary" type="button" onClick={() => setSelectedTrade(null)}>✕</button></div>
+        <div className="trade-details-grid">
+          {detailItems.map(([label, value]) => <div className="trade-detail-item" key={label}><span>{label}</span><strong>{displayValue(value)}</strong></div>)}
+        </div>
+        {String(trade.source || '').trim().toUpperCase() === 'AUTOTRENDER' && snapshot && <section className="trade-details-notes" style={{ marginTop: 18 }}>
+          <h3 style={{ margin: '0 0 12px' }}>AutoTrender Entry Signal Snapshot</h3>
+          <div className="trade-details-grid">
+            {snapshotItems.map(([label, value]) => <div className="trade-detail-item" key={label}><span>{label}</span><strong>{displayValue(value)}</strong></div>)}
+          </div>
+        </section>}
+        {trade.notes && <div className="trade-details-notes"><span>Notes</span><p>{trade.notes}</p></div>}
+      </div>
+    </div>;
+  };
+  if (splitLists) return <>{<section className="dashboard-day-trades" aria-label="Today's active and closed trades">{renderPanel('OPEN', 'Active')}{renderPanel('CLOSED', 'Closed')}</section>}{renderTradeDetails()}</>;
+  return <>{renderPanel('ALL', selectedDate ? 'Trades' : "Today's")}{renderTradeDetails()}</>;
 
 }
 
