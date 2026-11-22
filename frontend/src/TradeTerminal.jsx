@@ -301,7 +301,7 @@ export default function TradeTerminal({ onUnderlyingSelect }) {
     });
   const tradesMatchingOtherFilters = tradesMatchingBaseFilters;
   const visibleTrades = tradesMatchingOtherFilters;
-  const showAutoTrenderSnapshotColumns = columnPreset === 'AutoTrender' && sourceFilter === 'AUTOTRENDER';
+  const showAutoTrenderSnapshotColumns = columnPreset === 'AutoTrender';
 
   const create = async (event) => {
     event.preventDefault(); setSaving(true); setError('');
