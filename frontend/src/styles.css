@@ -3320,3 +3320,27 @@ select,input,textarea{
 .price-vwap-workspace .chart-enter-card strong {
   font-size: 13px !important;
 }
+
+
+/* Clickable instrument symbol in AutoTrender trade history. */
+.autotrend-trade-symbol-link {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text, #e5edf8);
+  font: inherit;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+}
+.autotrend-trade-symbol-link:hover,
+.autotrend-trade-symbol-link:focus-visible {
+  color: var(--cyan, #38bdf8);
+  text-decoration-color: currentColor;
+  outline: none;
+}
