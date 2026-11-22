@@ -516,6 +516,11 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
     const realizedPnl = trade.net_realized_pnl ?? trade.gross_realized_pnl ?? trade.realized_pnl ?? calculatedRealizedPnl;
     const isClosed = String(trade.status || '').toUpperCase() === 'CLOSED';
     const pnlValue = isClosed ? realizedPnl : (trade.unrealized_pnl ?? tradePnl(trade));
+    const pnlNumber = numericValue(pnlValue);
+    const pnlTone = pnlNumber === null ? '' : pnlNumber > 0 ? 'positive' : pnlNumber < 0 ? 'negative' : 'neutral';
+    const formattedPnl = pnlNumber === null
+      ? displayValue(pnlValue)
+      : `${pnlNumber > 0 ? '+' : pnlNumber < 0 ? '−' : ''}₹${Math.abs(pnlNumber).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const startedAt = new Date(trade.entry_time || trade.created_at || trade.opened_at || Date.now()).getTime();
     const endedAt = isClosed
       ? new Date(trade.closed_at || trade.auto_exit_at || trade.exit_at || trade.updated_at || Date.now()).getTime()
@@ -570,7 +575,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
         <section className="autotrend-compact-section"><h3>Price &amp; Execution</h3><div className="autotrend-compact-grid">
           {[[ "Entry", trade.average_entry_price ?? trade.entry_price ], [ "Exit", trade.average_exit_price ?? trade.exit_price ], [ "Last Price", trade.last_price ?? trade.average_exit_price ?? trade.exit_price ], [ "Stop Loss", trade.stop_loss ], [ "Target", trade.target ], [ "Exit Method", trade.exit_method ]].map(([label, value]) => <div className="autotrend-compact-field" key={label}><span>{label}</span><strong>{displayValue(value)}</strong></div>)}
         </div></section>
-        <div className={"autotrend-compact-pnl" + (typeof pnlValue === "number" ? (pnlValue > 0 ? " positive" : pnlValue < 0 ? " negative" : "") : "")}><span>P&amp;L</span><strong>{typeof pnlValue === "number" ? pnlValue.toLocaleString("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero" }) : displayValue(pnlValue)}</strong></div>
+        <div className={`autotrend-compact-pnl ${pnlTone}`}><span>{pnlNumber === null ? 'P&amp;L' : pnlNumber > 0 ? 'P&amp;L · PROFIT' : pnlNumber < 0 ? 'P&amp;L · LOSS' : 'P&amp;L · BREAK-EVEN'}</span><strong>{formattedPnl}</strong></div>
         <div className="autotrend-compact-meta"><span>Exit reason: {displayValue(trade.exit_reason)}</span><span>Created: {trade.created_at ? new Date(trade.created_at).toLocaleString("en-IN") : "Not recorded"}</span><span>Updated: {trade.updated_at ? new Date(trade.updated_at).toLocaleString("en-IN") : "Not recorded"}</span></div>
         {String(trade.source || "").trim().toUpperCase() === "AUTOTRENDER" && snapshot && <details className="autotrend-snapshot-accordion"><summary>Entry Signal Snapshot <span>22 metrics</span></summary><div className="autotrend-compact-grid autotrend-snapshot-grid">{snapshotItems.map(([label, value]) => <div className="autotrend-compact-field" key={label}><span>{label}</span><strong>{displayValue(value)}</strong></div>)}</div></details>}
       </div>
