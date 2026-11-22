@@ -93,7 +93,9 @@ def test_missing_call_put_does_not_increment_or_replace_baseline():
     apply(tr, row(1, call="45", put="55"))
     apply(tr, row(2, call=None, put=None))
     assert tr["autotrend_exit_monitor"]["counters"]["call_put_strength_diff"] == 1
-    assert tr["autotrend_exit_monitor"]["last_valid_reading"]["call_put_strength_diff"] == -10
+    assert abs(
+        tr["autotrend_exit_monitor"]["last_valid_reading"]["call_put_strength_diff"] + 10
+    ) < 1e-9
     apply(tr, row(3, call="50", put="50"))
     assert tr["autotrend_exit_monitor"]["counters"]["call_put_strength_diff"] == 2
 
