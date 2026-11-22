@@ -482,7 +482,7 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
       {cacheUnavailable && <div className="autotrend-active-trades-error">Trade history could not be loaded from the database. Check backend database connectivity.</div>}
       <div className="autotrend-active-trades-list">
         <table className="autotrend-trades-table">
-          <thead><tr><th>Symbol</th><th>Entry</th><th>LTP</th><th>Target</th><th>P&amp;L</th></tr></thead>
+          <thead><tr><th>Symbol</th><th>Entry</th><th>LTP</th><th>Target</th><th>P&amp;L</th><th>Status</th></tr></thead>
           <tbody>
             {items.map((trade) => {
               const pnl = tradePnl(trade);
@@ -493,9 +493,10 @@ function AutoTrenderActiveTrades({ underlyings, selectedDate = null, splitLists 
                 <td>{number(ltp)}</td>
                 <td>{number(trade.target)}</td>
                 <td className={pnl === null ? '' : pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : ''}>{formatPnl(pnl)}</td>
+                <td className={`autotrend-trade-status ${String(trade.status || 'OPEN').toLowerCase()}`}>{String(trade.status || 'OPEN').toUpperCase()}</td>
               </tr>;
             })}
-            {!items.length && !loading && !error && !cacheUnavailable && <tr><td colSpan="5" className="autotrend-trades-empty">No {title.toLowerCase()} trades for this date.</td></tr>}
+            {!items.length && !loading && !error && !cacheUnavailable && <tr><td colSpan="6" className="autotrend-trades-empty">No {title.toLowerCase()} trades for this date.</td></tr>}
             {!items.length && loading && <tr><td colSpan="5" className="autotrend-trades-empty">Loading trades…</td></tr>}
           </tbody>
         </table>
