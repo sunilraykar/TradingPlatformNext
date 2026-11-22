@@ -363,7 +363,7 @@ def _quote_timestamp_is_fresh(value: Any, now: datetime | None = None) -> bool:
     return 0 <= age <= 120
 
 
-def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float, execution_mode: str = "PAPER") -> dict[str, Any]:
+def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float, execution_mode: str = "PAPER", entry_signal_snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
     """Create a trade using the configured Trading Mode and canonical contract selector."""
     normalized_index = str(index or "").strip().upper()
     normalized_direction = str(direction or "").strip().upper()
@@ -461,6 +461,7 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
         "instrument_symbol": tradingsymbol, "exchange": exchange,
         "instrument_token": instrument_token,
         "direction": "BUY", "quantity": quantity, "entry_price": premium, "target": target,
+        "entry_signal_snapshot": entry_signal_snapshot,
         "notes": "AutoTrender signal=" + normalized_direction + "; signal_timestamp=" + signal_timestamp.isoformat()
             + "; spot=" + str(spot) + "; option=" + option_type + "; expiry=" + expiry
             + "; strike=" + str(strike) + "; contract_selector=shared_ui_selector",
@@ -470,7 +471,7 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
         return submit_entry(trade_payload)
     return trade_terminal.create_trade(trade_payload)
 
-def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float, execution_mode: str = "PAPER") -> dict[str, Any]:
+def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_timestamp: datetime, target_fallback_percent: float, execution_mode: str = "PAPER", entry_signal_snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
     """Serialize active-trade check + creation across worker processes using a MySQL lock."""
     lock_name = "autotrend-paper:" + index
     with get_engine().connect() as connection:
@@ -479,7 +480,8 @@ def _create_paper_trade(index: str, direction: str, row: dict[str, Any], signal_
             raise ValueError("paper_entry_lock_unavailable")
         try:
             return _create_paper_trade_under_lock(
-                index, direction, row, signal_timestamp, target_fallback_percent, execution_mode
+                index, direction, row, signal_timestamp, target_fallback_percent, execution_mode,
+                entry_signal_snapshot,
             )
         finally:
             connection.execute(text("SELECT RELEASE_LOCK(:name)"), {"name": lock_name})
@@ -591,9 +593,16 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                     logger.exception("Could not queue AutoTrender Telegram signal index=%s", index)
             if evaluation.eligible:
                 try:
+                    entry_signal_snapshot = dict(evaluation.entry_signal_snapshot or {})
+                    entry_signal_snapshot.update({
+                        "signal_timestamp": signal_id,
+                        "signal_evaluated_at": current.isoformat(),
+                        "signal_direction": evaluation.direction,
+                    })
                     trade = _create_paper_trade(index, evaluation.direction or "", row, signal_timestamp,
                                                 float(settings.get("targetFallbackPercent", 1.0)),
-                                                str(settings.get("executionMode", "PAPER")))
+                                                str(settings.get("executionMode", "PAPER")),
+                                                entry_signal_snapshot=entry_signal_snapshot)
                     _LAST_SIGNAL_BY_INDEX[index] = signal_id
                     if str(settings.get("executionMode", "PAPER")).strip().upper() in {"REAL", "LIVE"}:
                         state = "kite_order_submitted"
