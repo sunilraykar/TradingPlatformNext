@@ -15,7 +15,7 @@ from typing import Any
 from sqlalchemy import text
 
 from app.db.session import get_engine
-from app.providers.kite.client import KiteOrderRejectedError
+from app.providers.kite.client import KiteAuthenticationError, KiteOrderRejectedError
 from app.providers.kite.registry import get_kite_provider
 from app.services import trade_terminal
 
@@ -384,11 +384,21 @@ def run_cycle() -> dict[str, Any]:
 
 async def run_scheduler() -> None:
     logger.info("AutoTrender Kite execution reconciler started")
+    authentication_failure_logged = False
     while True:
         try:
             await asyncio.to_thread(run_cycle)
+            if authentication_failure_logged:
+                logger.info("AutoTrender Kite execution reconciler resumed after Kite login")
+                authentication_failure_logged = False
         except asyncio.CancelledError:
             raise
+        except KiteAuthenticationError:
+            # The broker session is expired/missing. Do not emit a traceback every
+            # two seconds; the UI presents the relogin notice and this worker waits.
+            if not authentication_failure_logged:
+                logger.warning("AutoTrender Kite execution paused. Please relogin to Kite.")
+                authentication_failure_logged = True
         except Exception:
             logger.exception("AutoTrender Kite execution reconciliation failed")
         await asyncio.sleep(2)
