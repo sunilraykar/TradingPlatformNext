@@ -1867,7 +1867,6 @@ export default function App({ user = null, onSignOut }) {
   const [kiteReconnecting, setKiteReconnecting] = useState(false);
   const [index, setIndex] = useState('NIFTY');
   const [showAllIndices, setShowAllIndices] = useState(true);
-  const [appNavigationDepth, setAppNavigationDepth] = useState(0);
   const appNavigationDepthRef = useRef(0);
   const appRouteRef = useRef(null);
 
@@ -1891,7 +1890,6 @@ export default function App({ user = null, onSignOut }) {
     };
     appRouteRef.current = next;
     appNavigationDepthRef.current = Math.max(0, Number(depth) || 0);
-    setAppNavigationDepth(appNavigationDepthRef.current);
     setApplicationTab(next.applicationTab);
     setAutotrenderView(next.autotrenderView);
     setKiteTab(next.kiteTab);
@@ -1934,17 +1932,12 @@ export default function App({ user = null, onSignOut }) {
       ...window.history.state,
       __tradingPlatformApp: { route: next, depth },
     }, '', window.location.href);
-    setAppNavigationDepth(depth);
     setApplicationTab(next.applicationTab);
     setAutotrenderView(next.autotrenderView);
     setKiteTab(next.kiteTab);
     setSelectedOptionChainSymbol(next.selectedOptionChainSymbol);
     setIndex(next.index);
     setShowAllIndices(next.showAllIndices);
-  }, []);
-
-  const goBackInApp = useCallback(() => {
-    if (appNavigationDepthRef.current > 0) window.history.back();
   }, []);
 
   const refreshInFlight = useRef(false);
@@ -2480,7 +2473,6 @@ export default function App({ user = null, onSignOut }) {
       <header className="topbar">
         <div className="brand-mark">TP</div>
         <div className="brand-copy"><strong>TradingPlatformNext</strong><span>MARKET INTELLIGENCE</span></div>
-      <button type="button" className="app-back-button" onClick={goBackInApp} disabled={appNavigationDepth === 0} aria-label="Go back within TradingPlatformNext" title={appNavigationDepth > 0 ? 'Go back to the previous app screen' : 'No previous app screen'}>← Back</button>
       <nav className="application-tabs" aria-label="Application section">
         <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => navigateApp({ applicationTab: 'autotrender' })}>AutoTrender</button>
         <button type="button" className={applicationTab === 'option-chain' ? 'active' : ''} onClick={() => navigateApp({ applicationTab: 'option-chain' })}>Market Intelligence</button>
