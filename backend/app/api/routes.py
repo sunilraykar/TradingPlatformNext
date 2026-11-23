@@ -1,4 +1,5 @@
 import logging
+from decimal import Decimal, ROUND_DOWN
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
@@ -647,9 +648,10 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
             with get_engine().connect() as connection:
                 instrument = connection.execute(
                     text(
-                        "SELECT instrument_type FROM instruments "
+                        "SELECT instrument_type, tick_size FROM instruments "
                         "WHERE source = 'KITE' AND is_active = TRUE "
-                        "AND exchange = :exchange AND tradingsymbol = :symbol LIMIT 1"
+                        "AND exchange = :exchange AND tradingsymbol = :symbol "
+                        "ORDER BY instrument_version DESC LIMIT 1"
                     ),
                     {"exchange": exchange, "symbol": symbol},
                 ).mappings().first()
@@ -664,6 +666,25 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
             raise HTTPException(status_code=422, detail="Option order type does not match the selected Kite contract")
         if instrument_type == "FUT" and actual_type != "FUT":
             raise HTTPException(status_code=422, detail="Futures order rejected: selected instrument is not a futures contract")
+
+        # The selected tradable instrument (EQ/CE/PE/FUT) is the sole source
+        # of truth for tick size. Never reuse the underlying's tick size.
+        try:
+            tick_size = Decimal(str(instrument.get("tick_size") or "0"))
+            if tick_size <= 0:
+                raise ValueError("missing tick size")
+            if order_type in {"LIMIT", "GTT"}:
+                raw_price = Decimal(str(payload.price))
+                if order_type == "GTT":
+                    raw_price = min(raw_price, Decimal(str(payload.trigger_price)))
+                normalized = (raw_price / tick_size).to_integral_value(rounding=ROUND_DOWN) * tick_size
+                if normalized <= 0:
+                    raise HTTPException(status_code=422, detail="Order price is below one valid tick for this instrument")
+                payload.price = float(normalized)
+                if order_type == "GTT":
+                    payload.trigger_price = float(normalized)
+        except (ArithmeticError, TypeError, ValueError) as exc:
+            raise HTTPException(status_code=503, detail="Unable to validate the selected instrument tick size") from exc
 
     if mode == "PAPER":
         return {
