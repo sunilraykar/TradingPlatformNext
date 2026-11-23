@@ -2929,3 +2929,61 @@
 .ltp-option-chain[data-active-view="swing-trade"] .ltp-contract-index-row {
   display: none !important;
 }
+
+
+/* Clickable strike prices open the matching reversal-priced option ticket. */
+.ltp-option-chain .ltp-option-table .ltp-strike-order-button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.ltp-option-chain .ltp-option-table .ltp-strike-order-button:hover:not(:disabled) {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, .12);
+}
+.ltp-option-chain .ltp-option-table .ltp-strike-order-button:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+.ltp-option-chain .ltp-option-table .ltp-strike-order-button:disabled {
+  cursor: default;
+}
+.ltp-order-dialog .ltp-order-reversal-price {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 11px;
+  border: 1px solid rgba(34, 211, 238, .38);
+  border-radius: 7px;
+  background: rgba(8, 145, 178, .10);
+}
+.ltp-order-dialog .ltp-order-reversal-price span {
+  color: #9fb3c8;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+.ltp-order-dialog .ltp-order-reversal-price strong {
+  color: #67e8f9;
+  font-size: 16px;
+  font-weight: 900;
+}
+.ltp-order-dialog .ltp-order-types {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.ltp-order-dialog .ltp-order-types button.active {
+  border-color: #38bdf8;
+  background: rgba(14, 116, 144, .35);
+  color: #e0f2fe;
+}
