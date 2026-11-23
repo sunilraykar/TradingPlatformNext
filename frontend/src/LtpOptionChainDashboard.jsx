@@ -100,7 +100,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima, activeReversal, onT
       <button type="button" className={'ltp-reversal ' + tone(value)} aria-label={side + ' reversal ' + (value || 'unavailable') + ', show option LTP'} aria-expanded={isOpen} onClick={() => onToggleReversal(rowKey, side)}>{value || '—'}</button>
       {isOpen && <span className="ltp-reversal-popover" role="status">
         <span>{instrument?.side === 'CE' ? 'CALL' : instrument?.side === 'PE' ? 'PUT' : side} LTP</span>
-        <button type="button" className="ltp-reversal-ltp-action" disabled={!instrument} onClick={() => onOpenOrder(instrument, value)} aria-label={'Open order for ' + (instrument?.tradingsymbol || side)} title={ltp !== null && ltp > 0 ? 'Open order' : 'LTP unavailable; open order anyway'}>{ltp !== null && ltp > 0 ? fmt(ltp) : 'LTP unavailable'}</button>
+        <button type="button" className="ltp-reversal-ltp-action" disabled={!instrument} onClick={() => onOpenOrder(instrument, value, side)} aria-label={'Open order for ' + (instrument?.tradingsymbol || side)} title={ltp !== null && ltp > 0 ? 'Open order' : 'LTP unavailable; open order anyway'}>{ltp !== null && ltp > 0 ? fmt(ltp) : 'LTP unavailable'}</button>
       </span>}
     </span>;
   };
@@ -279,15 +279,15 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     setOrderTriggerPrice(preferredPrice !== null ? String(preferredPrice) : '');
     setOrderError('');
   };
-  const openStockOrder = (row, signalSide) => {
-    const stockSymbol = String(row?.symbol || '').trim().toUpperCase();
-    if (!stockSymbol) return;
-    const reversalPrice = n(signalSide === 'bullish' ? row.S_OI_Reversal : row.R_OI_Reversal);
-    const lastPrice = n(row['Price-S'] ?? row.Price_S ?? row.price);
+  const openStockTicket = (stockSymbol, reversalValue, lastPriceValue, signalSide = 'bullish', exchange = 'NSE') => {
+    const tradingsymbol = String(stockSymbol || '').trim().toUpperCase();
+    if (!tradingsymbol) return;
+    const reversalPrice = n(reversalValue);
+    const lastPrice = n(lastPriceValue);
     if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
     reversalPopupTimer.current = null;
     setActiveReversal(null);
-    setOrderDraft({ instrumentType: 'STOCK', tradingsymbol: stockSymbol, exchange: String(row.exchange || 'NSE').toUpperCase(), lot_size: 1, reversalPrice, lastPrice, signalSide });
+    setOrderDraft({ instrumentType: 'STOCK', tradingsymbol, exchange: String(exchange || 'NSE').toUpperCase(), lot_size: 1, reversalPrice, lastPrice, signalSide });
     setOrderDirection('BUY');
     setOrderLots('1');
     setOrderType('LIMIT');
@@ -296,11 +296,27 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     setOrderTriggerPrice(reversalPrice !== null ? String(reversalPrice) : '');
     setOrderError('');
   };
+  const openStockOrder = (row, signalSide) => {
+    const reversalValue = signalSide === 'bullish' ? row.S_OI_Reversal : row.R_OI_Reversal;
+    openStockTicket(row?.symbol, reversalValue, row?.['Price-S'] ?? row?.Price_S ?? row?.price, signalSide, row?.exchange || 'NSE');
+  };
+  const isIndexUnderlying = ['NIFTY', 'BANKNIFTY', 'FINNIFTY', 'SENSEX', 'BANKEX', 'MIDCPNIFTY'].includes(String(symbol).toUpperCase());
+  const openUnderlyingOrder = (instrument, reversalValue, side) => {
+    if (!isIndexUnderlying) {
+      openStockTicket(symbol, reversalValue, data.Price_S, side === 'PUT' ? 'bearish' : 'bullish', 'NSE');
+      return;
+    }
+    openAtmOrder(instrument, reversalValue);
+  };
   const openStrikeOrder = (row, strike, liveSpot, call, put) => {
     const isPut = n(strike) !== null && n(liveSpot) !== null && Number(strike) < Number(liveSpot);
+    const reversalPrice = n(isPut ? row.putReversal : row.calReversal);
+    if (!isIndexUnderlying) {
+      openStockTicket(symbol, reversalPrice, data.Price_S, isPut ? 'bearish' : 'bullish', 'NSE');
+      return;
+    }
     const optionSide = isPut ? 'PE' : 'CE';
     const instrument = isPut ? put : call;
-    const reversalPrice = n(isPut ? row.putReversal : row.calReversal);
     const fallbackInstrument = {
       tradingsymbol: instrument?.tradingsymbol || (symbol + ' ' + expiry + ' ' + strike + ' ' + optionSide),
       exchange: instrument?.exchange || 'NFO',
@@ -360,6 +376,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol: orderDraft.tradingsymbol,
+          instrument_type: isStock ? 'EQ' : (orderDraft.side || (orderDraft.tradingsymbol.endsWith('CE') ? 'CE' : 'PE')),
           exchange: orderDraft.exchange || (isStock ? 'NSE' : 'NFO'),
           transaction_type: orderDirection,
           quantity: lots * lot,
@@ -640,7 +657,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
             const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
             const showSpot = underlying !== null && strike !== null && (underlying >= strike && (nextStrike === null || underlying < nextStrike));
             return <React.Fragment key={row._id || row.strike}>
-              <OptionRow row={row} spot={spot} quotes={quotes} instruments={instrumentMap} maxima={maxima} activeReversal={activeReversal} onToggleReversal={toggleReversalPopup} onOpenOrder={openAtmOrder} onStrikeSelect={openStrikeOrder} />
+              <OptionRow row={row} spot={spot} quotes={quotes} instruments={instrumentMap} maxima={maxima} activeReversal={activeReversal} onToggleReversal={toggleReversalPopup} onOpenOrder={openUnderlyingOrder} onStrikeSelect={openStrikeOrder} />
               {showSpot && <tr className="ltp-spot-marker-row">
                 <td colSpan="4"><div className="ltp-rs-indicators ltp-rs-call">
                   <span className="ltp-rs-chip"><b>{rs.R_OI_Status || '—'}</b><strong>{fmt(rs.R_OI_ShiftingStrike_per, 2)}%</strong><small>OI · {rs.R_OI_Strike || '—'}{rs.R_OI_Shifting ? ' → ' + (rs.R_OI_ShiftingStrike || '—') : ''}</small></span>
