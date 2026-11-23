@@ -391,6 +391,23 @@
 }
 .trade-sort-header:hover,
 .trade-symbol-link:hover { color: var(--accent, #5bd4d0); }
+.trade-symbol-link.trade-instrument-buy{color:#55dfa8;font-weight:800}
+.trade-symbol-link.trade-instrument-sell{color:#ff8793;font-weight:800}
+.trade-progress-cell{min-width:190px!important;width:220px;white-space:normal!important}
+.trade-progress{display:flex;flex-direction:column;gap:5px;min-width:170px;padding:2px 4px}
+.trade-progress-track{position:relative;height:9px;border-radius:999px;background:linear-gradient(90deg,rgba(248,113,113,.34),rgba(148,163,184,.22) 50%,rgba(52,211,153,.34));overflow:visible}
+.trade-progress-fill{position:absolute;top:0;height:100%;border-radius:999px;opacity:.9}
+.trade-progress-fill.favorable{background:#22c55e}
+.trade-progress-fill.adverse{background:#ef4444}
+.trade-progress-entry{position:absolute;top:-3px;width:2px;height:15px;background:#e2e8f0;transform:translateX(-50%);border-radius:2px;z-index:2}
+.trade-progress-current{position:absolute;top:50%;width:11px;height:11px;border:2px solid #e2e8f0;border-radius:50%;transform:translate(-50%,-50%);z-index:3;box-shadow:0 0 0 2px rgba(15,23,42,.55)}
+.trade-progress-current.favorable{background:#22c55e}
+.trade-progress-current.adverse{background:#ef4444}
+.trade-progress-label{font-size:10px;font-weight:750;line-height:1.2}
+.trade-progress-label.favorable{color:#55dfa8}
+.trade-progress-label.adverse{color:#ff8793}
+.trade-progress-unavailable{font-size:10px;color:var(--muted,#94a3b8)}
+
 .trade-symbol-link {
   padding: 0;
   color: inherit;
