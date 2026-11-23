@@ -781,7 +781,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
                 });
                 const found = await request('/kite/instruments/option-contract?' + query.toString());
                 const contract = found.contract;
-                setOrderDraft((current) => current ? { ...current, optionContract: contract, optionStrike: contract.strike, optionExpiry: contract.expiry, optionSide: contract.instrument_type, lot_size: contract.lot_size } : current);
+                setOrderDraft((current) => current ? { ...current, optionContract: contract, instrumentAvailable: true, optionStrike: contract.strike, optionExpiry: contract.expiry, optionSide: contract.instrument_type, lot_size: contract.lot_size } : current);
                 const liveLtp = n(quoteForInstrument(contract)?.last_price);
                 setOrderPrice(liveLtp !== null ? String(liveLtp) : '');
                 setOrderTriggerPrice(liveLtp !== null ? String(liveLtp) : '');
