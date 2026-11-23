@@ -201,7 +201,54 @@
 .trade-terminal-count{margin-left:auto;color:var(--muted);font-size:11px;padding-bottom:8.8px}
 .trade-terminal-table-panel{min-width:0}
 .trade-terminal-table-scroll{max-height:calc(100vh - 350px);min-height:220px;overflow:auto}
-.trade-terminal-table{min-width:1500px;font-size:11px}
+.trade-terminal-table{width:max-content;min-width:1420px;table-layout:fixed;font-size:11px}
+/* Compact, predictable widths for the three Trade Terminal column presets. */
+.trade-terminal-table-basic{min-width:1420px}
+.trade-terminal-table-basic th:nth-child(1),.trade-terminal-table-basic td:nth-child(1){width:65px}
+.trade-terminal-table-basic th:nth-child(2),.trade-terminal-table-basic td:nth-child(2){width:115px}
+.trade-terminal-table-basic th:nth-child(3),.trade-terminal-table-basic td:nth-child(3){width:165px}
+.trade-terminal-table-basic th:nth-child(4),.trade-terminal-table-basic td:nth-child(4){width:60px}
+.trade-terminal-table-basic th:nth-child(5),.trade-terminal-table-basic td:nth-child(5){width:125px}
+.trade-terminal-table-basic th:nth-child(6),.trade-terminal-table-basic td:nth-child(6){width:340px}
+.trade-terminal-table-basic th:nth-child(7),.trade-terminal-table-basic td:nth-child(7){width:145px}
+.trade-terminal-table-basic th:nth-child(8),.trade-terminal-table-basic td:nth-child(8){width:90px}
+.trade-terminal-table-basic th:nth-child(9),.trade-terminal-table-basic td:nth-child(9){width:85px}
+.trade-terminal-table-basic th:nth-child(10),.trade-terminal-table-basic td:nth-child(10){width:125px}
+.trade-terminal-table-basic th:nth-child(11),.trade-terminal-table-basic td:nth-child(11){width:105px}
+.trade-terminal-table-autotr​​ender{min-width:1600px}
+.trade-terminal-table-autotr​​ender th:nth-child(1),.trade-terminal-table-autotr​​ender td:nth-child(1){width:65px}
+.trade-terminal-table-autotr​​ender th:nth-child(2),.trade-terminal-table-autotr​​ender td:nth-child(2){width:115px}
+.trade-terminal-table-autotr​​ender th:nth-child(3),.trade-terminal-table-autotr​​ender td:nth-child(3){width:165px}
+.trade-terminal-table-autotr​​ender th:nth-child(4),.trade-terminal-table-autotr​​ender td:nth-child(4){width:60px}
+.trade-terminal-table-autotr​​ender th:nth-child(5),.trade-terminal-table-autotr​​ender td:nth-child(5){width:125px}
+.trade-terminal-table-autotr​​ender th:nth-child(6),.trade-terminal-table-autotr​​ender td:nth-child(6){width:340px}
+.trade-terminal-table-autotr​​ender th:nth-child(7),.trade-terminal-table-autotr​​ender td:nth-child(7){width:145px}
+.trade-terminal-table-autotr​​ender th:nth-child(8),.trade-terminal-table-autotr​​ender td:nth-child(8){width:90px}
+.trade-terminal-table-autotr​​ender th:nth-child(9),.trade-terminal-table-autotr​​ender td:nth-child(9){width:85px}
+.trade-terminal-table-autotr​​ender th:nth-child(10),.trade-terminal-table-autotr​​ender td:nth-child(10){width:85px}
+.trade-terminal-table-autotr​​ender th:nth-child(11),.trade-terminal-table-autotr​​ender td:nth-child(11){width:95px}
+.trade-terminal-table-autotr​​ender th:nth-child(12),.trade-terminal-table-autotr​​ender td:nth-child(12){width:125px}
+.trade-terminal-table-autotr​​ender th:nth-child(13),.trade-terminal-table-autotr​​ender td:nth-child(13){width:105px}
+.trade-terminal-table-detailed{min-width:1750px}
+.trade-terminal-table-detailed th:nth-child(1),.trade-terminal-table-detailed td:nth-child(1){width:65px}
+.trade-terminal-table-detailed th:nth-child(2),.trade-terminal-table-detailed td:nth-child(2){width:115px}
+.trade-terminal-table-detailed th:nth-child(3),.trade-terminal-table-detailed td:nth-child(3){width:165px}
+.trade-terminal-table-detailed th:nth-child(4),.trade-terminal-table-detailed td:nth-child(4){width:60px}
+.trade-terminal-table-detailed th:nth-child(5),.trade-terminal-table-detailed td:nth-child(5){width:125px}
+.trade-terminal-table-detailed th:nth-child(6),.trade-terminal-table-detailed td:nth-child(6){width:95px}
+.trade-terminal-table-detailed th:nth-child(7),.trade-terminal-table-detailed td:nth-child(7){width:340px}
+.trade-terminal-table-detailed th:nth-child(8),.trade-terminal-table-detailed td:nth-child(8){width:145px}
+.trade-terminal-table-detailed th:nth-child(9),.trade-terminal-table-detailed td:nth-child(9){width:90px}
+.trade-terminal-table-detailed th:nth-child(10),.trade-terminal-table-detailed td:nth-child(10){width:85px}
+.trade-terminal-table-detailed th:nth-child(11),.trade-terminal-table-detailed td:nth-child(11){width:85px}
+.trade-terminal-table-detailed th:nth-child(12),.trade-terminal-table-detailed td:nth-child(12){width:95px}
+.trade-terminal-table-detailed th:nth-child(13),.trade-terminal-table-detailed td:nth-child(13){width:125px}
+.trade-terminal-table-detailed th:nth-child(14),.trade-terminal-table-detailed td:nth-child(14){width:120px}
+.trade-terminal-table-detailed th:nth-child(15),.trade-terminal-table-detailed td:nth-child(15){width:105px}
+.trade-terminal-table td:nth-child(3),.trade-terminal-table td.holding-pnl-positive,.trade-terminal-table td.holding-pnl-negative,.trade-terminal-table td.holding-pnl-zero{overflow:hidden;text-overflow:ellipsis}
+.trade-terminal-table .trade-progress-cell{width:340px;min-width:340px}
+.trade-terminal-table .trade-progress{min-width:310px}
+.trade-terminal-table .trade-pnl-percent{white-space:nowrap}
 /* Subtle vertical boundaries keep Trade Terminal columns visually distinct. */
 .trade-terminal-table{border-collapse:separate;border-spacing:0}
 .trade-terminal-table th,
