@@ -1569,7 +1569,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
           if (index > 0 && dates[index - 1]) openSnapshot(dates[index - 1]);
         }}>›</button>
       </div>
-      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
+      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => navigateApp({ autotrenderView: 'live' })}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => navigateApp({ autotrenderView: 'historical' })}>Historical Data</button></nav>
     </section>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
@@ -1867,6 +1867,86 @@ export default function App({ user = null, onSignOut }) {
   const [kiteReconnecting, setKiteReconnecting] = useState(false);
   const [index, setIndex] = useState('NIFTY');
   const [showAllIndices, setShowAllIndices] = useState(true);
+  const [appNavigationDepth, setAppNavigationDepth] = useState(0);
+  const appNavigationDepthRef = useRef(0);
+  const appRouteRef = useRef(null);
+
+  const currentAppRoute = () => ({
+    applicationTab,
+    autotrenderView,
+    kiteTab,
+    selectedOptionChainSymbol,
+    index,
+    showAllIndices,
+  });
+
+  const applyAppRoute = useCallback((route, depth = 0) => {
+    const next = {
+      applicationTab: route.applicationTab || 'autotrender',
+      autotrenderView: route.autotrenderView === 'historical' ? 'historical' : 'live',
+      kiteTab: ['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings'].includes(route.kiteTab) ? route.kiteTab : 'Dashboard',
+      selectedOptionChainSymbol: route.selectedOptionChainSymbol || 'NIFTY',
+      index: DEFAULT_INDICES.includes(route.index) ? route.index : 'NIFTY',
+      showAllIndices: route.showAllIndices !== false,
+    };
+    appRouteRef.current = next;
+    appNavigationDepthRef.current = Math.max(0, Number(depth) || 0);
+    setAppNavigationDepth(appNavigationDepthRef.current);
+    setApplicationTab(next.applicationTab);
+    setAutotrenderView(next.autotrenderView);
+    setKiteTab(next.kiteTab);
+    setSelectedOptionChainSymbol(next.selectedOptionChainSymbol);
+    setIndex(next.index);
+    setShowAllIndices(next.showAllIndices);
+  }, []);
+
+  useEffect(() => {
+    const initialRoute = currentAppRoute();
+    const existing = window.history.state?.__tradingPlatformApp;
+    if (existing?.route) {
+      applyAppRoute(existing.route, existing.depth);
+    } else {
+      appRouteRef.current = initialRoute;
+      window.history.replaceState({
+        ...window.history.state,
+        __tradingPlatformApp: { route: initialRoute, depth: 0 },
+      }, '', window.location.href);
+    }
+
+    const handlePopState = (event) => {
+      const navigation = event.state?.__tradingPlatformApp;
+      if (navigation?.route) applyAppRoute(navigation.route, navigation.depth);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [applyAppRoute]);
+
+  const navigateApp = useCallback((patch) => {
+    const current = appRouteRef.current || currentAppRoute();
+    const next = { ...current, ...patch };
+    const changed = Object.keys(next).some((key) => next[key] !== current[key]);
+    if (!changed) return;
+
+    const depth = appNavigationDepthRef.current + 1;
+    appNavigationDepthRef.current = depth;
+    appRouteRef.current = next;
+    window.history.pushState({
+      ...window.history.state,
+      __tradingPlatformApp: { route: next, depth },
+    }, '', window.location.href);
+    setAppNavigationDepth(depth);
+    setApplicationTab(next.applicationTab);
+    setAutotrenderView(next.autotrenderView);
+    setKiteTab(next.kiteTab);
+    setSelectedOptionChainSymbol(next.selectedOptionChainSymbol);
+    setIndex(next.index);
+    setShowAllIndices(next.showAllIndices);
+  }, []);
+
+  const goBackInApp = useCallback(() => {
+    if (appNavigationDepthRef.current > 0) window.history.back();
+  }, []);
+
   const refreshInFlight = useRef(false);
   const kiteQuoteRefreshInFlight = useRef(false);
   const kiteRefreshInFlight = useRef(false);
@@ -2065,9 +2145,8 @@ export default function App({ user = null, onSignOut }) {
   const openHoldingOptionChain = useCallback((symbol) => {
     const normalized = String(symbol || '').trim().toUpperCase();
     if (!normalized || !holdingsOptionAvailability[normalized]?.available) return;
-    setSelectedOptionChainSymbol(normalized);
-    setApplicationTab('option-chain');
-  }, [holdingsOptionAvailability]);
+    navigateApp({ selectedOptionChainSymbol: normalized, applicationTab: 'option-chain' });
+  }, [holdingsOptionAvailability, navigateApp]);
 
   useEffect(() => {
     if (applicationTab !== 'kite' || kiteTab !== 'Holdings' || !Array.isArray(kiteData?.rows)) {
@@ -2273,9 +2352,7 @@ export default function App({ user = null, onSignOut }) {
   const openAutoTrenderUnderlying = (value) => {
     const normalized = String(value || '').trim().toUpperCase();
     if (!DEFAULT_INDICES.includes(normalized)) return;
-    setIndex(normalized);
-    setAutotrenderView('live');
-    setApplicationTab('autotrender');
+    navigateApp({ index: normalized, autotrenderView: 'live', applicationTab: 'autotrender' });
   };
 
   const login = async () => {
@@ -2403,12 +2480,13 @@ export default function App({ user = null, onSignOut }) {
       <header className="topbar">
         <div className="brand-mark">TP</div>
         <div className="brand-copy"><strong>TradingPlatformNext</strong><span>MARKET INTELLIGENCE</span></div>
+      <button type="button" className="app-back-button" onClick={goBackInApp} disabled={appNavigationDepth === 0} aria-label="Go back within TradingPlatformNext" title={appNavigationDepth > 0 ? 'Go back to the previous app screen' : 'No previous app screen'}>← Back</button>
       <nav className="application-tabs" aria-label="Application section">
-        <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => setApplicationTab('autotrender')}>AutoTrender</button>
-        <button type="button" className={applicationTab === 'option-chain' ? 'active' : ''} onClick={() => setApplicationTab('option-chain')}>Market Intelligence</button>
-        <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => setApplicationTab('kite')}>Kite</button>
-        {user?.role !== 'VIEWER' && <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => setApplicationTab('trades')}>Trade Terminal</button>}
-        {user?.role === 'SUPER_ADMIN' && <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => setApplicationTab('settings')}>Settings</button>}
+        <button type="button" className={applicationTab === 'autotrender' ? 'active' : ''} onClick={() => navigateApp({ applicationTab: 'autotrender' })}>AutoTrender</button>
+        <button type="button" className={applicationTab === 'option-chain' ? 'active' : ''} onClick={() => navigateApp({ applicationTab: 'option-chain' })}>Market Intelligence</button>
+        <button type="button" className={applicationTab === 'kite' ? 'active' : ''} onClick={() => navigateApp({ applicationTab: 'kite' })}>Kite</button>
+        {user?.role !== 'VIEWER' && <button type="button" className={applicationTab === 'trades' ? 'active' : ''} onClick={() => navigateApp({ applicationTab: 'trades' })}>Trade Terminal</button>}
+        {user?.role === 'SUPER_ADMIN' && <button type="button" className={applicationTab === 'settings' ? 'active' : ''} onClick={() => navigateApp({ applicationTab: 'settings' })}>Settings</button>}
       </nav>
         <div className="topbar-right">
           <div className="theme-switch" role="group" aria-label="Appearance">
@@ -2441,14 +2519,14 @@ export default function App({ user = null, onSignOut }) {
       {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'option-chain' ? <LtpOptionChainDashboard initialSymbol={selectedOptionChainSymbol} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
-          <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => setShowAllIndices(true)}>DASHBOARD</button>
-          {DEFAULT_INDICES.map((item) => <button key={item} className={!showAllIndices && index === item ? 'selected' : ''} onClick={() => { setIndex(item); setShowAllIndices(false); }}>{item}</button>)}
+          <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => navigateApp({ showAllIndices: true })}>DASHBOARD</button>
+          {DEFAULT_INDICES.map((item) => <button key={item} className={!showAllIndices && index === item ? 'selected' : ''} onClick={() => navigateApp({ index: item, showAllIndices: false })}>{item}</button>)}
         </div>
         <div className="autotrend-refresh-meta" aria-label="Chart and refresh settings">
           <span>Chart window <strong>{mins} min</strong></span>
           <span>Auto refresh <strong>{autoTrenderRefreshSeconds}s</strong></span>
         </div>
-        <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
+        <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => navigateApp({ autotrenderView: 'live' })}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => navigateApp({ autotrenderView: 'historical' })}>Historical Data</button></nav>
       </section>
 
       {error && <div className="error-banner"><strong>Data request issue</strong><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
@@ -2504,7 +2582,7 @@ export default function App({ user = null, onSignOut }) {
       </>) : <>
                 <nav className="kite-tabs" aria-label="Kite sections">
           {['Dashboard', 'Option Chain', 'Orders', 'Positions', 'Holdings'].map((tab) =>
-            <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => setKiteTab(tab)}>{tab}</button>
+            <button key={tab} type="button" className={kiteTab === tab ? 'active' : ''} onClick={() => navigateApp({ kiteTab: tab })}>{tab}</button>
           )}
         </nav>
         <section className={`kite-data-panel panel ${kiteTab === 'Dashboard' ? 'kite-dashboard-panel' : ''}`}>
