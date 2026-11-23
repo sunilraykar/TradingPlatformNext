@@ -755,6 +755,9 @@
 .holding-buy-button:hover{background:#14532d}
 .holding-sell-button{border:1px solid #b83b48;background:#451d29;color:#fda4af}
 .holding-sell-button:hover{background:#7f1d1d}
+.holding-option-chain-button{border:1px solid #2563a6;background:#172d49;color:#93c5fd}
+.holding-option-chain-button:hover:not(:disabled){background:#1e40af}
+.holding-option-chain-button:disabled{opacity:.38;cursor:not-allowed;filter:grayscale(1)}
 .portfolio-order-modal-backdrop{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:14.4px;background:rgba(2,6,15,.72);backdrop-filter:blur(3px)}
 .portfolio-order-modal{width:min(460px,100%);overflow:hidden;border:1px solid var(--line,#29354c);border-radius:12px;background:#111b2b;color:var(--text,#edf3ff);box-shadow:0 24px 70px #0009}
 .portfolio-order-modal-header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:13.6px 15.2px;border-bottom:1px solid var(--line,#29354c)}
