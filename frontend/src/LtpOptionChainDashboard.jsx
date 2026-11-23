@@ -787,8 +787,8 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
         <div className="ltp-order-directions ltp-order-types">
           {['MARKET', 'LIMIT', 'GTT'].map((type) => <button key={type} type="button" className={orderType === type ? 'active' : ''} onClick={() => setOrderType(type)}>{type}</button>)}
         </div>
-        {orderType === 'LIMIT' && <label><span>LIMIT PRICE (₹)</span><input type="number" min="0.01" step="0.05" value={orderPrice} onChange={(event) => setOrderPrice(event.target.value)} required /></label>}
-        {orderType === 'GTT' && <><label><span>TRIGGER PRICE (₹)</span><input type="number" min="0.01" step="0.05" value={orderTriggerPrice} onChange={(event) => setOrderTriggerPrice(event.target.value)} required /></label><label><span>ORDER PRICE (₹)</span><input type="number" min="0.01" step="0.05" value={orderPrice} onChange={(event) => setOrderPrice(event.target.value)} required /></label></>}
+        {orderType === 'LIMIT' && <label><span>LIMIT PRICE (₹)</span><input type="number" value={orderPrice} onChange={(event) => setOrderPrice(event.target.value)} required /></label>}
+        {orderType === 'GTT' && <><label><span>TRIGGER PRICE (₹)</span><input type="number" value={orderTriggerPrice} onChange={(event) => setOrderTriggerPrice(event.target.value)} required /></label><label><span>ORDER PRICE (₹)</span><input type="number" value={orderPrice} onChange={(event) => setOrderPrice(event.target.value)} required /></label></>}
         {orderError && <div className="ltp-order-error">{orderError}</div>}
         <div className="ltp-order-actions"><button type="button" onClick={() => setOrderDraft(null)} disabled={orderSaving}>CANCEL</button><button type="submit" disabled={orderSaving}>{orderSaving ? 'SUBMITTING…' : 'PLACE ORDER'}</button></div>
         <div className="ltp-order-mode">TRADING MODE: {executionMode} · {executionMode === 'PAPER' ? 'NO BROKER ORDER' : 'KITE ORDER'}</div>
