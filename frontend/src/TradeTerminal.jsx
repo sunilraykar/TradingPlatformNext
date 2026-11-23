@@ -67,6 +67,7 @@ const calculateTradeProgress = (trade) => {
   const lowerBound = hasStop ? stop : entry;
   const low = Math.min(lowerBound, target);
   const high = Math.max(lowerBound, target);
+  if (high === low) return null;
   const position = Math.max(0, Math.min(100, ((ltp - low) / (high - low)) * 100));
   const entryPosition = Math.max(0, Math.min(100, ((entry - low) / (high - low)) * 100));
   const progress = ((ltp - entry) / (target - entry)) * 100;
