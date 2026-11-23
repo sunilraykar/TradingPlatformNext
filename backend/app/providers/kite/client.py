@@ -80,7 +80,7 @@ class KiteProvider:
 
     def profile(self) -> dict[str, Any]:
         if not self._client.access_token:
-            raise KiteProviderError("Kite session is not configured")
+            raise KiteAuthenticationError("Kite session is not configured. Please relogin to Kite.")
         try:
             return self._client.profile()
         except Exception as exc:
@@ -88,7 +88,7 @@ class KiteProvider:
 
     def instruments(self, exchange: str | None = None) -> list[dict[str, Any]]:
         if not self._client.access_token:
-            raise KiteProviderError("Kite session is not configured")
+            raise KiteAuthenticationError("Kite session is not configured. Please relogin to Kite.")
         try:
             records = self._client.instruments(exchange) if exchange else self._client.instruments()
         except Exception as exc:
@@ -111,7 +111,7 @@ class KiteProvider:
     def quotes(self, instruments: list[str | int]) -> dict[str, Any]:
         """Fetch quotes by Kite instrument token or EXCHANGE:TRADINGSYMBOL key."""
         if not self._client.access_token:
-            raise KiteProviderError("Kite session is not configured")
+            raise KiteAuthenticationError("Kite session is not configured. Please relogin to Kite.")
         keys = [str(instrument) for instrument in instruments]
         try:
             return self._client.quote(*keys)
@@ -120,13 +120,16 @@ class KiteProvider:
 
     def _account_call(self, operation: str, *args, **kwargs):
         if not self._client.access_token:
-            raise KiteProviderError("Kite session is not configured")
+            raise KiteAuthenticationError("Kite session is not configured. Please relogin to Kite.")
         try:
             return getattr(self._client, operation)(*args, **kwargs)
         except Exception as exc:
-            # Keep the full traceback in backend logs and surface Kite's rejection
-            # message to the UI. Never log request headers, API keys or access tokens.
-            logger.exception("Kite %s request failed", operation)
+            # Authentication failures are expected when the daily Kite session expires.
+            # Keep them concise; reserve tracebacks for unexpected/provider failures.
+            if _is_authentication_error(exc):
+                logger.warning("Kite %s request rejected: please relogin to Kite", operation)
+            else:
+                logger.exception("Kite %s request failed", operation)
             raise _provider_error(operation, exc) from exc
 
     def margins(self, segment: str | None = None) -> dict[str, Any]:
@@ -147,7 +150,7 @@ class KiteProvider:
     def place_order(self, **params) -> str:
         """Place an order and distinguish definite broker input rejections from transport failures."""
         if not self._client.access_token:
-            raise KiteProviderError("Kite session is not configured")
+            raise KiteAuthenticationError("Kite session is not configured. Please relogin to Kite.")
         try:
             return self._client.place_order(variety="regular", **params)
         except InputException as exc:
@@ -158,7 +161,10 @@ class KiteProvider:
                 code=getattr(exc, "code", 400),
             ) from exc
         except Exception as exc:
-            logger.exception("Kite place_order request failed")
+            if _is_authentication_error(exc):
+                logger.warning("Kite order request rejected: please relogin to Kite")
+            else:
+                logger.exception("Kite place_order request failed")
             raise _provider_error("place_order", exc) from exc
 
     def place_gtt(self, **params) -> dict[str, Any]:
