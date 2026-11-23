@@ -100,7 +100,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima, activeReversal, onT
       <button type="button" className={'ltp-reversal ' + tone(value)} aria-label={side + ' reversal ' + (value || 'unavailable') + ', show option LTP'} aria-expanded={isOpen} onClick={() => onToggleReversal(rowKey, side)}>{value || '—'}</button>
       {isOpen && <span className="ltp-reversal-popover" role="status">
         <span>{instrument?.side === 'CE' ? 'CALL' : instrument?.side === 'PE' ? 'PUT' : side} LTP</span>
-        <button type="button" className="ltp-reversal-ltp-action" disabled={!instrument || ltp === null || ltp <= 0} onClick={() => onOpenOrder(instrument, value)} aria-label={'Open order for ' + (instrument?.tradingsymbol || side)}>{ltp !== null && ltp > 0 ? fmt(ltp) : '—'}</button>
+        <button type="button" className="ltp-reversal-ltp-action" disabled={!instrument} onClick={() => onOpenOrder(instrument, value)} aria-label={'Open order for ' + (instrument?.tradingsymbol || side)} title={ltp !== null && ltp > 0 ? 'Open order' : 'LTP unavailable; open order anyway'}>{ltp !== null && ltp > 0 ? fmt(ltp) : 'LTP unavailable'}</button>
       </span>}
     </span>;
   };
@@ -595,7 +595,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
 
     {activeView === "option-chain" && <div className="ltp-contract-index-row" aria-label="Option chain contract shortcuts">
       <div className="ltp-atm-contracts" aria-label="ATM put contract">
-        <button type="button" className="ltp-atm-contract put" onClick={() => openAtmOrder(atmPut)} disabled={!atmPut || !quoteForInstrument(atmPut)}>
+        <button type="button" className="ltp-atm-contract put" onClick={() => openAtmOrder(atmPut)} disabled={!atmPut}>
           <strong>{atmPut?.tradingsymbol || '—'}</strong>
         </button>
       </div>
@@ -605,7 +605,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
         ))}
       </div>
       <div className="ltp-atm-contracts" aria-label="ATM call contract">
-        <button type="button" className="ltp-atm-contract call" onClick={() => openAtmOrder(atmCall)} disabled={!atmCall || !quoteForInstrument(atmCall)}>
+        <button type="button" className="ltp-atm-contract call" onClick={() => openAtmOrder(atmCall)} disabled={!atmCall}>
           <strong>{atmCall?.tradingsymbol || '—'}</strong>
         </button>
       </div>
