@@ -644,12 +644,22 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
                     updates["target"] = round(target, 4)
                     updates["target_trail_count"] = int(trade.get("target_trail_count") or 0) + target_advances
 
-                    # Trail the stop to the level one configured distance behind the
-                    # last target milestone. SL only changes when Target advances.
-                    candidate = (target - target_step - distance) if is_buy else (target - target_step + distance)
+                    # Trail the stop behind the previous target milestone. If that
+                    # calculation crosses entry, reduce the trailing distance by
+                    # five price points for this milestone, then enforce entry as
+                    # the hard floor (BUY) / ceiling (SELL).
+                    previous_target = target - target_step if is_buy else target + target_step
+                    candidate = previous_target - distance if is_buy else previous_target + distance
+                    if (candidate < entry if is_buy else candidate > entry):
+                        adjusted_distance = max(0.0, distance - 5.0)
+                        candidate = (
+                            previous_target - adjusted_distance
+                            if is_buy else previous_target + adjusted_distance
+                        )
+                    candidate = max(entry, candidate) if is_buy else min(entry, candidate)
                     rounded_stop = round(candidate, 4)
                     improves_stop = stop <= 0 or (rounded_stop > round(stop, 4) if is_buy else rounded_stop < round(stop, 4))
-                    if distance > 0 and improves_stop:
+                    if improves_stop:
                         stop = candidate
                         updates["stop_loss"] = rounded_stop
 
