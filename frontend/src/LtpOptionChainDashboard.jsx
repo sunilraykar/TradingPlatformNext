@@ -181,9 +181,9 @@ function SwingTradePanel({ onSymbolSelect }) {
   </section>;
 }
 
-export default function LtpOptionChainDashboard() {
+export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
   const [symbols, setSymbols] = useState(DEFAULT_SYMBOLS);
-  const [symbol, setSymbol] = useState('NIFTY');
+  const [symbol, setSymbol] = useState(initialSymbol || 'NIFTY');
   const [expiries, setExpiries] = useState([]);
   const [expiry, setExpiry] = useState('09-11-2026');
   const [lotSize, setLotSize] = useState(65);
