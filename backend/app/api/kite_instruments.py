@@ -13,6 +13,32 @@ from app.services.option_contract_selector import select_atm_contract
 router = APIRouter(prefix="/kite/instruments", tags=["Kite Instrument Master"])
 
 
+@router.get("/tick-size")
+def get_instrument_tick_size(symbol: str, exchange: str, instrument_type: str) -> dict[str, object]:
+    """Return tick size for the exact tradable instrument, not its underlying."""
+    key = symbol.strip().upper()
+    venue = exchange.strip().upper()
+    kind = instrument_type.strip().upper()
+    if not key or venue not in {"NSE", "BSE", "NFO", "BFO"} or kind not in {"EQ", "CE", "PE", "FUT"}:
+        raise HTTPException(status_code=400, detail="Invalid instrument identity")
+    with get_engine().connect() as connection:
+        row = connection.execute(text("""
+            SELECT tick_size, instrument_token, tradingsymbol
+            FROM instruments
+            WHERE source = 'KITE' AND is_active = TRUE
+              AND exchange = :exchange AND tradingsymbol = :symbol
+              AND instrument_type = :instrument_type
+            ORDER BY instrument_version DESC
+            LIMIT 1
+        """), {"exchange": venue, "symbol": key, "instrument_type": kind}).mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Selected instrument is not present in the active Kite instrument master")
+    tick = float(row["tick_size"] or 0)
+    if tick <= 0:
+        raise HTTPException(status_code=503, detail="Tick size is missing for the selected Kite instrument")
+    return {"symbol": key, "exchange": venue, "instrument_type": kind, "tick_size": tick, "instrument_token": int(row["instrument_token"])}
+
+
 @router.get("/option-contract")
 def find_option_contract(
     underlying: str,
