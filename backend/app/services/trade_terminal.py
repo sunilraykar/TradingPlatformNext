@@ -160,7 +160,11 @@ def status() -> dict[str, Any]:
 def list_trades(*, mode: str | None = None, status_filter: str | None = None,
                 source: str | None = None, underlying: str | None = None) -> list[dict[str, Any]]:
     with _lock:
-        rows = [{key: value for key, value in trade.items() if key not in _LEGACY_TRADE_FIELDS} for trade in _cache.values()]
+        rows = [
+            {key: value for key, value in trade.items() if key not in _LEGACY_TRADE_FIELDS}
+            for trade in _cache.values()
+            if not bool(trade.get("hidden_from_terminal"))
+        ]
     if mode:
         rows = [t for t in rows if t.get("execution_mode") == mode.upper()]
     if status_filter:
