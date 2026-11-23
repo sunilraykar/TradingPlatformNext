@@ -432,6 +432,121 @@ def test_m_ttts_moves_stop_only_with_target_and_keeps_trail_counts_synchronized(
     assert last["stop_loss_trail_count"] == 3
 
 
+def test_m_ttts_reduces_trailing_distance_by_five_when_buy_sl_would_cross_entry(monkeypatch):
+    updates = []
+    monkeypatch.setattr(
+        trade_terminal,
+        "update_trade",
+        lambda trade_id, values, event_type=None: updates.append(dict(values)),
+    )
+    trade = {
+        "trade_id": "m-ttts-buy-entry-floor",
+        "execution_mode": "PAPER",
+        "status": "OPEN",
+        "direction": "BUY",
+        "quantity": 1,
+        "entry_price": 43.0,
+        "average_entry_price": 43.0,
+        "target": 46.6,
+        "stop_loss": None,
+        "favorable_price": 43.0,
+        "trailing_active": False,
+        "target_trail_count": 0,
+        "stop_loss_trail_count": 0,
+        "trailing_strategy": "M-TTTS",
+        "target_stop_loss_settings": {
+            "trailingDistance": 5,
+            "trailingDistanceType": "POINTS",
+            "trailingTarget": 10,
+            "trailingTargetType": "POINTS",
+        },
+    }
+
+    trade_terminal._manage_paper_trade_risk(trade, 46.6, "2026-11-23T10:00:00")
+
+    assert updates[-1]["target"] == 56.6
+    # Original SL would be 41.6; reducing distance from 5 to 0 puts it at
+    # the previous target milestone, safely above the BUY entry.
+    assert updates[-1]["stop_loss"] == 46.6
+    assert updates[-1]["target_trail_count"] == 1
+    assert updates[-1]["stop_loss_trail_count"] == 1
+
+
+def test_m_ttts_reduces_trailing_distance_by_five_when_sell_sl_would_cross_entry(monkeypatch):
+    updates = []
+    monkeypatch.setattr(
+        trade_terminal,
+        "update_trade",
+        lambda trade_id, values, event_type=None: updates.append(dict(values)),
+    )
+    trade = {
+        "trade_id": "m-ttts-sell-entry-ceiling",
+        "execution_mode": "PAPER",
+        "status": "OPEN",
+        "direction": "SELL",
+        "quantity": 1,
+        "entry_price": 43.0,
+        "average_entry_price": 43.0,
+        "target": 39.0,
+        "stop_loss": None,
+        "favorable_price": 43.0,
+        "trailing_active": False,
+        "target_trail_count": 0,
+        "stop_loss_trail_count": 0,
+        "trailing_strategy": "M-TTTS",
+        "target_stop_loss_settings": {
+            "trailingDistance": 5,
+            "trailingDistanceType": "POINTS",
+            "trailingTarget": 10,
+            "trailingTargetType": "POINTS",
+        },
+    }
+
+    trade_terminal._manage_paper_trade_risk(trade, 39.0, "2026-11-23T10:00:00")
+
+    assert updates[-1]["target"] == 29.0
+    # Original SL would be 44; reducing distance from 5 to 0 puts it at
+    # the previous target milestone, safely below the SELL entry.
+    assert updates[-1]["stop_loss"] == 39.0
+    assert updates[-1]["target_trail_count"] == 1
+    assert updates[-1]["stop_loss_trail_count"] == 1
+
+
+def test_m_ttts_entry_price_is_a_hard_boundary_when_five_point_reduction_is_insufficient(monkeypatch):
+    updates = []
+    monkeypatch.setattr(
+        trade_terminal,
+        "update_trade",
+        lambda trade_id, values, event_type=None: updates.append(dict(values)),
+    )
+    trade = {
+        "trade_id": "m-ttts-entry-hard-boundary",
+        "execution_mode": "PAPER",
+        "status": "OPEN",
+        "direction": "BUY",
+        "quantity": 1,
+        "entry_price": 100.0,
+        "average_entry_price": 100.0,
+        "target": 103.0,
+        "stop_loss": None,
+        "favorable_price": 100.0,
+        "trailing_active": False,
+        "target_trail_count": 0,
+        "stop_loss_trail_count": 0,
+        "trailing_strategy": "M-TTTS",
+        "target_stop_loss_settings": {
+            "trailingDistance": 20,
+            "trailingDistanceType": "POINTS",
+            "trailingTarget": 10,
+            "trailingTargetType": "POINTS",
+        },
+    }
+
+    trade_terminal._manage_paper_trade_risk(trade, 103.0, "2026-11-23T10:00:00")
+
+    # 20 - 5 = 15 still crosses entry; the hard BUY floor is entry.
+    assert updates[-1]["stop_loss"] == 100.0
+
 def test_m_ttts_preserves_and_executes_manual_stop_before_first_target(monkeypatch):
     updates = []
     monkeypatch.setattr(
