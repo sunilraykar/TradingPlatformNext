@@ -3577,11 +3577,12 @@ select,input,textarea{
 }
 
 
-/* Trade Terminal: compact, always-visible trailing event counters. */
+/* Trade Terminal: place SL and Target counters at opposite ends of the progress row. */
 .trade-terminal-table .trade-trail-counters {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  width: 100%;
   min-height: 16px;
   margin-top: 2px;
 }
@@ -3596,10 +3597,12 @@ select,input,textarea{
   color: var(--text, #e5eaf3);
 }
 .trade-terminal-table .trade-trail-counter.sl {
+  align-self: flex-start;
   color: #f5c36a;
   background: rgba(245, 195, 106, .12);
 }
 .trade-terminal-table .trade-trail-counter.target {
+  align-self: flex-end;
   color: #60d6a0;
   background: rgba(96, 214, 160, .12);
 }
