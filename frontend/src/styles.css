@@ -249,16 +249,16 @@
 .trade-terminal-table .trade-progress-cell{width:340px;min-width:340px}
 .trade-terminal-table .trade-progress{min-width:310px}
 .trade-terminal-table .trade-pnl-percent{white-space:nowrap}
-/* Subtle vertical boundaries keep Trade Terminal columns visually distinct. */
+/* Trade Terminal: remove vertical column dividers while retaining row separators. */
 .trade-terminal-table{border-collapse:separate;border-spacing:0}
 .trade-terminal-table th,
-.trade-terminal-table td{border-right:1px solid rgba(148,163,184,.22)}
+.trade-terminal-table td,
 .trade-terminal-table th:first-child,
-.trade-terminal-table td:first-child{border-left:1px solid rgba(148,163,184,.22)}
+.trade-terminal-table td:first-child,
+.trade-terminal-table th:last-child,
+.trade-terminal-table td:last-child{border-left:0!important;border-right:0!important}
 .trade-terminal-table thead th{border-top:1px solid rgba(148,163,184,.28);border-bottom:1px solid rgba(148,163,184,.34)}
 .trade-terminal-table tbody td{border-bottom:1px solid rgba(148,163,184,.2)}
-.trade-terminal-table th:last-child,
-.trade-terminal-table td:last-child{border-right:1px solid rgba(148,163,184,.22)}
 
 /* Center every Trade Terminal column except Underlying and Instrument. */
 .trade-terminal-table th:not(:nth-child(2)):not(:nth-child(3)),.trade-terminal-table td:not(:nth-child(2)):not(:nth-child(3)){text-align:center}
