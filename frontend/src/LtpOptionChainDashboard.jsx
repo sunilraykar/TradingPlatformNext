@@ -318,7 +318,13 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     const reversalPrice = n(isPut ? row.putReversal : row.calReversal);
     if (!isIndexUnderlying) {
       openStockTicket(symbol, reversalPrice, data.Price_S, isPut ? 'bearish' : 'bullish', 'NSE');
-      setOrderDraft((current) => current ? { ...current, optionContract: isPut ? put : call } : current);
+      setOrderDraft((current) => current ? {
+        ...current,
+        optionContract: isPut ? put : call,
+        optionStrike: n(strike),
+        optionExpiry: (isPut ? put?.expiry : call?.expiry) || expiry,
+        optionSide: isPut ? 'PE' : 'CE',
+      } : current);
       return;
     }
     const optionSide = isPut ? 'PE' : 'CE';
@@ -332,6 +338,9 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
       expiry: instrument?.expiry || expiry,
       lot_size: Number(instrument?.lot_size || lotSize),
       instrumentAvailable: Boolean(instrument?.tradingsymbol),
+      optionStrike: n(strike),
+      optionExpiry: instrument?.expiry || expiry,
+      optionSide,
     };
     openAtmOrder(fallbackInstrument, reversalPrice);
   };
@@ -511,6 +520,8 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     const tokens = instruments.map((item) => item.instrument_token);
     if (spotToken) tokens.push(spotToken);
     if (futureToken) tokens.push(futureToken);
+    if (orderDraft?.optionContract?.instrument_token) tokens.push(orderDraft.optionContract.instrument_token);
+    if (orderDraft?.futuresContract?.instrument_token) tokens.push(orderDraft.futuresContract.instrument_token);
     if (!tokens.length) return;
     const query = new URLSearchParams();
     Array.from(new Set(tokens)).forEach((token) => query.append('instrument_tokens', String(token)));
@@ -519,7 +530,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
       setQuotes(response.quotes || {});
       setFeedConnected(Boolean(response.connected));
     } catch { setFeedConnected(false); }
-  }, [instruments, spotToken, futureToken]);
+  }, [instruments, spotToken, futureToken, orderDraft?.optionContract?.instrument_token, orderDraft?.futuresContract?.instrument_token]);
 
   const login = async () => {
     setLoggingIn(true);
@@ -757,9 +768,30 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
             }
             setOrderProduct('MIS');
             if (mode === 'OPTIONS') {
-              const optionLtp = n(quoteForInstrument(orderDraft.optionContract)?.last_price);
-              setOrderPrice(optionLtp !== null ? String(optionLtp) : '');
-              setOrderTriggerPrice(optionLtp !== null ? String(optionLtp) : '');
+              setOrderPrice('');
+              setOrderTriggerPrice('');
+              setFuturesLoading(true);
+              try {
+                const optionSelection = orderDraft.optionContract || {};
+                const query = new URLSearchParams({
+                  underlying: orderDraft.underlyingSymbol || symbol,
+                  expiry: orderDraft.optionExpiry || optionSelection.expiry || expiry,
+                  strike: String(orderDraft.optionStrike ?? optionSelection.strike ?? ''),
+                  option_type: orderDraft.optionSide || optionSelection.side || (String(optionSelection.tradingsymbol || '').endsWith('PE') ? 'PE' : 'CE'),
+                });
+                const found = await request('/kite/instruments/option-contract?' + query.toString());
+                const contract = found.contract;
+                setOrderDraft((current) => current ? { ...current, optionContract: contract, optionStrike: contract.strike, optionExpiry: contract.expiry, optionSide: contract.instrument_type, lot_size: contract.lot_size } : current);
+                const liveLtp = n(quoteForInstrument(contract)?.last_price);
+                setOrderPrice(liveLtp !== null ? String(liveLtp) : '');
+                setOrderTriggerPrice(liveLtp !== null ? String(liveLtp) : '');
+                if (liveLtp === null) setOrderError('Option contract found. Waiting for its live Kite price…');
+              } catch (error) {
+                setOrderDraft((current) => current ? { ...current, optionContract: null } : current);
+                setOrderError(error.message || 'Unable to find the selected option contract in the Kite instrument master.');
+              } finally {
+                setFuturesLoading(false);
+              }
               return;
             }
             setOrderPrice('');
@@ -775,7 +807,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
           }}>{mode}</button>)}
         </div>
         <div className="ltp-order-quote"><span>{instrumentMode === 'CASH' ? (orderDraft.cashAvailable ? 'NSE · CASH EQUITY' : 'CASH EQUITY NOT AVAILABLE FOR THIS INDEX') : instrumentMode === 'OPTIONS' ? 'NFO · OPTIONS' : 'NFO · FUTURES'}</span><strong>LTP {fmt(instrumentMode === 'CASH' ? orderDraft.lastPrice : quoteForInstrument(instrumentMode === 'OPTIONS' ? orderDraft.optionContract : orderDraft.futuresContract)?.last_price)}</strong></div>
-        {futuresLoading && <div className="ltp-order-error">Loading futures contracts…</div>}
+        {futuresLoading && <div className="ltp-order-error">Loading selected Kite contract…</div>}
         <div className="ltp-order-reversal-price"><span>{instrumentMode === 'CASH' ? 'REVERSAL BUY PRICE' : 'UNDERLYING REVERSAL REFERENCE'}</span><strong>₹{fmt(orderDraft.reversalPrice)}</strong></div>
         <div className="ltp-order-directions">
           <button type="button" className={orderDirection === 'BUY' ? 'active buy' : 'buy'} onClick={() => setOrderDirection('BUY')}>BUY</button>
