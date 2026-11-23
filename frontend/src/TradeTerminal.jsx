@@ -65,18 +65,23 @@ const calculateTradeProgress = (trade) => {
   // When the strategy has not established an SL yet (e.g. M-TTTS before
   // first target), show progress from entry toward target instead.
   const lowerBound = hasStop ? stop : entry;
-  const low = Math.min(lowerBound, target);
-  const high = Math.max(lowerBound, target);
+  // Include the live price in the visible scale. Otherwise an LTP beyond
+  // the SL/entry range gets clamped onto the same edge point as Entry.
+  const scalePrices = [lowerBound, target, entry, ltp];
+  if (hasStop) scalePrices.push(stop);
+  const low = Math.min(...scalePrices);
+  const high = Math.max(...scalePrices);
   if (high === low) return null;
-  const position = Math.max(0, Math.min(100, ((ltp - low) / (high - low)) * 100));
-  const entryPosition = Math.max(0, Math.min(100, ((entry - low) / (high - low)) * 100));
+  const toPosition = (price) => ((price - low) / (high - low)) * 100;
+  const position = toPosition(ltp);
+  const entryPosition = toPosition(entry);
   const progress = ((ltp - entry) / (target - entry)) * 100;
   return {
     position,
     entryPosition,
     progress,
-    stopPosition: hasStop ? Math.max(0, Math.min(100, ((stop - low) / (high - low)) * 100)) : 0,
-    targetPosition: Math.max(0, Math.min(100, ((target - low) / (high - low)) * 100)),
+    stopPosition: hasStop ? toPosition(stop) : 0,
+    targetPosition: toPosition(target),
     stopLabel: hasStop ? fmt(stop) : '—',
     entryLabel: fmt(entry),
     ltpLabel: fmt(ltp),
