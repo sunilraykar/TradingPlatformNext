@@ -370,10 +370,10 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
     if normalized_direction not in {"BUY", "SELL"}:
         raise ValueError("invalid_option_signal_direction")
 
-    # Prefer the exact contract most recently displayed by the AutoTrender UI
-    # when its underlying and final BUY/SELL decision match this worker cycle.
-    # If the UI has not published a matching selection, fall back to the same
-    # canonical selector used by the UI (never the old independent spot-row logic).
+    # Resolve the authoritative expiry on every entry attempt. A recently saved
+    # UI selection may still be reused for its strike only when its expiry agrees
+    # with the current canonical resolver (prevents stale expiry-day contracts).
+    canonical_selection = select_atm_contract(normalized_index, normalized_direction)
     selected = None
     with get_engine().connect() as connection:
         saved = connection.execute(
@@ -411,11 +411,12 @@ def _create_paper_trade_under_lock(index: str, direction: str, row: dict[str, An
             and str(saved.get("tradingsymbol") or "").upper().startswith(normalized_index)
             and saved.get("instrument_token")
             and selection_expiry_is_valid
+            and str(saved.get("expiry")) == str(canonical_selection.get("expiry"))
             and selection_is_fresh
         ):
             selected = saved
     if selected is None:
-        selected = select_atm_contract(normalized_index, normalized_direction)
+        selected = canonical_selection
     if selected.get("status") != "SELECTED":
         raise ValueError("autotrender_contract_not_selected")
 
