@@ -149,6 +149,70 @@ def option_chain_metadata(symbol: str = Query(default="NIFTY", max_length=30)) -
     }
 
 
+@router.get("/availability")
+def option_chain_availability(
+    symbols: str = Query(..., min_length=1, max_length=5000),
+) -> dict[str, Any]:
+    """Batch-check whether holdings have a current Kite expiry and APIPLATFORM support."""
+    requested = list(dict.fromkeys(
+        _symbol(item) for item in symbols.split(",") if item.strip()
+    ))
+    if not requested:
+        raise HTTPException(status_code=422, detail="At least one symbol is required.")
+
+    today = datetime.now(IST).date()
+    placeholders = []
+    params: dict[str, Any] = {"today": today}
+    for index, symbol in enumerate(requested):
+        key = f"symbol_{index}"
+        placeholders.append(f":{key}")
+        params[key] = symbol
+
+    try:
+        with get_engine().connect() as connection:
+            rows = connection.execute(text(f"""
+                SELECT name, MIN(expiry) AS next_expiry
+                FROM instruments
+                WHERE source = 'KITE' AND is_active = TRUE
+                  AND exchange IN ('NFO', 'BFO')
+                  AND instrument_type IN ('CE', 'PE')
+                  AND expiry >= :today
+                  AND UPPER(name) IN ({", ".join(placeholders)})
+                GROUP BY name
+            """), params).mappings().all()
+    except SQLAlchemyError as exc:
+        logger.exception("Could not check Kite option-chain availability")
+        raise HTTPException(
+            status_code=503,
+            detail="Kite instrument master is unavailable.",
+        ) from exc
+
+    kite_expiries = {
+        str(row["name"]).strip().upper(): _expiry_label(row["next_expiry"])
+        for row in rows
+    }
+    provider_symbols = {
+        str(item.get("symbol") or "").strip().upper()
+        for item in option_chain_symbols().get("symbols", [])
+        if isinstance(item, dict) and item.get("symbol")
+    }
+    return {
+        "availability": {
+            symbol: {
+                "available": symbol in kite_expiries and symbol in provider_symbols,
+                "next_expiry": kite_expiries.get(symbol),
+                "reason": (
+                    None if symbol in kite_expiries and symbol in provider_symbols
+                    else "APIPLATFORM does not list this option-chain underlying."
+                    if symbol not in provider_symbols
+                    else "No active Kite option contracts or future expiry found."
+                ),
+            }
+            for symbol in requested
+        }
+    }
+
+
 @router.get("/fetch")
 def fetch_apiplatform_option_chain(
     symbol: str = Query(default="NIFTY", max_length=30),
