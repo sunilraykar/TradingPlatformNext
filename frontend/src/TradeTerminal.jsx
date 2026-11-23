@@ -58,11 +58,15 @@ const calculateTradeProgress = (trade) => {
   const ltp = Number(ltpRaw);
   const stop = Number(stopRaw);
   const target = Number(targetRaw);
-  if ([entryRaw, ltpRaw, stopRaw, targetRaw].some((value) => value === null || value === undefined || value === '') ||
-      ![entry, ltp, stop, target].every(Number.isFinite) || stop === target) return null;
+  if ([entryRaw, ltpRaw, targetRaw].some((value) => value === null || value === undefined || value === '') ||
+      ![entry, ltp, target].every(Number.isFinite) || entry === target) return null;
+  const hasStop = stopRaw !== null && stopRaw !== undefined && stopRaw !== '' && Number.isFinite(stop);
   const isBuy = String(trade.direction || 'BUY').toUpperCase() !== 'SELL';
-  const low = Math.min(stop, target);
-  const high = Math.max(stop, target);
+  // When the strategy has not established an SL yet (e.g. M-TTTS before
+  // first target), show progress from entry toward target instead.
+  const lowerBound = hasStop ? stop : entry;
+  const low = Math.min(lowerBound, target);
+  const high = Math.max(lowerBound, target);
   const position = Math.max(0, Math.min(100, ((ltp - low) / (high - low)) * 100));
   const entryPosition = Math.max(0, Math.min(100, ((entry - low) / (high - low)) * 100));
   const progress = ((ltp - entry) / (target - entry)) * 100;
@@ -71,7 +75,7 @@ const calculateTradeProgress = (trade) => {
     entryPosition,
     progress,
     favorable: isBuy ? ltp >= entry : ltp <= entry,
-    title: `SL ${fmt(stop)} · Entry ${fmt(entry)} · LTP ${fmt(ltp)} · Target ${fmt(target)}`,
+    title: `SL ${hasStop ? fmt(stop) : 'not set'} · Entry ${fmt(entry)} · LTP ${fmt(ltp)} · Target ${fmt(target)}`,
   };
 };
 const calculateCapitalUsed = (trade) => {
