@@ -572,6 +572,17 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     const timer = window.setInterval(refreshQuotes, 1000);
     return () => window.clearInterval(timer);
   }, [refreshQuotes]);
+
+  useEffect(() => {
+    if (instrumentMode !== 'OPTIONS' || !orderDraft?.optionContract?.instrument_token) return;
+    const liveLtp = n(quoteForInstrument(orderDraft.optionContract)?.last_price);
+    if (liveLtp === null || liveLtp <= 0) return;
+    if (!String(orderPrice || '').trim()) {
+      setOrderPrice(String(liveLtp));
+      setOrderTriggerPrice(String(liveLtp));
+    }
+    setOrderError((current) => current === 'Option contract found. Waiting for its live Kite price…' ? '' : current);
+  }, [instrumentMode, orderDraft?.optionContract?.instrument_token, quotes, orderPrice]);
   useEffect(() => {
     if (!auth.authenticated || !expiry || !instruments.length) return undefined;
     let active = true;
