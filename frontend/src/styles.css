@@ -202,6 +202,17 @@
 .trade-terminal-table-panel{min-width:0}
 .trade-terminal-table-scroll{max-height:calc(100vh - 350px);min-height:220px;overflow:auto}
 .trade-terminal-table{min-width:1500px;font-size:11px}
+/* Subtle vertical boundaries keep Trade Terminal columns visually distinct. */
+.trade-terminal-table{border-collapse:separate;border-spacing:0}
+.trade-terminal-table th,
+.trade-terminal-table td{border-right:1px solid rgba(148,163,184,.22)}
+.trade-terminal-table th:first-child,
+.trade-terminal-table td:first-child{border-left:1px solid rgba(148,163,184,.22)}
+.trade-terminal-table thead th{border-top:1px solid rgba(148,163,184,.28);border-bottom:1px solid rgba(148,163,184,.34)}
+.trade-terminal-table tbody td{border-bottom:1px solid rgba(148,163,184,.2)}
+.trade-terminal-table th:last-child,
+.trade-terminal-table td:last-child{border-right:1px solid rgba(148,163,184,.22)}
+
 /* Center every Trade Terminal column except Underlying and Instrument. */
 .trade-terminal-table th:not(:nth-child(2)):not(:nth-child(3)),.trade-terminal-table td:not(:nth-child(2)):not(:nth-child(3)){text-align:center}
 .trade-terminal-table th:not(:nth-child(2)):not(:nth-child(3)) .trade-sort-header{justify-content:center}
