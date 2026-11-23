@@ -109,7 +109,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima, activeReversal, onT
     <td className={rankClass('callOi', callOi)}><strong className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callOi, 0)}</strong><small className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small></td>
     <td className={rankClass('callVol', callVol)}><strong className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callVol, 0)}</strong><small className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small></td>
     <td>{reversal('CALL', row.calReversal, pq, put)}</td>
-    <td className="ltp-strike-cell"><button type="button" className="ltp-strike-order-button" disabled={strike === null || spot === null || Math.abs(strike - spot) < 0.01} onClick={() => onStrikeSelect?.(row, strike, spot, call, put)} title={strike < spot ? 'Buy this strike PE at Put Reversal' : 'Buy this strike CE at Call Reversal'}><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</button></td>
+    <td className="ltp-strike-cell"><button type="button" className="ltp-strike-order-button" onClick={() => onStrikeSelect?.(row, strike, spot, call, put)} title="Open order ticket for this strike"><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</button></td>
     <td>{reversal('PUT', row.putReversal, cq, call)}</td>
     <td className={rankClass('putVol', putVol)}><strong className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putVol, 0)}</strong><small className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small></td>
     <td className={rankClass('putOi', putOi)}><strong className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putOi, 0)}</strong><small className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small></td>
@@ -297,12 +297,21 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     setOrderError('');
   };
   const openStrikeOrder = (row, strike, liveSpot, call, put) => {
-    if (strike === liveSpot) return;
-    const isPut = strike < liveSpot;
+    const isPut = n(strike) !== null && n(liveSpot) !== null && Number(strike) < Number(liveSpot);
+    const optionSide = isPut ? 'PE' : 'CE';
     const instrument = isPut ? put : call;
     const reversalPrice = n(isPut ? row.putReversal : row.calReversal);
-    if (!instrument) { setOrderError('The selected option contract is not available in the instrument master.'); return; }
-    openAtmOrder(instrument, reversalPrice);
+    const fallbackInstrument = {
+      tradingsymbol: instrument?.tradingsymbol || (symbol + ' ' + expiry + ' ' + strike + ' ' + optionSide),
+      exchange: instrument?.exchange || 'NFO',
+      instrument_token: instrument?.instrument_token || null,
+      strike: n(strike),
+      side: optionSide,
+      expiry: instrument?.expiry || expiry,
+      lot_size: Number(instrument?.lot_size || lotSize),
+      instrumentAvailable: Boolean(instrument?.tradingsymbol),
+    };
+    openAtmOrder(fallbackInstrument, reversalPrice);
   };
   const toggleReversalPopup = (rowKey, side) => {
     if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
@@ -325,6 +334,10 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
   const submitAtmPaperOrder = async (event) => {
     event.preventDefault();
     if (!orderDraft || orderSaving) return;
+    if (orderDraft.instrumentType === 'OPTION' && orderDraft.instrumentAvailable === false) {
+      setOrderError('This strike popup is open, but its contract is missing from the Kite instrument master. Refresh the option chain/instrument master before placing the order.');
+      return;
+    }
     const lots = Number(orderLots);
     const isStock = orderDraft.instrumentType === 'STOCK';
     const lot = isStock ? 1 : Number(orderDraft.lot_size || lotSize);
