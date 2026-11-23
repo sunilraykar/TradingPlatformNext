@@ -13,6 +13,25 @@ from app.services.option_contract_selector import select_atm_contract
 router = APIRouter(prefix="/kite/instruments", tags=["Kite Instrument Master"])
 
 
+@router.get("/derivatives")
+def find_derivative_contracts(underlying: str) -> dict[str, object]:
+    """Find nearest active futures contracts for an underlying."""
+    name = underlying.strip().upper()
+    if not name or len(name) > 40:
+        raise HTTPException(status_code=400, detail="A valid underlying symbol is required")
+    try:
+        with get_engine().connect() as connection:
+            rows = connection.execute(text(
+                "SELECT instrument_token, exchange, tradingsymbol, name, instrument_type, expiry, lot_size, tick_size "
+                "FROM instruments WHERE source = 'KITE' AND is_active = TRUE AND exchange = 'NFO' "
+                "AND instrument_type = 'FUT' AND UPPER(name) = :underlying AND expiry >= CURDATE() "
+                "ORDER BY expiry ASC LIMIT 12"
+            ), {"underlying": name}).mappings().all()
+        return {"instruments": [dict(row) for row in rows]}
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Unable to search the Kite futures instrument master") from exc
+
+
 @router.get("/refresh-status")
 def refresh_status() -> dict[str, object]:
     """Return scheduler timing and the latest instrument-master refresh result."""
