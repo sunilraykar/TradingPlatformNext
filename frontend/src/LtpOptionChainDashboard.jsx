@@ -783,7 +783,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
         </div>
         <label><span>{instrumentMode === 'CASH' ? 'QUANTITY (SHARES)' : 'LOTS'}</span><input type="number" min="1" step="1" value={orderLots} onChange={(event) => setOrderLots(event.target.value)} required /></label>
         <div className="ltp-order-quantity"><span>QUANTITY</span><strong>{(Number(orderLots) > 0 ? Number(orderLots) : 0) * Number(orderDraft.lot_size || 1)}</strong></div>
-        {instrumentMode === 'CASH' && <label><span>PRODUCT</span><select value={orderProduct} onChange={(event) => setOrderProduct(event.target.value)}><option value="CNC">CNC</option><option value="MIS">MIS</option></select></label>
+        {instrumentMode === 'CASH' && <label><span>PRODUCT</span><select value={orderProduct} onChange={(event) => setOrderProduct(event.target.value)}><option value="CNC">CNC</option><option value="MIS">MIS</option></select></label>}
         <div className="ltp-order-directions ltp-order-types">
           {['MARKET', 'LIMIT', 'GTT'].map((type) => <button key={type} type="button" className={orderType === type ? 'active' : ''} onClick={() => setOrderType(type)}>{type}</button>)}
         </div>
