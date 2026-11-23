@@ -3575,3 +3575,31 @@ select,input,textarea{
   border-bottom: 0 !important;
   border-left: 0 !important;
 }
+
+
+/* Trade Terminal: compact, always-visible trailing event counters. */
+.trade-terminal-table .trade-trail-counters {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 16px;
+  margin-top: 2px;
+}
+.trade-terminal-table .trade-trail-counter {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font: 700 9px/1.2 'DM Mono', monospace;
+  white-space: nowrap;
+  background: rgba(148, 163, 184, .12);
+  color: var(--text, #e5eaf3);
+}
+.trade-terminal-table .trade-trail-counter.sl {
+  color: #f5c36a;
+  background: rgba(245, 195, 106, .12);
+}
+.trade-terminal-table .trade-trail-counter.target {
+  color: #60d6a0;
+  background: rgba(96, 214, 160, .12);
+}
