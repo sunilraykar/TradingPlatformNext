@@ -1569,7 +1569,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
           if (index > 0 && dates[index - 1]) openSnapshot(dates[index - 1]);
         }}>›</button>
       </div>
-      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => navigateApp({ autotrenderView: 'live' })}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => navigateApp({ autotrenderView: 'historical' })}>Historical Data</button></nav>
+      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
     </section>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
