@@ -2987,3 +2987,8 @@
   background: rgba(14, 116, 144, .35);
   color: #e0f2fe;
 }
+
+
+.ltp-order-dialog .ltp-order-instrument-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:2px 0 8px}
+.ltp-order-dialog .ltp-order-instrument-modes button{min-height:38px;border:1px solid #52657a;border-radius:5px;background:#293849;color:#dbe6f2;font-weight:800;cursor:pointer}
+.ltp-order-dialog .ltp-order-instrument-modes button.active{border-color:#22d3ee;background:rgba(8,145,178,.3);color:#a5f3fc}
