@@ -157,7 +157,16 @@ async def lifespan(application: FastAPI):
         application.state.autotrender_cache = AutoTrenderCache(application.state.autotrender_auth)
     trade_terminal.hydrate_cache()
     live_quotes.add_listener(trade_terminal.apply_quote_to_open_trades)
-    await _restore_kite_session()
+    try:
+        await _restore_kite_session()
+    except Exception:
+        # Optional broker-session restoration must never prevent the API from starting.
+        # This also covers invalid/missing proxy configuration and unexpected Kite SDK
+        # initialization errors. Kite-dependent operations will surface their own errors.
+        clear_active_kite_session()
+        logger.exception(
+            "Kite session restoration failed; continuing startup without an active Kite session"
+        )
     # Default AutoTrender index feeds are registered on every backend start.
     # Desired tokens remain in memory and will be applied when Kite is authenticated.
     live_market_data.subscribe_autotrender_indices()
