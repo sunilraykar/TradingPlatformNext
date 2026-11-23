@@ -432,6 +432,79 @@ def test_m_ttts_moves_stop_only_with_target_and_keeps_trail_counts_synchronized(
     assert last["stop_loss_trail_count"] == 3
 
 
+def test_m_ttts_preserves_and_executes_manual_stop_before_first_target(monkeypatch):
+    updates = []
+    monkeypatch.setattr(
+        trade_terminal,
+        "update_trade",
+        lambda trade_id, values, event_type=None: updates.append(dict(values)),
+    )
+    trade = {
+        "trade_id": "m-ttts-manual-sl",
+        "execution_mode": "PAPER",
+        "status": "OPEN",
+        "direction": "BUY",
+        "quantity": 65,
+        "open_quantity": 65,
+        "entry_price": 107.10,
+        "average_entry_price": 107.10,
+        "target": 128.52,
+        "stop_loss": 50.0,
+        "favorable_price": 107.10,
+        "trailing_active": False,
+        "trailing_strategy": "M-TTTS",
+        "target_stop_loss_settings": {
+            "trailingDistance": 5,
+            "trailingDistanceType": "POINTS",
+            "trailingTarget": 10,
+            "trailingTargetType": "POINTS",
+        },
+    }
+
+    trade_terminal._manage_paper_trade_risk(
+        trade, 32.95, "2026-11-23T10:41:00+05:30"
+    )
+
+    assert updates
+    assert updates[-1]["status"] == "CLOSED"
+    assert updates[-1]["exit_price"] == 32.95
+    assert updates[-1]["exit_method"] == "STOP_LOSS"
+    assert updates[-1]["auto_exit_reason"] == "MANUAL_STOP_LOSS_BREACHED"
+
+
+def test_m_ttts_does_not_create_an_initial_stop_when_none_is_supplied(monkeypatch):
+    _mock_empty_strategy_settings(monkeypatch)
+    monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
+    trade = trade_terminal.create_trade({
+        "execution_mode": "PAPER",
+        "source": "MANUAL",
+        "instrument_symbol": "NIFTY26NOV25700CE",
+        "direction": "BUY",
+        "quantity": 65,
+        "entry_price": 107.10,
+        "target": 128.52,
+        "trailing_strategy": "M-TTTS",
+    })
+    assert trade["stop_loss"] is None
+
+
+def test_m_ttts_preserves_a_manually_supplied_initial_stop(monkeypatch):
+    _mock_empty_strategy_settings(monkeypatch)
+    monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
+    trade = trade_terminal.create_trade({
+        "execution_mode": "PAPER",
+        "source": "MANUAL",
+        "instrument_symbol": "NIFTY26NOV25700CE",
+        "direction": "BUY",
+        "quantity": 65,
+        "entry_price": 107.10,
+        "target": 128.52,
+        "stop_loss": 50.0,
+        "trailing_strategy": "M-TTTS",
+    })
+    assert trade["stop_loss"] == 50.0
+
+
 def test_paper_close_calculates_gross_realized_pnl_for_buy_and_sell(monkeypatch):
     monkeypatch.setattr(trade_terminal, "_persist", lambda *args, **kwargs: None)
     for trade_id, direction, expected in (
