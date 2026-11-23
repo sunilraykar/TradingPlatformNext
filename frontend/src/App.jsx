@@ -286,8 +286,6 @@ function PriceVwapChart({ rows, levels = [], entryStartTime = '10:00', entryEndT
       </svg>
       {hoveredRow && <div className="price-vwap-tooltip" style={{ left: `${Math.max(16, Math.min(84, ((x(hoveredRow.minutes) - 12) / 696) * 100))}%` }}>
         <div className="price-vwap-tooltip-heading">{hoveredRow.time || 'Intraday values'}</div>
-        <div><span>Price</span><strong>{formatHoverNumber(hoveredRow.price, 2)}</strong></div>
-        <div><span>VWAP</span><strong>{formatHoverNumber(hoveredRow.vwap, 2)}</strong></div>
         <div><span>PCR</span><strong>{formatHoverNumber(hoveredRow.pcr, 2)}</strong></div>
         <div><span>Entry Signal</span><strong style={{ color: hoveredRow.enter === 'BUY' ? '#22c55e' : hoveredRow.enter === 'SELL' ? '#f87171' : '#fbbf24' }}>{hoveredRow.enter || '—'}</strong></div>
         <div><span>Price − VWAP</span><strong className={hoveredGap === null ? '' : hoveredGap >= 0 ? 'positive' : 'negative'}>{formatHoverNumber(hoveredGap, 2)}</strong></div>
