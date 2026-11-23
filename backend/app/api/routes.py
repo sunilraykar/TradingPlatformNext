@@ -576,6 +576,7 @@ def kite_orders() -> dict:
 
 class KitePortfolioOrderRequest(BaseModel):
     symbol: str = Field(min_length=1, max_length=80)
+    instrument_type: str = Field(default="EQ", min_length=1, max_length=10)
     exchange: str = Field(min_length=1, max_length=20)
     transaction_type: str = Field(min_length=1, max_length=10)
     product: str = Field(default="CNC", min_length=1, max_length=10)
@@ -605,6 +606,14 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
         raise HTTPException(status_code=400, detail="order_type must be LIMIT, MARKET or GTT")
     if order_type == "LIMIT" and payload.price is None:
         raise HTTPException(status_code=400, detail="A limit price is required for LIMIT orders")
+    instrument_type = payload.instrument_type.strip().upper()
+    if instrument_type not in {"EQ", "CE", "PE"}:
+        raise HTTPException(status_code=400, detail="instrument_type must be EQ, CE or PE")
+    if instrument_type == "EQ" and exchange not in {"NSE", "BSE"}:
+        raise HTTPException(status_code=400, detail="Cash equity orders must use NSE or BSE")
+    if instrument_type in {"CE", "PE"} and exchange != "NFO":
+        raise HTTPException(status_code=400, detail="Option orders must use NFO")
+
     if order_type == "GTT":
         if payload.trigger_price is None:
             raise HTTPException(status_code=400, detail="A GTT trigger price is required")
@@ -632,6 +641,27 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
 
     if mode not in {"PAPER", "REAL"}:
         raise HTTPException(status_code=503, detail="Trading Mode is invalid; order was not submitted")
+
+    if mode == "REAL":
+        try:
+            with get_engine().connect() as connection:
+                instrument = connection.execute(
+                    text(
+                        "SELECT instrument_type FROM instruments "
+                        "WHERE source = 'KITE' AND is_active = TRUE "
+                        "AND exchange = :exchange AND tradingsymbol = :symbol LIMIT 1"
+                    ),
+                    {"exchange": exchange, "symbol": symbol},
+                ).mappings().first()
+        except SQLAlchemyError as exc:
+            raise HTTPException(status_code=503, detail="Unable to verify the order instrument; order was not submitted") from exc
+        if not instrument:
+            raise HTTPException(status_code=422, detail="The selected instrument is not present in the active Kite instrument master")
+        actual_type = str(instrument.get("instrument_type") or "").strip().upper()
+        if instrument_type == "EQ" and actual_type != "EQ":
+            raise HTTPException(status_code=422, detail="Cash equity order rejected: selected symbol resolves to an option/derivative contract")
+        if instrument_type in {"CE", "PE"} and actual_type != instrument_type:
+            raise HTTPException(status_code=422, detail="Option order type does not match the selected Kite contract")
 
     if mode == "PAPER":
         return {
