@@ -13,6 +13,61 @@ from app.services.option_contract_selector import select_atm_contract
 router = APIRouter(prefix="/kite/instruments", tags=["Kite Instrument Master"])
 
 
+@router.get("/option-contract")
+def find_option_contract(
+    underlying: str,
+    expiry: str,
+    strike: float,
+    option_type: str,
+) -> dict[str, object]:
+    """Resolve and subscribe the exact option contract selected in the Option Chain."""
+    name = underlying.strip().upper()
+    side = option_type.strip().upper()
+    if not name or len(name) > 40 or side not in {"CE", "PE"} or strike <= 0:
+        raise HTTPException(status_code=400, detail="A valid underlying, strike and CE/PE option type are required")
+    try:
+        expiry_date = datetime.strptime(expiry.strip(), "%d-%m-%Y").date()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Expiry must use DD-MM-YYYY") from exc
+
+    exchange = "BFO" if name in {"SENSEX", "BANKEX"} else "NFO"
+    try:
+        with get_engine().connect() as connection:
+            row = connection.execute(text("""
+                SELECT instrument_token, exchange, tradingsymbol, name, instrument_type,
+                       expiry, strike, lot_size, tick_size
+                FROM instruments
+                WHERE source = 'KITE' AND is_active = TRUE
+                  AND exchange = :exchange AND name = :underlying
+                  AND instrument_type = :option_type
+                  AND expiry = :expiry AND strike = :strike
+                ORDER BY instrument_version DESC
+                LIMIT 1
+            """), {
+                "exchange": exchange, "underlying": name, "option_type": side,
+                "expiry": expiry_date, "strike": strike,
+            }).mappings().first()
+        if not row:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No {side} contract found for {name} {strike:g} expiry {expiry_date:%d-%m-%Y}. Refresh the Kite instrument master.",
+            )
+        contract = dict(row)
+        contract["instrument_token"] = int(contract["instrument_token"])
+        contract["strike"] = float(contract["strike"])
+        contract["lot_size"] = int(contract["lot_size"] or 1)
+        contract["expiry"] = contract["expiry"].strftime("%d-%m-%Y") if hasattr(contract["expiry"], "strftime") else str(contract["expiry"])
+        from app.services import live_market_data
+        live_market_data.replace_subscription_group(
+            "order_ticket_option", [contract["instrument_token"]], mode="quote"
+        )
+        return {"contract": contract, "market_data": live_market_data.status()}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="Unable to resolve the selected Kite option contract") from exc
+
+
 @router.get("/derivatives")
 def find_derivative_contracts(underlying: str) -> dict[str, object]:
     """Find nearest active futures contracts for an underlying."""
