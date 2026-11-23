@@ -204,6 +204,8 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
   const chainFetchBusy = useRef(false);
   const metadataRequestId = useRef(0);
   const [orderDraft, setOrderDraft] = useState(null);
+  const [instrumentMode, setInstrumentMode] = useState('CASH');
+  const [futuresLoading, setFuturesLoading] = useState(false);
   const [orderDirection, setOrderDirection] = useState('BUY');
   const [orderLots, setOrderLots] = useState('1');
   const [orderSaving, setOrderSaving] = useState(false);
@@ -270,7 +272,8 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     reversalPopupTimer.current = null;
     setActiveReversal(null);
     const preferredPrice = n(reversalPrice);
-    setOrderDraft({ ...instrument, instrumentType: 'OPTION', reversalPrice: preferredPrice });
+    setOrderDraft({ ...instrument, instrumentType: 'OPTION', reversalPrice: preferredPrice, underlyingSymbol: symbol, optionContract: instrument, futuresContract: null, cashAvailable: !isIndexUnderlying });
+    setInstrumentMode('CASH');
     setOrderDirection('BUY');
     setOrderLots('1');
     setOrderType('LIMIT');
@@ -287,7 +290,8 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
     reversalPopupTimer.current = null;
     setActiveReversal(null);
-    setOrderDraft({ instrumentType: 'STOCK', tradingsymbol, exchange: String(exchange || 'NSE').toUpperCase(), lot_size: 1, reversalPrice, lastPrice, signalSide });
+    setOrderDraft({ instrumentType: 'STOCK', tradingsymbol, exchange: String(exchange || 'NSE').toUpperCase(), lot_size: 1, reversalPrice, lastPrice, signalSide, underlyingSymbol: tradingsymbol, optionContract: null, futuresContract: null, cashAvailable: true });
+    setInstrumentMode('CASH');
     setOrderDirection('BUY');
     setOrderLots('1');
     setOrderType('LIMIT');
@@ -304,6 +308,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
   const openUnderlyingOrder = (instrument, reversalValue, side) => {
     if (!isIndexUnderlying) {
       openStockTicket(symbol, reversalValue, data.Price_S, side === 'PUT' ? 'bearish' : 'bullish', 'NSE');
+      setOrderDraft((current) => current ? { ...current, optionContract: instrument } : current);
       return;
     }
     openAtmOrder(instrument, reversalValue);
@@ -313,6 +318,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     const reversalPrice = n(isPut ? row.putReversal : row.calReversal);
     if (!isIndexUnderlying) {
       openStockTicket(symbol, reversalPrice, data.Price_S, isPut ? 'bearish' : 'bullish', 'NSE');
+      setOrderDraft((current) => current ? { ...current, optionContract: isPut ? put : call } : current);
       return;
     }
     const optionSide = isPut ? 'PE' : 'CE';
@@ -355,13 +361,20 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
       return;
     }
     const lots = Number(orderLots);
-    const isStock = orderDraft.instrumentType === 'STOCK';
-    const lot = isStock ? 1 : Number(orderDraft.lot_size || lotSize);
+    const isStock = instrumentMode === 'CASH';
+    const activeInstrument = instrumentMode === 'CASH'
+      ? (orderDraft.cashAvailable === false ? null : { tradingsymbol: orderDraft.underlyingSymbol || orderDraft.tradingsymbol, exchange: 'NSE', lot_size: 1 })
+      : instrumentMode === 'OPTIONS' ? orderDraft.optionContract : orderDraft.futuresContract;
+    if (!activeInstrument?.tradingsymbol) {
+      setOrderError(instrumentMode === 'CASH' ? 'Cash equity is not available for this underlying. Select OPTIONS or FUTURES.' : instrumentMode === 'OPTIONS' ? 'The selected option contract is unavailable.' : 'Select an available futures contract before placing the order.');
+      return;
+    }
+    const lot = isStock ? 1 : Number(activeInstrument.lot_size || orderDraft.lot_size || lotSize);
     if (!Number.isInteger(lots) || lots < 1 || !Number.isInteger(lot) || lot < 1) {
       setOrderError(isStock ? 'Enter a valid share quantity.' : 'Enter a valid lot quantity.');
       return;
     }
-    const quote = isStock ? null : quoteForInstrument(orderDraft);
+    const quote = isStock ? null : quoteForInstrument(activeInstrument);
     const ltp = isStock ? n(orderDraft.lastPrice) : n(quote && quote.last_price);
     const price = n(orderPrice);
     const triggerPrice = n(orderTriggerPrice);
@@ -375,12 +388,12 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          symbol: orderDraft.tradingsymbol,
-          instrument_type: isStock ? 'EQ' : (orderDraft.side || (orderDraft.tradingsymbol.endsWith('CE') ? 'CE' : 'PE')),
-          exchange: orderDraft.exchange || (isStock ? 'NSE' : 'NFO'),
+          symbol: activeInstrument.tradingsymbol,
+          instrument_type: instrumentMode === 'CASH' ? 'EQ' : instrumentMode === 'OPTIONS' ? (activeInstrument.side || (activeInstrument.tradingsymbol.endsWith('CE') ? 'CE' : 'PE')) : 'FUT',
+          exchange: activeInstrument.exchange || (isStock ? 'NSE' : 'NFO'),
           transaction_type: orderDirection,
           quantity: lots * lot,
-          product: orderProduct,
+          product: isStock ? orderProduct : 'MIS',
           order_type: orderType,
           price: ['LIMIT', 'GTT'].includes(orderType) ? price : null,
           trigger_price: orderType === 'GTT' ? triggerPrice : null,
@@ -731,16 +744,33 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
 
     {orderDraft && <div className="ltp-order-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !orderSaving) setOrderDraft(null); }}>
       <form className="ltp-order-dialog" onSubmit={submitAtmPaperOrder}>
-        <div className="ltp-order-heading"><h2>{orderDraft.tradingsymbol}</h2><button type="button" onClick={() => setOrderDraft(null)} disabled={orderSaving}>×</button></div>
-        <div className="ltp-order-quote"><span>{orderDraft.instrumentType === 'STOCK' ? 'EQUITY · ' + (orderDraft.signalSide || '').toUpperCase() : symbol + ' · ' + expiry}</span><strong>LTP {fmt(orderDraft.instrumentType === 'STOCK' ? orderDraft.lastPrice : quoteForInstrument(orderDraft)?.last_price)}</strong></div>
+        <div className="ltp-order-heading"><h2>{instrumentMode === 'CASH' ? (orderDraft.underlyingSymbol || orderDraft.tradingsymbol) : instrumentMode === 'OPTIONS' ? (orderDraft.optionContract?.tradingsymbol || 'Option contract unavailable') : (orderDraft.futuresContract?.tradingsymbol || 'Select futures contract')}</h2><button type="button" onClick={() => setOrderDraft(null)} disabled={orderSaving}>×</button></div>
+        <div className="ltp-order-instrument-modes" role="group" aria-label="Instrument mode">
+          {['CASH', 'OPTIONS', 'FUTURES'].map((mode) => <button key={mode} type="button" className={instrumentMode === mode ? 'active' : ''} onClick={async () => {
+            setInstrumentMode(mode); setOrderError(''); setOrderLots('1');
+            if (mode === 'CASH') { setOrderProduct('CNC'); return; }
+            setOrderProduct('MIS');
+            if (mode === 'OPTIONS') return;
+            setFuturesLoading(true);
+            try {
+              const query = new URLSearchParams({ underlying: orderDraft.underlyingSymbol || symbol });
+              const found = await request('/kite/instruments/derivatives?' + query.toString());
+              setOrderDraft((current) => current ? { ...current, futuresContract: found.instruments?.[0] || null } : current);
+              if (!found.instruments?.length) setOrderError('No active futures contract found for this underlying in the Kite instrument master.');
+            } catch (error) { setOrderError(error.message || 'Unable to load futures contracts.'); }
+            finally { setFuturesLoading(false); }
+          }}>{mode}</button>)}
+        </div>
+        <div className="ltp-order-quote"><span>{instrumentMode === 'CASH' ? (orderDraft.cashAvailable ? 'NSE · CASH EQUITY' : 'CASH EQUITY NOT AVAILABLE FOR THIS INDEX') : instrumentMode === 'OPTIONS' ? 'NFO · OPTIONS' : 'NFO · FUTURES'}</span><strong>LTP {fmt(instrumentMode === 'CASH' ? orderDraft.lastPrice : quoteForInstrument(instrumentMode === 'OPTIONS' ? orderDraft.optionContract : orderDraft.futuresContract)?.last_price)}</strong></div>
+        {futuresLoading && <div className="ltp-order-error">Loading futures contracts…</div>}
         <div className="ltp-order-reversal-price"><span>REVERSAL BUY PRICE</span><strong>₹{fmt(orderDraft.reversalPrice)}</strong></div>
         <div className="ltp-order-directions">
           <button type="button" className={orderDirection === 'BUY' ? 'active buy' : 'buy'} onClick={() => setOrderDirection('BUY')}>BUY</button>
           <button type="button" className={orderDirection === 'SELL' ? 'active sell' : 'sell'} onClick={() => setOrderDirection('SELL')}>SELL</button>
         </div>
-        <label><span>{orderDraft.instrumentType === 'STOCK' ? 'QUANTITY (SHARES)' : 'LOTS'}</span><input type="number" min="1" step="1" value={orderLots} onChange={(event) => setOrderLots(event.target.value)} required /></label>
+        <label><span>{instrumentMode === 'CASH' ? 'QUANTITY (SHARES)' : 'LOTS'}</span><input type="number" min="1" step="1" value={orderLots} onChange={(event) => setOrderLots(event.target.value)} required /></label>
         <div className="ltp-order-quantity"><span>QUANTITY</span><strong>{(Number(orderLots) > 0 ? Number(orderLots) : 0) * Number(orderDraft.lot_size || 1)}</strong></div>
-        <label><span>PRODUCT</span><select value={orderProduct} onChange={(event) => setOrderProduct(event.target.value)}><option value="CNC">CNC</option><option value="MIS">MIS</option></select></label>
+        {instrumentMode === 'CASH' && <label><span>PRODUCT</span><select value={orderProduct} onChange={(event) => setOrderProduct(event.target.value)}><option value="CNC">CNC</option><option value="MIS">MIS</option></select></label>
         <div className="ltp-order-directions ltp-order-types">
           {['MARKET', 'LIMIT', 'GTT'].map((type) => <button key={type} type="button" className={orderType === type ? 'active' : ''} onClick={() => setOrderType(type)}>{type}</button>)}
         </div>
