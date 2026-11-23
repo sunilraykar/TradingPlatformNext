@@ -6,6 +6,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import pandas_market_calendars as market_calendars
 from fastapi import HTTPException
 from sqlalchemy import text
 
@@ -27,12 +28,55 @@ INDEX_SPECS: dict[str, dict[str, str]] = {
 }
 
 
-def _previous_weekday(day: date) -> date:
-    """Return the previous Monday-Friday date; exchange holidays are not inferred."""
-    candidate = day - timedelta(days=1)
-    while candidate.weekday() >= 5:
-        candidate -= timedelta(days=1)
-    return candidate
+def _previous_trading_session(expiry: date, option_exchange: str) -> date:
+    """Return the last actual exchange session before expiry, including holidays."""
+    calendar_name = {"NFO": "NSE", "BFO": "BSE"}.get(option_exchange)
+    if calendar_name is None:
+        raise HTTPException(status_code=503, detail=f"No trading calendar configured for {option_exchange}")
+
+    try:
+        calendar = market_calendars.get_calendar(calendar_name)
+        sessions = calendar.valid_days(
+            start_date=expiry - timedelta(days=31),
+            end_date=expiry - timedelta(days=1),
+        )
+        if len(sessions) == 0:
+            raise ValueError("calendar returned no sessions before expiry")
+        return sessions[-1].date()
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not resolve the {calendar_name} trading calendar before expiry {expiry.isoformat()}",
+        ) from exc
+
+
+def _resolve_expiry(
+    expiries: list[date],
+    today: date,
+    option_exchange: str,
+) -> tuple[date, date, bool, str]:
+    """Resolve nearest listed expiry, rolling on expiry day and its prior trading session."""
+    available = sorted({item for item in expiries if item is not None and item >= today})
+    if not available:
+        raise HTTPException(status_code=503, detail="No unexpired option contracts are available")
+
+    nearest_expiry = available[0]
+    if today == nearest_expiry:
+        rollover = True
+        rule = "Next listed expiry selected on expiry day"
+    elif today == _previous_trading_session(nearest_expiry, option_exchange):
+        rollover = True
+        rule = "Next listed expiry selected on the last trading session before expiry"
+    else:
+        rollover = False
+        rule = "Nearest listed expiry"
+
+    if rollover and len(available) < 2:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Next expiry is unavailable for {option_exchange}; refusing to select the expiring contract",
+        )
+    return nearest_expiry, (available[1] if rollover else nearest_expiry), rollover, rule
 
 
 def _spot_price(token: int) -> float | None:
@@ -56,9 +100,9 @@ def _spot_price(token: int) -> float | None:
 def select_atm_contract(index: str, signal: str | None = None) -> dict[str, Any]:
     """Select the listed strike nearest spot and the correct expiry/type for a signal.
 
-    One weekday before the nearest expiry, the selector moves to the next listed
-    expiry. Exact exchange holidays are not embedded in the application, so this
-    weekday-based pre-expiry check is a best-effort calendar rule.
+    The selector moves to the next listed expiry on expiry day and on the last
+    actual exchange trading session before expiry. NSE/BSE holidays are resolved
+    through the packaged exchange calendar; calendar failures fail closed.
     """
     key = str(index or "").upper()
     if key not in INDEX_SPECS:
@@ -73,6 +117,7 @@ def select_atm_contract(index: str, signal: str | None = None) -> dict[str, Any]
         }
 
     spec = INDEX_SPECS[key]
+    today = datetime.now(IST).date()
     with get_engine().connect() as connection:
         spot_row = connection.execute(
             text(
@@ -93,20 +138,21 @@ def select_atm_contract(index: str, signal: str | None = None) -> dict[str, Any]
             {
                 "exchange": spec["option_exchange"],
                 "name": spec["option_name"],
-                "today": datetime.now(IST).date(),
+                "today": today,
             },
         ).scalars().all()
 
-    today = datetime.now(IST).date()
-    expiries = sorted({item for item in expiries if item is not None and item >= today})
-    if not expiries:
-        raise HTTPException(status_code=503, detail=f"No future {key} option expiries found; refresh the Kite instrument master")
-
-    current_expiry = expiries[0]
-    pre_expiry_switch = today == _previous_weekday(current_expiry)
-    chosen_expiry = expiries[1] if pre_expiry_switch and len(expiries) > 1 else current_expiry
-    if pre_expiry_switch and len(expiries) == 1:
-        raise HTTPException(status_code=503, detail=f"Next expiry for {key} is unavailable; refusing to select the expiring contract")
+    try:
+        current_expiry, chosen_expiry, used_next_expiry, expiry_rule = _resolve_expiry(
+            list(expiries), today, spec["option_exchange"]
+        )
+    except HTTPException as exc:
+        if "No unexpired option contracts" in str(exc.detail):
+            raise HTTPException(
+                status_code=503,
+                detail=f"No future {key} option expiries found; refresh the Kite instrument master",
+            ) from exc
+        raise
 
     spot = _spot_price(int(spot_row["instrument_token"]))
     if spot is None or spot <= 0:
@@ -144,12 +190,12 @@ def select_atm_contract(index: str, signal: str | None = None) -> dict[str, Any]
         "strike": float(chosen["strike"]),
         "expiry": chosen_expiry.isoformat(),
         "nearest_expiry": current_expiry.isoformat(),
-        "used_next_expiry": bool(pre_expiry_switch),
-        "expiry_rule": "Next listed expiry selected one weekday before nearest expiry" if pre_expiry_switch else "Nearest listed expiry",
+        "used_next_expiry": used_next_expiry,
+        "expiry_rule": expiry_rule,
         "tradingsymbol": str(chosen["tradingsymbol"]),
         "instrument_token": int(chosen["instrument_token"]),
         "lot_size": int(chosen["lot_size"]) if chosen["lot_size"] is not None else None,
         "exchange": str(chosen["exchange"]),
         "price_distance": abs(float(chosen["strike"]) - spot),
-        "calendar_note": "Pre-expiry switch uses weekdays; exchange holidays are not included in the calendar calculation.",
+        "calendar_note": "NSE/BSE sessions use the installed pandas_market_calendars holiday schedule; update the package when exchange calendars are revised.",
     }
