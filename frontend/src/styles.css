@@ -3552,3 +3552,23 @@ select,input,textarea{
   .autotrend-compact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .autotrend-compact-meta { grid-template-columns: 1fr; }
 }
+
+
+/* Final Trade Terminal override: no vertical separators between columns. */
+.trade-terminal-table.kite-data-table,
+.trade-terminal-table.kite-data-table th,
+.trade-terminal-table.kite-data-table td {
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-inline: 0 !important;
+  box-shadow: none !important;
+  background-image: none !important;
+}
+.trade-terminal-table.kite-data-table thead th {
+  border-top: 1px solid rgba(148,163,184,.28) !important;
+  border-bottom: 1px solid rgba(148,163,184,.34) !important;
+}
+.trade-terminal-table.kite-data-table tbody td {
+  border-top: 0 !important;
+  border-bottom: 1px solid rgba(148,163,184,.2) !important;
+}
