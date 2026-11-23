@@ -35,7 +35,9 @@ async function api(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     const detail = typeof payload.detail === 'string' ? payload.detail : `Request failed (${response.status})`;
-    throw new Error(detail);
+    const kiteAuthenticationFailure = path.startsWith('/kite/') &&
+      /kite session is not configured|tokenexception|access[_ ]?token|session expired|invalid session|unauthori[sz]ed|incorrect api[_ ]?key/i.test(detail);
+    throw new Error(kiteAuthenticationFailure ? 'Please relogin to Kite.' : detail);
   }
   return payload;
 }
@@ -2020,8 +2022,13 @@ export default function App({ user = null, onSignOut }) {
     try {
       const status = await api('/kite/session/status');
       setKiteSessionStatus(status);
-      if (status.status === 'login_required') kiteAuthInvalidRef.current = true;
-      else if (status.session_configured === true || status.authenticated === true) kiteAuthInvalidRef.current = false;
+      if (status.status === 'login_required') {
+        kiteAuthInvalidRef.current = true;
+        setKiteError('Please relogin to Kite.');
+      } else if (status.session_configured === true || status.authenticated === true) {
+        kiteAuthInvalidRef.current = false;
+        setKiteError((current) => current === 'Please relogin to Kite.' ? '' : current);
+      }
     } catch (error) {
       setKiteSessionStatus({ authenticated: null, status: 'status_unavailable', error: error.message });
     }
@@ -2036,7 +2043,7 @@ export default function App({ user = null, onSignOut }) {
     try {
       const status = await api('/kite/market-data/status');
       setWebsocketStatus(kiteAuthInvalidRef.current
-        ? { ...status, connected: false, state: 'login_required', reason: 'Kite API authentication failed. Please log in again.' }
+        ? { ...status, connected: false, state: 'login_required', reason: 'Please relogin to Kite.' }
         : status);
     } catch (e) {
       setWebsocketStatus({ connected: false, state: 'unavailable', error: e.message });
@@ -2098,13 +2105,20 @@ export default function App({ user = null, onSignOut }) {
       setKiteData(null);
       const message = e.message || 'Unable to load Kite data. Check Kite login and backend.';
       setKiteError(message);
-      if (/incorrect.*api[_ ]?key|access[_ ]?token|token.*(expired|invalid)|unauthori[sz]ed/i.test(message)) {
+      if (/please relogin to kite|kite session is not configured|incorrect.*api[_ ]?key|access[_ ]?token|token.*(expired|invalid)|unauthori[sz]ed/i.test(message)) {
         kiteAuthInvalidRef.current = true;
+        setKiteError('Please relogin to Kite.');
+        setKiteSessionStatus((current) => ({
+          ...(current || {}),
+          authenticated: false,
+          session_configured: false,
+          status: 'login_required',
+        }));
         setWebsocketStatus((current) => ({
           ...(current || {}),
           connected: false,
           state: 'login_required',
-          reason: 'Kite rejected the API credentials. Please log in again.',
+          reason: 'Please relogin to Kite.',
         }));
       }
     } finally {
@@ -2362,6 +2376,11 @@ export default function App({ user = null, onSignOut }) {
           </details>}
         </div>
       </header>
+
+      {kiteSessionStatus?.status === 'login_required' && <div role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, margin: '12px 18px', padding: '12px 16px', border: '1px solid #b45309', borderRadius: 10, background: 'rgba(245, 158, 11, 0.12)' }}>
+        <div><strong>Kite login required</strong><div style={{ marginTop: 3 }}>Please relogin to Kite.</div></div>
+        <button type="button" className="button primary" onClick={reconnectKite} disabled={kiteReconnecting || kiteResetting}>{kiteReconnecting ? 'Waiting for Kite login…' : 'Login with Kite'}</button>
+      </div>}
 
       {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'option-chain' ? <LtpOptionChainDashboard /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
       <section className="control-panel">
