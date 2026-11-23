@@ -1387,7 +1387,7 @@ function SettingsPanel() {
   </section>;
 }
 
-function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, autotrendSettings }) {
+function AutoTrenderHistoricalData({ autotrenderView, navigateApp, mins, autotrendSettings }) {
   const [exportStartDate, setExportStartDate] = useState('');
   const [exportEndDate, setExportEndDate] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
@@ -1569,7 +1569,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
           if (index > 0 && dates[index - 1]) openSnapshot(dates[index - 1]);
         }}>›</button>
       </div>
-      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => setAutotrenderView('live')}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => setAutotrenderView('historical')}>Historical Data</button></nav>
+      <nav className="kite-tabs autotrender-view-switch" aria-label="AutoTrender sections"><button type="button" className={autotrenderView === 'live' ? 'active' : ''} onClick={() => navigateApp({ autotrenderView: 'live' })}>Live Data</button><button type="button" className={autotrenderView === 'historical' ? 'active' : ''} onClick={() => navigateApp({ autotrenderView: 'historical' })}>Historical Data</button></nav>
     </section>
     {error && <div className="error-banner"><strong>Historical data issue</strong><span>{error}</span></div>}
     {detailLoading && <div className="panel historical-payload"><p>Loading selected snapshot…</p></div>}
@@ -2516,7 +2516,7 @@ export default function App({ user = null, onSignOut }) {
         <button type="button" className="button primary" onClick={reconnectKite} disabled={kiteReconnecting || kiteResetting}>{kiteReconnecting ? 'Waiting for Kite login…' : 'Login with Kite'}</button>
       </div>}
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'option-chain' ? <LtpOptionChainDashboard initialSymbol={selectedOptionChainSymbol} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'option-chain' ? <LtpOptionChainDashboard initialSymbol={selectedOptionChainSymbol} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} navigateApp={navigateApp} mins={mins} autotrendSettings={autotrendSettings} /> : <>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
           <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => navigateApp({ showAllIndices: true })}>DASHBOARD</button>
