@@ -1602,7 +1602,7 @@ function AutoTrenderHistoricalData({ autotrenderView, setAutotrenderView, mins, 
   </section>;
 }
 
-function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false, positionsMode = false, columnsOverride = null, onRowSelect = null, onActionComplete = null }) {
+function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns = [], holdingsMode = false, positionsMode = false, columnsOverride = null, onRowSelect = null, onActionComplete = null, optionChainAvailability = {}, optionChainAvailabilityLoading = false, onOpenOptionChain = null }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [portfolioOrder, setPortfolioOrder] = useState(null);
   const [portfolioOrderLoading, setPortfolioOrderLoading] = useState(false);
@@ -1794,7 +1794,17 @@ function KiteDataTable({ rows, emptyText = 'No records returned.', hiddenColumns
           const pnl = Number(row.pnl ?? row.profit_and_loss ?? row.profit_loss ?? 0);
           return <tr className={holdingsMode ? (pnl > 0 ? "holding-gain" : pnl < 0 ? "holding-loss" : "holding-neutral") : ""} key={row.order_id || row.tradingsymbol || i} onClick={onRowSelect ? () => onRowSelect(row) : undefined} style={onRowSelect ? { cursor: 'pointer' } : undefined}>
             {columns.map((key) => <td key={key} style={{ textAlign: positionsMode ? ['book','tradingsymbol','trading_symbol','symbol','exchange','product','segment'].includes(normalizeColumn(key)) ? 'left' : 'right' : holdingsMode || !isSymbol(key) ? "center" : "left" }} className={(positionsMode ? 'positions-cell ' : '') + (holdingsMode && ["pnl","profit_and_loss","profit_loss"].includes(key.toLowerCase()) ? (pnl > 0 ? "holding-pnl-positive" : pnl < 0 ? "holding-pnl-negative" : "holding-pnl-zero") : holdingsMode && ["day_change","day_change_percentage","daychange","daychangepercentage","net_change_percentage"].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? "cell-positive" : Number(row[key] ?? 0) < 0 ? "cell-negative" : "") : positionsMode && ["pnl","m2m","unrealised","unrealized","realised","realized"].includes(normalizeColumn(key)) ? (Number(row[key] ?? 0) > 0 ? "cell-positive" : Number(row[key] ?? 0) < 0 ? "cell-negative" : "cell-neutral") : normalizeColumn(key) === "strengthdiff" ? (numericValue(row[key]) < 0 ? "cell-positive" : numericValue(row[key]) > 0 ? "cell-negative" : "") : "")}>{renderCell(row[key], key, row)}</td>)}
-            {holdingsMode && <td className="holdings-actions-cell"><button type="button" className="holding-buy-button" onClick={() => openPortfolioOrder(row, "BUY")}>Buy</button><button type="button" className="holding-sell-button" onClick={() => openPortfolioOrder(row, "SELL")}>Sell</button></td>}
+            {holdingsMode && <td className="holdings-actions-cell"><button type="button" className="holding-buy-button" onClick={() => openPortfolioOrder(row, "BUY")}>Buy</button><button type="button" className="holding-sell-button" onClick={() => openPortfolioOrder(row, "SELL")}>Sell</button>{(() => {
+              const holdingSymbol = String(row.tradingsymbol || row.trading_symbol || row.symbol || '').trim().toUpperCase();
+              const availability = optionChainAvailability[holdingSymbol];
+              const disabled = optionChainAvailabilityLoading || !availability?.available;
+              const title = optionChainAvailabilityLoading
+                ? 'Checking option-chain availability…'
+                : availability?.available
+                  ? 'Open ' + holdingSymbol + ' Option Chain'
+                  : availability?.reason || 'No option chain available for this instrument.';
+              return <button type="button" className="holding-option-chain-button" disabled={disabled} title={title} aria-label={'Open option chain for ' + holdingSymbol} onClick={() => onOpenOptionChain?.(holdingSymbol)}>OC</button>;
+            })()}</td>}
           </tr>;
         })}</tbody>
       </table>
@@ -1836,6 +1846,9 @@ export default function App({ user = null, onSignOut }) {
   }, [user?.role, applicationTab]);
   const [autotrenderView, setAutotrenderView] = useState('live');
   const [kiteTab, setKiteTab] = useState('Dashboard');
+  const [selectedOptionChainSymbol, setSelectedOptionChainSymbol] = useState('NIFTY');
+  const [holdingsOptionAvailability, setHoldingsOptionAvailability] = useState({});
+  const [holdingsOptionAvailabilityLoading, setHoldingsOptionAvailabilityLoading] = useState(false);
   const [kiteData, setKiteData] = useState(null);
   const [kiteLoading, setKiteLoading] = useState(false);
   const [kiteError, setKiteError] = useState('');
@@ -2048,6 +2061,51 @@ export default function App({ user = null, onSignOut }) {
     }
   }, []);
   useEffect(() => { refreshWebsocketStatus(); const timer = window.setInterval(refreshWebsocketStatus, 3000); return () => window.clearInterval(timer); }, [refreshWebsocketStatus]);
+
+  const openHoldingOptionChain = useCallback((symbol) => {
+    const normalized = String(symbol || '').trim().toUpperCase();
+    if (!normalized || !holdingsOptionAvailability[normalized]?.available) return;
+    setSelectedOptionChainSymbol(normalized);
+    setApplicationTab('option-chain');
+  }, [holdingsOptionAvailability]);
+
+  useEffect(() => {
+    if (applicationTab !== 'kite' || kiteTab !== 'Holdings' || !Array.isArray(kiteData?.rows)) {
+      setHoldingsOptionAvailability({});
+      setHoldingsOptionAvailabilityLoading(false);
+      return undefined;
+    }
+
+    const symbols = [...new Set(kiteData.rows
+      .map((row) => String(row.tradingsymbol ?? row.trading_symbol ?? row.symbol ?? '').trim().toUpperCase())
+      .filter(Boolean))];
+    if (!symbols.length) {
+      setHoldingsOptionAvailability({});
+      setHoldingsOptionAvailabilityLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setHoldingsOptionAvailability({});
+    setHoldingsOptionAvailabilityLoading(true);
+    api('/apiplatform/option-chain/availability?symbols=' + encodeURIComponent(symbols.join(',')))
+      .then((result) => {
+        if (!cancelled) setHoldingsOptionAvailability(result.availability || {});
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setHoldingsOptionAvailability(Object.fromEntries(symbols.map((symbol) => [
+            symbol,
+            { available: false, reason: 'Option-chain availability could not be verified.' },
+          ])));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setHoldingsOptionAvailabilityLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [applicationTab, kiteTab, kiteData?.rows]);
 
   const loadKiteTab = useCallback(async () => {
     if (applicationTab !== 'kite' || kiteRefreshInFlight.current) return;
@@ -2380,7 +2438,7 @@ export default function App({ user = null, onSignOut }) {
         <button type="button" className="button primary" onClick={reconnectKite} disabled={kiteReconnecting || kiteResetting}>{kiteReconnecting ? 'Waiting for Kite login…' : 'Login with Kite'}</button>
       </div>}
 
-      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'option-chain' ? <LtpOptionChainDashboard /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
+      {applicationTab === 'settings' ? <SettingsPanel /> : applicationTab === 'trades' ? <TradeTerminal onUnderlyingSelect={openAutoTrenderUnderlying} /> : applicationTab === 'option-chain' ? <LtpOptionChainDashboard initialSymbol={selectedOptionChainSymbol} /> : applicationTab === 'autotrender' ? (autotrenderView === 'historical' ? <AutoTrenderHistoricalData autotrenderView={autotrenderView} setAutotrenderView={setAutotrenderView} mins={mins} autotrendSettings={autotrendSettings} /> : <>
       <section className="control-panel">
         <div className="index-switch" aria-label="Select index">
           <button type="button" className={showAllIndices ? 'selected' : ''} onClick={() => setShowAllIndices(true)}>DASHBOARD</button>
@@ -2675,7 +2733,7 @@ export default function App({ user = null, onSignOut }) {
                   return <div className="holdings-concentration-row" key={symbolOf(row)}><span>{symbolOf(row)}</span><div><i style={{ width: `${share}%` }} /></div><strong>{share.toFixed(1)}%</strong></div>;
                 })}</div>
               </details>
-              <KiteDataTable rows={sortedHoldings} holdingsMode onActionComplete={loadKiteTab} hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
+              <KiteDataTable rows={sortedHoldings} holdingsMode onActionComplete={loadKiteTab} optionChainAvailability={holdingsOptionAvailability} optionChainAvailabilityLoading={holdingsOptionAvailabilityLoading} onOpenOptionChain={openHoldingOptionChain} hiddenColumns={['instrument_token', 'isin', 'product', 't1_quantity', 'authorised_quantity', 'authorisation', 'last_quantity', 'authorised_date', 'discrepancy', 'short_quantity', 'used_quantity', 'mtf', 'realised_quantity', 'realized_quantity', 'opening_quantity', 'collateral_quantity', 'collateral_type']} emptyText="No holdings match the selected filters." />
             </div>;
           })()}
           {kiteTab !== 'Dashboard' && kiteTab !== 'Holdings' && (kiteLoading && !kiteData ? <div className="kite-data-empty">Loading {kiteTab.toLowerCase()}…</div> : <KiteDataTable rows={kiteData?.rows || []} positionsMode={kiteTab === 'Positions'} emptyText={kiteError ? 'Data unavailable until the Kite API request succeeds.' : 'No records returned by Kite.'} />)}
