@@ -398,7 +398,10 @@ def create_trade(payload: dict[str, Any]) -> dict[str, Any]:
                     direction = str(payload.get("direction") or "BUY").upper()
                     initial_stop = entry_value - initial_distance if direction == "BUY" else entry_value + initial_distance
                     payload["stop_loss"] = round(max(0.0, initial_stop), 4)
-                elif strategy == "M-TTTS":
+                # M-TTTS delays its automatically generated trailing stop until
+                # the first target, but an explicitly supplied stop-loss is an
+                # active hard stop from entry and must never be discarded.
+                elif strategy == "M-TTTS" and stop_value <= 0:
                     payload["stop_loss"] = None
         except (TypeError, ValueError, OverflowError):
             raise ValueError("Entry price and target/stop settings must be valid numbers")
@@ -650,11 +653,17 @@ def _manage_paper_trade_risk(trade: dict[str, Any], price: float, timestamp: str
                     updates["stop_loss_trail_count"] = int(trade.get("stop_loss_trail_count") or 0) + target_advances
 
             updates["trailing_active"] = trailing_active
-            stop_breached = trailing_active and bool(stop > 0 and (price <= stop if is_buy else price >= stop))
+            # A manually populated SL is a hard stop even before the first
+            # target activates M-TTTS trailing. Once trailing activates, the
+            # same field represents the strategy-managed trailing stop.
+            stop_breached = bool(stop > 0 and (price <= stop if is_buy else price >= stop))
             if stop_breached:
+                is_trailing_exit = trailing_active
                 updates.update({"status": "CLOSED", "exit_price": price, "average_exit_price": price,
-                                "exit_method": "TRAILING_STOP", "exit_reason": "Target-triggered trailing stop breached", "auto_exit": True, "auto_exit_at": timestamp,
-                                "auto_exit_reason": "TARGET_TRIGGERED_TRAILING_STOP_BREACHED"})
+                                "exit_method": "TRAILING_STOP" if is_trailing_exit else "STOP_LOSS",
+                                "exit_reason": "Target-triggered trailing stop breached" if is_trailing_exit else "Manually configured stop loss breached",
+                                "auto_exit": True, "auto_exit_at": timestamp,
+                                "auto_exit_reason": "TARGET_TRIGGERED_TRAILING_STOP_BREACHED" if is_trailing_exit else "MANUAL_STOP_LOSS_BREACHED"})
         elif strategy == "H-PT-TSL":
             if distance > 0:
                 candidate = favorable - distance if is_buy else favorable + distance
