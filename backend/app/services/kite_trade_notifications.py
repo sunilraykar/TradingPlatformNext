@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import text
 
 from app.db.session import get_engine
-from app.providers.kite.client import KiteProviderError
+from app.providers.kite.client import KiteAuthenticationError, KiteProviderError
 from app.providers.kite.registry import get_kite_provider
 from app.services.notification_events import enqueue_notification, notifications_enabled
 
@@ -288,9 +288,17 @@ def process_trade_book(provider=None) -> dict[str, int]:
 
 async def run_scheduler() -> None:
     """Poll broker fills at a conservative interval; delivery remains in the outbox worker."""
+    authentication_failure_logged = False
     while True:
         try:
             await asyncio.to_thread(process_trade_book)
+            if authentication_failure_logged:
+                logger.info("Kite trade-fill notifications resumed after Kite login")
+                authentication_failure_logged = False
+        except KiteAuthenticationError:
+            if not authentication_failure_logged:
+                logger.warning("Kite trade-fill notifications paused. Please relogin to Kite.")
+                authentication_failure_logged = True
         except KiteProviderError as exc:
             logger.warning("Kite trade-fill notification poll unavailable: %s", exc)
         except Exception:
