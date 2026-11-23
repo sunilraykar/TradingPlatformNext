@@ -24,6 +24,17 @@ function fmt(value, digits = 2) {
   const parsed = n(value);
   return parsed === null ? '—' : parsed.toLocaleString('en-IN', { maximumFractionDigits: digits });
 }
+function floorToTick(value, tickSize) {
+  const price = n(value);
+  const tick = n(tickSize);
+  if (price === null || price <= 0 || tick === null || tick <= 0) return price;
+  const decimals = Math.min(8, Math.max(
+    (String(tick).split('.')[1] || '').length,
+    2,
+  ));
+  const steps = Math.floor((price + tick * 1e-9) / tick);
+  return Number((steps * tick).toFixed(decimals));
+}
 function compact(value) {
   const parsed = n(value);
   return parsed === null ? '—' : parsed.toLocaleString('en-IN', { notation: 'compact', maximumFractionDigits: 2 });
@@ -390,10 +401,16 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     }
     const quote = isStock ? null : quoteForInstrument(activeInstrument);
     const ltp = isStock ? n(orderDraft.lastPrice) : n(quote && quote.last_price);
-    const price = n(orderPrice);
-    const triggerPrice = n(orderTriggerPrice);
-    if (orderType === 'LIMIT' && (price === null || price <= 0)) { setOrderError('Enter a valid limit price.'); return; }
-    if (orderType === 'GTT' && (price === null || price <= 0 || triggerPrice === null || triggerPrice <= 0)) { setOrderError('Enter valid GTT trigger and order prices.'); return; }
+    const tickSize = n(activeInstrument.tick_size) || 0.05;
+    const enteredPrice = n(orderPrice);
+    const enteredTriggerPrice = n(orderTriggerPrice);
+    if (orderType === 'LIMIT' && (enteredPrice === null || enteredPrice <= 0)) { setOrderError('Enter a valid limit price.'); return; }
+    if (orderType === 'GTT' && (enteredPrice === null || enteredPrice <= 0 || enteredTriggerPrice === null || enteredTriggerPrice <= 0)) { setOrderError('Enter valid GTT trigger and order prices.'); return; }
+    const price = orderType === 'MARKET' ? null : floorToTick(orderType === 'GTT' ? enteredTriggerPrice : enteredPrice, tickSize);
+    const triggerPrice = orderType === 'GTT' ? price : null;
+    if (orderType !== 'MARKET' && (price === null || price <= 0)) { setOrderError('Price must be at least one valid tick.'); return; }
+    if (orderType !== 'MARKET') setOrderPrice(String(price));
+    if (orderType === 'GTT') setOrderTriggerPrice(String(price));
     if (orderType === 'GTT' && (ltp === null || ltp <= 0)) { setOrderError('Current market price is unavailable for GTT creation.'); return; }
     setOrderSaving(true);
     setOrderError('');
@@ -835,8 +852,8 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
         <div className="ltp-order-directions ltp-order-types">
           {['MARKET', 'LIMIT', 'GTT'].map((type) => <button key={type} type="button" className={orderType === type ? 'active' : ''} onClick={() => setOrderType(type)}>{type}</button>)}
         </div>
-        {orderType === 'LIMIT' && <label><span>LIMIT PRICE (₹)</span><input type="number" value={orderPrice} onChange={(event) => setOrderPrice(event.target.value)} required /></label>}
-        {orderType === 'GTT' && <><label><span>TRIGGER PRICE (₹)</span><input type="number" value={orderTriggerPrice} onChange={(event) => setOrderTriggerPrice(event.target.value)} required /></label><label><span>ORDER PRICE (₹)</span><input type="number" value={orderPrice} onChange={(event) => setOrderPrice(event.target.value)} required /></label></>}
+        {orderType === 'LIMIT' && <label><span>LIMIT PRICE (₹)</span><input type="number" value={orderPrice} onChange={(event) => setOrderPrice(event.target.value)} onBlur={() => { const rounded = floorToTick(orderPrice, n((instrumentMode === 'CASH' ? null : (orderDraft.optionContract || orderDraft.futuresContract)?.tick_size)) || 0.05); if (rounded !== null) setOrderPrice(String(rounded)); }} required /></label>}
+        {orderType === 'GTT' && <><label><span>TRIGGER PRICE (₹)</span><input type="number" value={orderTriggerPrice} onChange={(event) => { setOrderTriggerPrice(event.target.value); setOrderPrice(event.target.value); }} onBlur={() => { const rounded = floorToTick(orderTriggerPrice, n((instrumentMode === 'CASH' ? null : (orderDraft.optionContract || orderDraft.futuresContract)?.tick_size)) || 0.05); if (rounded !== null) { setOrderTriggerPrice(String(rounded)); setOrderPrice(String(rounded)); } }} required /></label><label><span>ORDER PRICE (₹)</span><input type="number" value={orderPrice} onChange={(event) => { setOrderPrice(event.target.value); setOrderTriggerPrice(event.target.value); }} onBlur={() => { const rounded = floorToTick(orderPrice, n((instrumentMode === 'CASH' ? null : (orderDraft.optionContract || orderDraft.futuresContract)?.tick_size)) || 0.05); if (rounded !== null) { setOrderPrice(String(rounded)); setOrderTriggerPrice(String(rounded)); } }} required /></label></>}
         {orderError && <div className="ltp-order-error">{orderError}</div>}
         <div className="ltp-order-actions"><button type="button" onClick={() => setOrderDraft(null)} disabled={orderSaving}>CANCEL</button><button type="submit" disabled={orderSaving}>{orderSaving ? 'SUBMITTING…' : 'PLACE ORDER'}</button></div>
         <div className="ltp-order-mode">TRADING MODE: {executionMode} · {executionMode === 'PAPER' ? 'NO BROKER ORDER' : 'KITE ORDER'}</div>
