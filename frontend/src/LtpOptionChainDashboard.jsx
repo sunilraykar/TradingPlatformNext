@@ -100,7 +100,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima, activeReversal, onT
       <button type="button" className={'ltp-reversal ' + tone(value)} aria-label={side + ' reversal ' + (value || 'unavailable') + ', show option LTP'} aria-expanded={isOpen} onClick={() => onToggleReversal(rowKey, side)}>{value || '—'}</button>
       {isOpen && <span className="ltp-reversal-popover" role="status">
         <span>{instrument?.side === 'CE' ? 'CALL' : instrument?.side === 'PE' ? 'PUT' : side} LTP</span>
-        <button type="button" className="ltp-reversal-ltp-action" disabled={!instrument || ltp === null || ltp <= 0} onClick={() => onOpenOrder(instrument)} aria-label={'Open paper trade for ' + (instrument?.tradingsymbol || side)}>{ltp !== null && ltp > 0 ? fmt(ltp) : '—'}</button>
+        <button type="button" className="ltp-reversal-ltp-action" disabled={!instrument || ltp === null || ltp <= 0} onClick={() => onOpenOrder(instrument, value)} aria-label={'Open order for ' + (instrument?.tradingsymbol || side)}>{ltp !== null && ltp > 0 ? fmt(ltp) : '—'}</button>
       </span>}
     </span>;
   };
@@ -109,7 +109,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima, activeReversal, onT
     <td className={rankClass('callOi', callOi)}><strong className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callOi, 0)}</strong><small className={percentageWeight(callOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callOiShare === null ? '' : fmt(callOiShare, 2) + '%'}</small></td>
     <td className={rankClass('callVol', callVol)}><strong className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(callVol, 0)}</strong><small className={percentageWeight(callVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{callVolShare === null ? '' : fmt(callVolShare, 2) + '%'}</small></td>
     <td>{reversal('CALL', row.calReversal, pq, put)}</td>
-    <td className="ltp-strike-cell"><button type="button" className="ltp-strike-order-button" disabled={strike === null || spot === null || strike === spot} onClick={() => onStrikeSelect?.(row, strike, spot, call, put)} title={strike < spot ? 'Buy this strike PE at Put Reversal' : 'Buy this strike CE at Call Reversal'}><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</button></td>
+    <td className="ltp-strike-cell"><button type="button" className="ltp-strike-order-button" disabled={strike === null || spot === null || Math.abs(strike - spot) < 0.01} onClick={() => onStrikeSelect?.(row, strike, spot, call, put)} title={strike < spot ? 'Buy this strike PE at Put Reversal' : 'Buy this strike CE at Call Reversal'}><strong>{fmt(strike, 0)}</strong>{isAtm && <small>ATM</small>}</button></td>
     <td>{reversal('PUT', row.putReversal, cq, call)}</td>
     <td className={rankClass('putVol', putVol)}><strong className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putVol, 0)}</strong><small className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small></td>
     <td className={rankClass('putOi', putOi)}><strong className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putOi, 0)}</strong><small className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small></td>
