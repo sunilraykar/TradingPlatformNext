@@ -10,6 +10,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import MetaData, Table, inspect, text
 
 from app.db.session import get_engine
+from app.providers.kite.client import KiteAuthenticationError
 from app.providers.kite.registry import get_kite_provider
 
 logger = logging.getLogger(__name__)
@@ -170,6 +171,9 @@ def refresh_instrument_master() -> dict[str, object]:
             logger.exception("Could not refresh AutoTrender index subscriptions after instrument-master update")
 
         return result
+    except KiteAuthenticationError:
+        _set_status(state="Failed", last_error="Please relogin to Kite.")
+        raise
     except Exception as exc:
         _set_status(state="Failed", last_error=str(exc))
         logger.exception("Kite instrument master refresh failed; prior committed master was retained")
@@ -180,6 +184,7 @@ def refresh_instrument_master() -> dict[str, object]:
 
 async def run_daily_instrument_refresh_scheduler() -> None:
     """Refresh once daily at 08:00 IST; retry every five minutes after failures."""
+    authentication_failure_logged = False
     while True:
         now = datetime.now(IST)
         today_at_refresh = now.replace(hour=REFRESH_HOUR, minute=REFRESH_MINUTE, second=0, microsecond=0)
@@ -201,7 +206,15 @@ async def run_daily_instrument_refresh_scheduler() -> None:
         if due and not succeeded_today:
             try:
                 await asyncio.to_thread(refresh_instrument_master)
+                authentication_failure_logged = False
+            except KiteAuthenticationError:
+                # Authentication is an expected daily-session state, not an
+                # application crash. Retry later without repeating stack traces.
+                if not authentication_failure_logged:
+                    logger.warning("Scheduled Kite instrument-master refresh paused. Please relogin to Kite.")
+                    authentication_failure_logged = True
             except Exception:
-                # Log failures and retry after five minutes; the prior master remains intact.
+                authentication_failure_logged = False
+                # Log unexpected failures and retry after five minutes; the prior master remains intact.
                 logger.exception("Scheduled Kite instrument-master refresh failed; retrying in five minutes")
         await asyncio.sleep(300)
