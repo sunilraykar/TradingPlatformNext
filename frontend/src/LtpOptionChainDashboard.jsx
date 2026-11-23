@@ -401,12 +401,29 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     }
     const quote = isStock ? null : quoteForInstrument(activeInstrument);
     const ltp = isStock ? n(orderDraft.lastPrice) : n(quote && quote.last_price);
-    const tickSize = n(activeInstrument.tick_size) || 0.05;
     const enteredPrice = n(orderPrice);
     const enteredTriggerPrice = n(orderTriggerPrice);
     if (orderType === 'LIMIT' && (enteredPrice === null || enteredPrice <= 0)) { setOrderError('Enter a valid limit price.'); return; }
     if (orderType === 'GTT' && (enteredPrice === null || enteredPrice <= 0 || enteredTriggerPrice === null || enteredTriggerPrice <= 0)) { setOrderError('Enter valid GTT trigger and order prices.'); return; }
-    const price = orderType === 'MARKET' ? null : floorToTick(orderType === 'GTT' ? enteredTriggerPrice : enteredPrice, tickSize);
+    let tickSize = n(activeInstrument.tick_size);
+    try {
+      const instrumentType = instrumentMode === 'CASH' ? 'EQ' : instrumentMode === 'OPTIONS'
+        ? (activeInstrument.side || (activeInstrument.tradingsymbol.endsWith('CE') ? 'CE' : 'PE')) : 'FUT';
+      const tickInfo = await request('/kite/instruments/tick-size?' + new URLSearchParams({
+        symbol: activeInstrument.tradingsymbol,
+        exchange: activeInstrument.exchange || (isStock ? 'NSE' : 'NFO'),
+        instrument_type: instrumentType,
+      }).toString());
+      tickSize = n(tickInfo.tick_size);
+    } catch (error) {
+      setOrderError(error.message || 'Unable to retrieve tick size for the selected instrument.');
+      return;
+    }
+    if (tickSize === null || tickSize <= 0) { setOrderError('Valid tick size is unavailable for the selected instrument.'); return; }
+    const price = orderType === 'MARKET' ? null : floorToTick(
+      orderType === 'GTT' ? Math.min(enteredPrice, enteredTriggerPrice) : enteredPrice,
+      tickSize,
+    );
     const triggerPrice = orderType === 'GTT' ? price : null;
     if (orderType !== 'MARKET' && (price === null || price <= 0)) { setOrderError('Price must be at least one valid tick.'); return; }
     if (orderType !== 'MARKET') setOrderPrice(String(price));
