@@ -314,14 +314,18 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     openAtmOrder(instrument, reversalValue);
   };
   const openStrikeOrder = (row, strike, liveSpot, call, put) => {
-    const isPut = n(strike) !== null && n(liveSpot) !== null && Number(strike) < Number(liveSpot);
+    const strikeValue = n(strike);
+    const spotValue = n(liveSpot);
+    const isPut = strikeValue !== null && spotValue !== null && strikeValue < spotValue;
+    const defaultDirection = strikeValue !== null && spotValue !== null && strikeValue > spotValue ? 'SELL' : 'BUY';
     const reversalPrice = n(isPut ? row.putReversal : row.calReversal);
     if (!isIndexUnderlying) {
       openStockTicket(symbol, reversalPrice, data.Price_S, isPut ? 'bearish' : 'bullish', 'NSE');
+      setOrderDirection(defaultDirection);
       setOrderDraft((current) => current ? {
         ...current,
         optionContract: isPut ? put : call,
-        optionStrike: n(strike),
+        optionStrike: strikeValue,
         optionExpiry: (isPut ? put?.expiry : call?.expiry) || expiry,
         optionSide: isPut ? 'PE' : 'CE',
       } : current);
@@ -343,6 +347,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
       optionSide,
     };
     openAtmOrder(fallbackInstrument, reversalPrice);
+    setOrderDirection(defaultDirection);
   };
   const toggleReversalPopup = (rowKey, side) => {
     if (reversalPopupTimer.current) window.clearTimeout(reversalPopupTimer.current);
