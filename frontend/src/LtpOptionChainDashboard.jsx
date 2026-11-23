@@ -748,9 +748,22 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
         <div className="ltp-order-instrument-modes" role="group" aria-label="Instrument mode">
           {['CASH', 'OPTIONS', 'FUTURES'].map((mode) => <button key={mode} type="button" className={instrumentMode === mode ? 'active' : ''} onClick={async () => {
             setInstrumentMode(mode); setOrderError(''); setOrderLots('1');
-            if (mode === 'CASH') { setOrderProduct('CNC'); return; }
+            if (mode === 'CASH') {
+              setOrderProduct('CNC');
+              const cashPrice = n(orderDraft.reversalPrice);
+              setOrderPrice(cashPrice !== null ? String(cashPrice) : '');
+              setOrderTriggerPrice(cashPrice !== null ? String(cashPrice) : '');
+              return;
+            }
             setOrderProduct('MIS');
-            if (mode === 'OPTIONS') return;
+            if (mode === 'OPTIONS') {
+              const optionLtp = n(quoteForInstrument(orderDraft.optionContract)?.last_price);
+              setOrderPrice(optionLtp !== null ? String(optionLtp) : '');
+              setOrderTriggerPrice(optionLtp !== null ? String(optionLtp) : '');
+              return;
+            }
+            setOrderPrice('');
+            setOrderTriggerPrice('');
             setFuturesLoading(true);
             try {
               const query = new URLSearchParams({ underlying: orderDraft.underlyingSymbol || symbol });
@@ -763,7 +776,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
         </div>
         <div className="ltp-order-quote"><span>{instrumentMode === 'CASH' ? (orderDraft.cashAvailable ? 'NSE · CASH EQUITY' : 'CASH EQUITY NOT AVAILABLE FOR THIS INDEX') : instrumentMode === 'OPTIONS' ? 'NFO · OPTIONS' : 'NFO · FUTURES'}</span><strong>LTP {fmt(instrumentMode === 'CASH' ? orderDraft.lastPrice : quoteForInstrument(instrumentMode === 'OPTIONS' ? orderDraft.optionContract : orderDraft.futuresContract)?.last_price)}</strong></div>
         {futuresLoading && <div className="ltp-order-error">Loading futures contracts…</div>}
-        <div className="ltp-order-reversal-price"><span>REVERSAL BUY PRICE</span><strong>₹{fmt(orderDraft.reversalPrice)}</strong></div>
+        <div className="ltp-order-reversal-price"><span>{instrumentMode === 'CASH' ? 'REVERSAL BUY PRICE' : 'UNDERLYING REVERSAL REFERENCE'}</span><strong>₹{fmt(orderDraft.reversalPrice)}</strong></div>
         <div className="ltp-order-directions">
           <button type="button" className={orderDirection === 'BUY' ? 'active buy' : 'buy'} onClick={() => setOrderDirection('BUY')}>BUY</button>
           <button type="button" className={orderDirection === 'SELL' ? 'active sell' : 'sell'} onClick={() => setOrderDirection('SELL')}>SELL</button>
