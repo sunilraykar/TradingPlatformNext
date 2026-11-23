@@ -607,12 +607,12 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
     if order_type == "LIMIT" and payload.price is None:
         raise HTTPException(status_code=400, detail="A limit price is required for LIMIT orders")
     instrument_type = payload.instrument_type.strip().upper()
-    if instrument_type not in {"EQ", "CE", "PE"}:
-        raise HTTPException(status_code=400, detail="instrument_type must be EQ, CE or PE")
+    if instrument_type not in {"EQ", "CE", "PE", "FUT"}:
+        raise HTTPException(status_code=400, detail="instrument_type must be EQ, CE, PE or FUT")
     if instrument_type == "EQ" and exchange not in {"NSE", "BSE"}:
         raise HTTPException(status_code=400, detail="Cash equity orders must use NSE or BSE")
-    if instrument_type in {"CE", "PE"} and exchange != "NFO":
-        raise HTTPException(status_code=400, detail="Option orders must use NFO")
+    if instrument_type in {"CE", "PE", "FUT"} and exchange != "NFO":
+        raise HTTPException(status_code=400, detail="Derivative orders must use NFO")
 
     if order_type == "GTT":
         if payload.trigger_price is None:
@@ -662,6 +662,8 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
             raise HTTPException(status_code=422, detail="Cash equity order rejected: selected symbol resolves to an option/derivative contract")
         if instrument_type in {"CE", "PE"} and actual_type != instrument_type:
             raise HTTPException(status_code=422, detail="Option order type does not match the selected Kite contract")
+        if instrument_type == "FUT" and actual_type != "FUT":
+            raise HTTPException(status_code=422, detail="Futures order rejected: selected instrument is not a futures contract")
 
     if mode == "PAPER":
         return {
