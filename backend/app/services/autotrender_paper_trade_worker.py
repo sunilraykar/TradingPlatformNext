@@ -313,8 +313,8 @@ def _entry_window(now: datetime, settings: dict[str, Any]) -> tuple[bool, str]:
     return True, "inside_entry_window"
 
 
-def _fetch_intraday(index: str) -> dict[str, Any]:
-    """Fetch one index snapshot directly through the existing authenticated provider."""
+def _fetch_intraday(index: str) -> dict[str, Any] | None:
+    """Fetch one index snapshot; HTTP 204 is a normal no-data response."""
     global _AUTH
     if _AUTH is None:
         _AUTH = AutoTrenderAuth()
@@ -323,8 +323,23 @@ def _fetch_intraday(index: str) -> dict[str, Any]:
         params={"category": INDEX_CATEGORIES[index], "mins": 5},
         timeout=8,
     )
-    response.raise_for_status()
+
+    # AutoTrender uses 204 when the current interval has no intraday payload.
+    # This is not an outage and must not open the circuit breaker.
+    if response.status_code == 204:
+        logger.debug("AutoTrender has no new intraday data index=%s status=204", index)
+        return None
+
     content_type = response.headers.get("Content-Type", "").lower()
+    if not response.ok:
+        excerpt = str(getattr(response, "text", "") or "").replace("\n", " ")[:180]
+        logger.warning(
+            "AutoTrender intraday request failed index=%s status=%s content_type=%s url=%s body=%r",
+            index, response.status_code, content_type,
+            getattr(response, "url", ""), excerpt,
+        )
+        response.raise_for_status()
+
     if "json" not in content_type:
         excerpt = str(getattr(response, "text", "") or "").replace("\n", " ")[:180]
         logger.warning(
@@ -585,6 +600,10 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             else:
                 _UPSTREAM_FAILURES.pop(index, None)
                 _UPSTREAM_RETRY_AT.pop(index, None)
+
+            if payload is None:
+                outcomes[index] = {"state": "no_data", "reason": "upstream_no_content"}
+                continue
 
             row = latest_intraday_row(payload)
             if row is None:
