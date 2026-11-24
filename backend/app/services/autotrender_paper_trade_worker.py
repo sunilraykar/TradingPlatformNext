@@ -565,7 +565,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             if now_monotonic < retry_at:
                 outcomes[index] = {
                     "state": "upstream_cooldown",
-                    "reason": "autotr​​ender_upstream_temporarily_unavailable",
+                    "reason": "upstream_temporarily_unavailable",
                     "retry_in_seconds": max(1, int(retry_at - now_monotonic)),
                 }
                 continue
