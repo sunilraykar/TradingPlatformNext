@@ -255,12 +255,13 @@ class AutoTrenderAuth:
                     logger.info("AutoTrender rejected the saved session; attempting automatic login")
                     self.login()
 
-            response = self.session.get(url, timeout=30, **kwargs)
+            kwargs.setdefault("timeout", 30)
+            response = self.session.get(url, **kwargs)
             if self._response_rejects_session(response):
                 logger.warning("AutoTrender rejected the session; clearing cookie and logging in again")
                 self.clear_saved_cookie()
                 self.login()
-                response = self.session.get(url, timeout=30, **kwargs)
+                response = self.session.get(url, **kwargs)
                 if self._response_rejects_session(response):
                     self.clear_saved_cookie()
                     raise RuntimeError(
