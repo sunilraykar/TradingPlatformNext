@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time as monotonic_time
 from datetime import UTC, datetime, time
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -52,6 +53,10 @@ _INDEX_SETTING_NAMES = {
 _AUTH: AutoTrenderAuth | None = None
 _LAST_CYCLE: dict[str, Any] = {"state": "not_started", "last_cycle_at": None, "indices": {}, "poll_interval_seconds": DEFAULT_POLL_SECONDS}
 _LAST_SIGNAL_BY_INDEX: dict[str, str] = {}
+# Per-index circuit breaker: upstream outages must not be hammered every cycle.
+_UPSTREAM_FAILURES: dict[str, int] = {}
+_UPSTREAM_RETRY_AT: dict[str, float] = {}
+_UPSTREAM_COOLDOWN_SECONDS = (60, 120, 300)
 
 _ENTRY_CONDITION_LOG_TABLE_READY = False
 
@@ -316,10 +321,17 @@ def _fetch_intraday(index: str) -> dict[str, Any]:
     response = _AUTH.get(
         "/api/derivatives/intra-day",
         params={"category": INDEX_CATEGORIES[index], "mins": 5},
+        timeout=8,
     )
     response.raise_for_status()
     content_type = response.headers.get("Content-Type", "").lower()
     if "json" not in content_type:
+        excerpt = str(getattr(response, "text", "") or "").replace("\n", " ")[:180]
+        logger.warning(
+            "AutoTrender intraday unavailable index=%s status=%s content_type=%s url=%s body=%r",
+            index, response.status_code, content_type,
+            getattr(response, "url", ""), excerpt,
+        )
         raise ValueError("AutoTrender returned a non-JSON intraday response")
     payload = response.json()
     if not isinstance(payload, dict):
@@ -548,7 +560,32 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
         if index not in INDEX_CATEGORIES:
             continue
         try:
-            payload = _fetch_intraday(index)
+            retry_at = _UPSTREAM_RETRY_AT.get(index, 0.0)
+            now_monotonic = monotonic_time.monotonic()
+            if now_monotonic < retry_at:
+                outcomes[index] = {
+                    "state": "upstream_cooldown",
+                    "reason": "autotr​​ender_upstream_temporarily_unavailable",
+                    "retry_in_seconds": max(1, int(retry_at - now_monotonic)),
+                }
+                continue
+
+            try:
+                payload = _fetch_intraday(index)
+            except Exception:
+                failures = _UPSTREAM_FAILURES.get(index, 0) + 1
+                _UPSTREAM_FAILURES[index] = failures
+                cooldown = _UPSTREAM_COOLDOWN_SECONDS[min(failures - 1, len(_UPSTREAM_COOLDOWN_SECONDS) - 1)]
+                _UPSTREAM_RETRY_AT[index] = monotonic_time.monotonic() + cooldown
+                logger.warning(
+                    "AutoTrender upstream circuit opened index=%s failures=%s retry_in=%ss",
+                    index, failures, cooldown,
+                )
+                raise
+            else:
+                _UPSTREAM_FAILURES.pop(index, None)
+                _UPSTREAM_RETRY_AT.pop(index, None)
+
             row = latest_intraday_row(payload)
             if row is None:
                 outcomes[index] = {"state": "skipped", "reason": "no_intraday_row"}
