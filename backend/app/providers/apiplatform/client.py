@@ -49,20 +49,24 @@ class APIPLATFORMClient:
         )
         try:
             self.auth.ensure_authenticated()
+            timeout = kwargs.pop("timeout", self.timeout)
             response = self.auth.session.request(
                 method.upper(),
                 url,
-                timeout=kwargs.pop("timeout", self.timeout),
+                timeout=timeout,
                 **kwargs,
             )
-            if response.status_code in (401, 403):
+            # A 401 indicates that the JWT may have expired. A 403 is an
+            # authorization/security-layer rejection (often Cloudflare) and
+            # must not trigger a destructive logout and browser relogin.
+            if response.status_code == 401:
                 previous_token = self.auth.token
                 self.auth.invalidate(expected_token=previous_token)
                 self.auth.login()
                 response = self.auth.session.request(
                     method.upper(),
                     url,
-                    timeout=kwargs.pop("timeout", self.timeout),
+                    timeout=timeout,
                     **kwargs,
                 )
             response.raise_for_status()
