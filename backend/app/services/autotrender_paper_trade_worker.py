@@ -696,11 +696,20 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                 index, evaluation.eligible, evaluation.direction, reason, trade_id,
             )
         except Exception as exc:  # isolate a failed index so other indices still evaluate
-            logger.exception("AutoTrender worker failed for index %s", index)
-            reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
-            outcomes[index] = {"state": "error", "reason": reason}
-            _log_entry_condition(index=index, state="error", reason=reason,
-                                 details={"exception_type": type(exc).__name__})
+            # Preserve broker/provider rejection details instead of hiding them
+            # behind the exception class name. logger.exception includes traceback.
+            logger.exception(
+                "AutoTrender entry failed index=%s execution_mode=%s",
+                index, settings.get("executionMode", "PAPER"),
+            )
+            reason = str(exc) or type(exc).__name__
+            error_details = {
+                "exception_type": type(exc).__name__,
+                "exception_message": reason,
+                "execution_mode": str(settings.get("executionMode", "PAPER")),
+            }
+            outcomes[index] = {"state": "error", "reason": reason, "details": error_details}
+            _log_entry_condition(index=index, state="error", reason=reason, details=error_details)
 
     result = {
         "state": "running",
