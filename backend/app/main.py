@@ -1,5 +1,5 @@
 import asyncio
-import logging
+import logging\nimport traceback
 import webbrowser
 from contextlib import asynccontextmanager, suppress
 
