@@ -3036,3 +3036,13 @@
  .ltp-option-chain .ltp-contract-index-row .ltp-atm-contract,
  .ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button {height:30px!important;min-height:30px!important;}
 }
+
+/* Correct compact horizontal layout: actual 4-child grid, 2px spacing, no 50%-width nested button distortion. */
+.ltp-option-chain .ltp-contract-index-row {display:grid!important;grid-template-columns:minmax(120px,1.15fr) minmax(220px,2fr) minmax(120px,1.15fr) minmax(300px,3fr)!important;gap:2px!important;align-items:center!important;width:100%!important;min-width:0!important;overflow:visible!important;}
+.ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts,.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts,.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {width:100%!important;min-width:0!important;max-width:none!important;margin:0!important;}
+.ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts .ltp-atm-contract {width:100%!important;max-width:none!important;min-width:0!important;height:30px!important;min-height:30px!important;padding:2px 4px!important;box-sizing:border-box!important;}
+.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts {display:flex!important;gap:2px!important;width:100%!important;min-width:0!important;}
+.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts button {flex:1 1 0!important;width:auto!important;max-width:none!important;min-width:0!important;height:30px!important;min-height:30px!important;padding:2px 4px!important;box-sizing:border-box!important;}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {display:flex!important;gap:2px!important;}
+.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls label {flex:1 1 0!important;min-width:0!important;}
+@media(max-width:1100px){.ltp-option-chain .ltp-contract-index-row{grid-template-columns:minmax(90px,1fr) minmax(160px,2fr) minmax(90px,1fr)!important}.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls{grid-column:1/-1!important}}
