@@ -695,7 +695,7 @@ const SETTINGS_TABS = [
   ['cache-viewer', 'Cache Viewer'],
   ['instruments', 'Instruments'],
   ['live-data-cache', 'Live Data & Cache'],
-  ['telegram', 'Telegram'],
+  ['telegram', 'Telegram'],\n  ['logs', 'Logs'],
 ];
 
 const SETTINGS_FIELDS = {
@@ -1145,6 +1145,21 @@ function TelegramSettings() {
     <p className="settings-ui-only-note">The Bot Token is encrypted at rest using KITE_TOKEN_ENCRYPTION_KEY. Keep that key private and backed up.</p>
   </div>;
 }
+function SystemLogsViewer() {
+  const [items,setItems]=useState([]),[loading,setLoading]=useState(false),[category,setCategory]=useState(''),[severity,setSeverity]=useState(''),[symbol,setSymbol]=useState(''),[reviewed,setReviewed]=useState('false'),[expanded,setExpanded]=useState({});
+  const load=useCallback(async()=>{setLoading(true);try{const p=new URLSearchParams();if(category)p.set('category',category);if(severity)p.set('severity',severity);if(symbol.trim())p.set('symbol',symbol.trim());if(reviewed!=='')p.set('reviewed',reviewed);const d=await api('/logs?'+p.toString());setItems(d.items||[]);}catch(e){setItems([]);}finally{setLoading(false);}},[category,severity,symbol,reviewed]);
+  useEffect(()=>{load();const t=setInterval(load,15000);return()=>clearInterval(t);},[load]);
+  const review=async id=>{try{await api('/logs/'+id+'/review',{method:'PATCH'});load();}catch(e){}};
+  return <div className="panel settings-section"><h2>System Logs</h2><p className="settings-intro">Persisted application diagnostics. Reviewing an event does not retry or submit trades.</p>
+  <div className="settings-grid"><label className="settings-control">Category<select value={category} onChange={e=>setCategory(e.target.value)}><option value="">All</option>{['AUTOTRENDER','KITE_EXECUTION','API','WEBSOCKET','WORKER','SYSTEM'].map(x=><option key={x}>{x}</option>)}</select></label>
+  <label className="settings-control">Severity<select value={severity} onChange={e=>setSeverity(e.target.value)}><option value="">All</option>{['INFO','WARNING','ERROR','CRITICAL'].map(x=><option key={x}>{x}</option>)}</select></label>
+  <label className="settings-control">Symbol<input value={symbol} onChange={e=>setSymbol(e.target.value)} placeholder="Filter symbol"/></label>
+  <label className="settings-control">Review status<select value={reviewed} onChange={e=>setReviewed(e.target.value)}><option value="">All</option><option value="false">Unreviewed</option><option value="true">Reviewed</option></select></label></div>
+  <div className="settings-actions"><button className="button secondary" onClick={load} disabled={loading}>{loading?'Refreshing…':'Refresh'}</button></div>
+  {items.length===0?<p>{loading?'Loading logs…':'No matching log entries. This feed will show persisted events recorded by the application.'}</p>:<div style={{overflowX:'auto'}}><table className="settings-table"><thead><tr><th>Time</th><th>Category</th><th>Severity</th><th>Symbol</th><th>Message</th><th>Status</th><th></th></tr></thead><tbody>{items.map(x=><React.Fragment key={x.id}><tr><td>{String(x.created_at||'').replace('T',' ')}</td><td>{x.category}</td><td>{x.severity}</td><td>{x.symbol||'—'}</td><td>{x.message}</td><td>{x.reviewed?'Reviewed':'Open'}</td><td><button className="button secondary" onClick={()=>setExpanded(v=>({...v,[x.id]:!v[x.id]}))}>Details</button>{!x.reviewed&&<button className="button secondary" onClick={()=>review(x.id)}>Mark reviewed</button>}</td></tr>{expanded[x.id]&&<tr><td colSpan="7"><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{x.details||'No technical details'}</pre></td></tr>}</React.Fragment>)}</tbody></table></div>}
+  </div>;
+}
+
 function SettingsPanel() {
   const [tab, setTab] = useState('market-intelligence');
   const [securityTab, setSecurityTab] = useState('sessions');
@@ -1380,9 +1395,9 @@ function SettingsPanel() {
       </>}
       {tab === 'cache-viewer' && <CacheViewer />}
       {tab === 'instruments' && <InstrumentsViewer />}
-      {tab === 'live-data-cache' && <LiveDataCacheViewer />}
+      {tab === 'live-data-cache' && <LiveDataCacheViewer />}\n      {tab === 'logs' && <SystemLogsViewer />}
       {tab === 'telegram' && <TelegramSettings />}
-      {tab !== 'telegram' && <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>}
+      {tab !== 'telegram' && tab !== 'logs' && <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>}
     </section>}
   </section>;
 }
