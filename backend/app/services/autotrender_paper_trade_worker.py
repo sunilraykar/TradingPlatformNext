@@ -670,8 +670,11 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                     trade_id = trade.get("trade_id")
                 except (ValueError, RuntimeError, KiteProviderError, SQLAlchemyError) as exc:
                     state = "entry_blocked"
-                    reason = str(exc) if isinstance(exc, ValueError) else type(exc).__name__
-                    logger.warning("AutoTrender paper entry blocked index=%s reason=%s", index, reason)
+                    reason = str(exc) or type(exc).__name__
+                    logger.exception(
+                        "AutoTrender entry blocked index=%s execution_mode=%s exception_type=%s exception_message=%s",
+                        index, settings.get("executionMode", "PAPER"), type(exc).__name__, reason,
+                    )
             outcomes[index] = {
                 "state": state,
                 "signal_timestamp": signal_id,
