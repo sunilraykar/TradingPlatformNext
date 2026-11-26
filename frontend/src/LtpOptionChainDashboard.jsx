@@ -124,7 +124,7 @@ function OptionRow({ row, spot, quotes, instruments, maxima, activeReversal, onT
     <td>{reversal('PUT', row.putReversal, cq, call)}</td>
     <td className={rankClass('putVol', putVol)}><strong className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putVol, 0)}</strong><small className={percentageWeight(putVolShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putVolShare === null ? '' : fmt(putVolShare, 2) + '%'}</small></td>
     <td className={rankClass('putOi', putOi)}><strong className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putOi, 0)}</strong><small className={percentageWeight(putOiShare) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putOiShare === null ? '' : fmt(putOiShare, 2) + '%'}</small></td>
-    <td className={(putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : '') + rankClass('putOiChg', putChg, true)}><strong className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putChg, 0)}</strong><small className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small></td>
+    <td className={(putChg > 0 ? 'positive' : putChg < 0 ? 'negative' : '') + rankClass('putOiChg', putChg, true)}><strong className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{fmt(putChg, 0)}</strong><small className={percentageWeight(putChgPct) === 900 ? "ltp-metric-emphasis" : "ltp-metric-normal"}>{putChgPct === null ? '' : fmt(putChgPct, 2) + '%'}</small></td><td className="ltp-buy-cell"><button type="button" className="ltp-row-buy" onClick={() => onStrikeSelect?.(row, strike, spot, call, put)}>BUY</button></td>
   </tr>;
 }
 
@@ -725,7 +725,7 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
     <section className="ltp-workspace">
       <article className="ltp-option-panel">
         <div className="ltp-table-scroll"><table className="ltp-option-table">
-          <thead><tr><th>CALL OI CHG</th><th>CALL OI</th><th>CALL VOLUME</th><th>CALL REVERSAL</th><th className="ltp-strike-head">STRIKE</th><th>PUT REVERSAL</th><th>PUT VOLUME</th><th>PUT OI</th><th>PUT OI CHG</th></tr></thead>
+          <thead><tr><th>CALL OI CHG</th><th>CALL OI</th><th>CALL VOLUME</th><th>CALL REVERSAL</th><th className="ltp-strike-head">STRIKE</th><th>PUT REVERSAL</th><th>PUT VOLUME</th><th>PUT OI</th><th>PUT OI CHG</th><th className="ltp-buy-head">BUY</th></tr></thead>
           <tbody>{visibleRows.map((row, index) => {
             const strike = n(row.strike);
             const nextStrike = index < visibleRows.length - 1 ? n(visibleRows[index + 1].strike) : null;
@@ -738,14 +738,14 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
                   <span className="ltp-rs-chip"><b>{rs.R_Vol_Status || '—'}</b><strong>{fmt(rs.R_Vol_ShiftingStrike_per, 2)}%</strong><small>VOL · {rs.R_Vol_Strike || '—'}{rs.R_Vol_Shifting ? ' → ' + (rs.R_Vol_ShiftingStrike || '—') : ''}</small></span>
                 </div></td>
                 <td className="ltp-spot-marker-cell"><strong>SPOT</strong><b>{fmt(underlying)}</b></td>
-                <td colSpan="4"><div className="ltp-rs-indicators ltp-rs-put">
+                <td colSpan="5"><div className="ltp-rs-indicators ltp-rs-put">
                   <span className="ltp-rs-chip"><b>{rs.S_Vol_Status || '—'}</b><strong>{fmt(rs.S_Vol_ShiftingStrike_per, 2)}%</strong><small>VOL · {rs.S_Vol_Strike || '—'}{rs.S_Vol_Shifting ? ' → ' + (rs.S_Vol_ShiftingStrike || '—') : ''}</small></span>
                   <span className="ltp-rs-chip"><b>{rs.S_OI_Status || '—'}</b><strong>{fmt(rs.S_OI_ShiftingStrike_per, 2)}%</strong><small>OI · {rs.S_OI_Strike || '—'}{rs.S_OI_Shifting ? ' → ' + (rs.S_OI_ShiftingStrike || '—') : ''}</small></span>
                 </div></td>
               </tr>}
             </React.Fragment>;
           })}
-            {!visibleRows.length && <tr><td colSpan="9" className="ltp-empty-cell">{loading ? 'Loading option-chain data…' : 'No option-chain records returned for this expiry.'}</td></tr>}
+            {!visibleRows.length && <tr><td colSpan="10" className="ltp-empty-cell">{loading ? 'Loading option-chain data…' : 'No option-chain records returned for this expiry.'}</td></tr>}
           </tbody>
           {visibleRows.length > 0 && <tfoot>
             <tr>
@@ -757,12 +757,12 @@ export default function LtpOptionChainDashboard({ initialSymbol = 'NIFTY' }) {
               <td>PUT REVERSAL</td>
               <td>PUT VOL<br />{compact(total('putVol'))}</td>
               <td>PUT OI<br />{compact(total('putOI'))}</td>
-              <td>PUT OI CHG<br />{fmt(total('putOIchg'), 0)}</td>
+              <td>PUT OI CHG<br />{fmt(total('putOIchg'), 0)}</td><td></td>
             </tr>
             <tr className="ltp-total-summary-row">
               <td colSpan="4">PE − CE OI CHANGE<br /><strong>{fmt(total('putOIchg') - total('callOIchg'), 0)}</strong></td>
               <td className="ltp-strike-head">VISIBLE STRIKES<br />{visibleRows.length}</td>
-              <td colSpan="4">TOTAL OI<br /><strong>{compact(total('callOI') + total('putOI'))}</strong></td>
+              <td colSpan="5">TOTAL OI<br /><strong>{compact(total('callOI') + total('putOI'))}</strong></td>
             </tr>
           </tfoot>}
         </table></div>
