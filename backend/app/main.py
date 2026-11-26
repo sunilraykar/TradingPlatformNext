@@ -20,7 +20,7 @@ from app.api.routes import router
 from app.api.subscription_test import router as subscription_test_router
 from app.api.telegram import router as telegram_router
 from app.api.trades import router as trades_router
-from app.api.system_logs import router as system_logs_router
+from app.api.system_logs import router as system_logs_router\nfrom app.api.system_logs import record_event
 from app.auth.security import get_session_user, verify_csrf_token
 from app.core.config import get_settings
 from app.core.logging import configure_logging
