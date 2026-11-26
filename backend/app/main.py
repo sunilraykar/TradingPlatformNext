@@ -22,7 +22,7 @@ from app.api.subscription_test import router as subscription_test_router
 from app.api.telegram import router as telegram_router
 from app.api.trades import router as trades_router
 from app.api.system_logs import router as system_logs_router
-from app.api.system_logs import record_event
+from app.api.system_logs import ensure_logs_schema, record_event
 from app.auth.security import get_session_user, verify_csrf_token
 from app.core.config import get_settings
 from app.core.logging import configure_logging
@@ -139,6 +139,11 @@ async def _restore_kite_session() -> None:
 async def lifespan(application: FastAPI):
     settings = get_settings()
     configure_logging(settings.log_level)
+    try:
+        ensure_logs_schema()
+        record_event('SYSTEM', 'INFO', 'Application startup logging initialized', operation='startup')
+    except Exception:
+        logger.exception('Unable to initialize persisted system logs')
 
     # Local API-only mode: do not initialize trading services or background workers.
     if settings.dev_safe_mode:
@@ -305,7 +310,11 @@ async def application_authentication(request: Request, call_next):
         if not viewer_session_action:
             return JSONResponse(status_code=403, content={"detail": "Viewer accounts have read-only access"})
     request.state.application_user = user
-    return await call_next(request)
+    try:
+        return await call_next(request)
+    except Exception:
+        logger.exception('Unhandled API request exception path=%s method=%s', path, request.method)
+        return JSONResponse(status_code=500, content={'detail': 'Internal server error'})
 
 
 @app.get("/health", tags=["health"])
