@@ -44,6 +44,12 @@ def list_logs(category: str|None=None, severity: str|None=None, symbol: str|None
         count=conn.execute(text("SELECT COUNT(*) FROM application_error_logs"+clause),params).scalar()
     return {"items":[dict(x) for x in rows],"total":count}
 
+@router.post("/test")
+def create_test_log():
+    record_event("SYSTEM", "WARNING", "System log test event: persistence and viewer are connected", details="Generated from the System Logs viewer test action.", operation="log_test")
+    return {"created": True}
+
+
 @router.patch("/{log_id}/review")
 def mark_reviewed(log_id: int):
     ensure_logs_schema()
