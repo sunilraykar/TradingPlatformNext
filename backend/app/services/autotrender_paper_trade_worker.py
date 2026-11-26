@@ -633,6 +633,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
             state = "rejected"
             reason = evaluation.reason
             trade_id = None
+            entry_exception_type = None
             if evaluation.eligible:
                 try:
                     record_autotrender_signal(
@@ -669,6 +670,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                         reason = "paper_trade_created"
                     trade_id = trade.get("trade_id")
                 except Exception as exc:
+                    entry_exception_type = type(exc).__name__
                     state = "entry_blocked"
                     reason = (str(getattr(exc, "detail", "")) or str(exc) or type(exc).__name__)
                     logger.exception(
@@ -694,7 +696,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                         "vwap_difference_percent": evaluation.vwap_difference_percent,
                         "execution_mode": str(settings.get("executionMode", "PAPER")),
                         "failure_context": "contract_selection_quote_trade_creation",
-                        "exception_type": type(exc).__name__,
+                        "exception_type": entry_exception_type,
                         "exception_message": reason,
                     },
                 )
