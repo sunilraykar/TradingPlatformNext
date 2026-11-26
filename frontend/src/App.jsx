@@ -1874,6 +1874,7 @@ export default function App({ user = null, onSignOut }) {
   const [kiteError, setKiteError] = useState('');
   const [holdingsLetter, setHoldingsLetter] = useState('ALL');
   const [holdingsProfitFilter, setHoldingsProfitFilter] = useState('ALL');
+  const [holdingsOCOnly, setHoldingsOCOnly] = useState(false);
   const [holdingsSearch, setHoldingsSearch] = useState('');
   const [holdingsSort, setHoldingsSort] = useState('SYMBOL');
   const [holdingsHistoryPeriod, setHoldingsHistoryPeriod] = useState('1Y');
@@ -2724,6 +2725,7 @@ export default function App({ user = null, onSignOut }) {
                 (holdingsLetter === '#' && /^[^A-Z0-9]/i.test(symbol)) ||
                 firstCharacter === holdingsLetter;
               return matchesSearch && matchesLetter &&
+                (!holdingsOCOnly || holdingsOptionAvailability[symbol]?.available === true) &&
                 (holdingsProfitFilter === 'ALL' || (holdingsProfitFilter === 'PROFITABLE' && pnl > 0) || (holdingsProfitFilter === 'LOSS' && pnl < 0) || (holdingsProfitFilter === 'BREAKEVEN' && pnl === 0));
             });
             const sortedHoldings = [...filtered].sort((left, right) => {
@@ -2812,6 +2814,7 @@ export default function App({ user = null, onSignOut }) {
                   {hasSpecialSymbols && <button type="button" className={holdingsLetter === '#' ? 'active' : ''} onClick={() => setHoldingsLetter('#')}>#</button>}
                 </div>
                 <div className="holdings-profit-filters" aria-label="Filter holdings by profitability">
+                  <button type="button" className={holdingsOCOnly ? 'active' : ''} disabled={holdingsOptionAvailabilityLoading} onClick={() => setHoldingsOCOnly((value) => !value)} title="Show only holdings whose OC button is enabled">OC Enabled<span>{holdingsOptionAvailabilityLoading ? '…' : holdings.filter((row) => holdingsOptionAvailability[String(row.tradingsymbol ?? row.trading_symbol ?? row.symbol ?? '').trim().toUpperCase()]?.available === true).length}</span></button>
                   {[['ALL','All'],['PROFITABLE','Profitable'],['LOSS','Loss-making'],['BREAKEVEN','Break-even']].map(([key,labelText]) => <button type="button" key={key} className={holdingsProfitFilter === key ? 'active' : ''} onClick={() => setHoldingsProfitFilter(key)}>{labelText}<span>{counts[key]}</span></button>)}
                 </div>
               </div>
