@@ -207,11 +207,25 @@ def submit_entry(payload: dict[str, Any]) -> dict[str, Any]:
     # Validate the authenticated broker session before creating an intent. This
     # avoids leaving a false SUBMISSION_UNKNOWN record when Kite is simply logged out.
     get_kite_provider().profile()
+    # Expire strategy-level ENTRY blockers after five minutes. This does NOT
+    # cancel or discard the broker order: STALE orders remain in reconciliation
+    # so late fills can still be detected and converted into canonical trades.
+    with get_engine().begin() as conn:
+        conn.execute(text("""
+            UPDATE autotrender_kite_orders
+            SET status='STALE',
+                last_error='ENTRY blocker expired after 5 minutes; broker reconciliation continues.',
+                updated_at=CURRENT_TIMESTAMP(6)
+            WHERE underlying=:underlying AND role='ENTRY'
+              AND status IN ('PREPARED','SUBMITTING','SUBMISSION_UNKNOWN','OPEN','PENDING','PARTIAL')
+              AND created_at < CURRENT_TIMESTAMP(6) - INTERVAL 5 MINUTE
+        """), {"underlying": str(payload["underlying"])})
     with get_engine().connect() as conn:
         pending = conn.execute(text("""
             SELECT idempotency_key FROM autotrender_kite_orders
             WHERE underlying=:underlying AND role='ENTRY'
               AND status IN ('PREPARED','SUBMITTING','SUBMISSION_UNKNOWN','OPEN','PENDING','PARTIAL')
+              AND created_at >= CURRENT_TIMESTAMP(6) - INTERVAL 5 MINUTE
             LIMIT 1
         """), {"underlying": str(payload["underlying"])}).first()
     if pending:
@@ -332,7 +346,7 @@ def run_cycle() -> dict[str, Any]:
     with get_engine().connect() as conn:
         rows = conn.execute(text(
             "SELECT " + _ORDER_COLUMNS + " FROM autotrender_kite_orders "
-            "WHERE status IN ('SUBMITTING','SUBMISSION_UNKNOWN','OPEN','PENDING','PARTIAL','COMPLETE','CANCELLED','REJECTED')"
+            "WHERE status IN ('STALE','SUBMITTING','SUBMISSION_UNKNOWN','OPEN','PENDING','PARTIAL','COMPLETE','CANCELLED','REJECTED')"
         )).mappings().all()
     processed = 0
     for row in rows:
