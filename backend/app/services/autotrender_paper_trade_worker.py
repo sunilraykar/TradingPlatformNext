@@ -692,6 +692,10 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                         "eligible": evaluation.eligible,
                         "strength_difference": evaluation.strength_difference,
                         "vwap_difference_percent": evaluation.vwap_difference_percent,
+                        "execution_mode": str(settings.get("executionMode", "PAPER")),
+                        "failure_context": "contract_selection_quote_trade_creation",
+                        "exception_type": type(exc).__name__,
+                        "exception_message": reason,
                     },
                 )
             logger.info(
