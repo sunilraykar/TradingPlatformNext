@@ -2994,19 +2994,3 @@
 .ltp-order-dialog .ltp-order-instrument-modes button.active{border-color:#22d3ee;background:rgba(8,145,178,.3);color:#a5f3fc}
 
 
-
-/* Keep the index shortcut buttons bounded to the option-chain panel; never bleed into chart panel. */
-.ltp-option-chain .ltp-contract-index-row,
-.ltp-option-chain .ltp-overview-row {max-width:100%;overflow:hidden;}
-.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts {min-width:0!important;width:100%!important;max-width:100%!important;overflow-x:auto!important;overflow-y:hidden!important;justify-content:flex-start!important;}
-.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts button {flex:0 0 clamp(110px, 17%, 190px)!important;max-width:100%;}
-.ltp-option-chain {min-width:0;max-width:100%;overflow-x:hidden;}
-@media (max-width:1600px){.ltp-option-chain .ltp-contract-index-row{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts{grid-row:auto!important;grid-column:1!important}}
-
-/* FIX: viewport breakpoint must account for the narrow option-chain half-panel even on wide monitors. */
-.ltp-option-chain .ltp-contract-index-row {grid-template-columns:minmax(0,1fr)!important;width:100%!important;max-width:100%!important;overflow:hidden!important;}
-.ltp-option-chain .ltp-contract-index-row > * {min-width:0!important;max-width:100%!important;}
-.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts {grid-column:1!important;grid-row:auto!important;display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;width:100%!important;}
-.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts button {flex:1 1 0!important;min-width:0!important;width:auto!important;}
-.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {grid-column:1!important;grid-row:auto!important;display:flex!important;flex-wrap:wrap!important;justify-content:flex-start!important;min-width:0!important;width:100%!important;overflow:hidden!important;}
-.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls label,.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls select,.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls input {min-width:0!important;max-width:100%!important;}
