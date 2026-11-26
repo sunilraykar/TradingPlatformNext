@@ -911,3 +911,36 @@ def database_health() -> dict[str, str]:
         ) from None
 
     return {"status": "ok", "database": "connected"}
+
+
+@router.get("/autotrender/diagnostics", tags=["autotrender"])
+def autotrender_diagnostics(limit: int = Query(default=100, ge=1, le=500)) -> dict[str, Any]:
+    """Return recent persisted AutoTrender entry outcomes for troubleshooting."""
+    try:
+        with get_engine().connect() as connection:
+            rows = connection.execute(text("""
+                SELECT id, occurred_at, source, underlying, state, reason, signal_timestamp,
+                       direction, signal_data, details
+                FROM trade_entry_condition_logs
+                ORDER BY occurred_at DESC, id DESC LIMIT :limit
+            """), {"limit": limit}).mappings().all()
+    except SQLAlchemyError as exc:
+        raise HTTPException(status_code=503, detail="AutoTrender diagnostics database unavailable") from exc
+    def decode(value):
+        if isinstance(value, str):
+            try: return json.loads(value)
+            except (TypeError, ValueError): return value
+        return value
+    return {"records": [{**dict(row), "occurred_at": row["occurred_at"].isoformat() if row["occurred_at"] else None,
+                       "signal_data": decode(row["signal_data"]), "details": decode(row["details"])} for row in rows]}
+
+
+@router.get("/autotrender/diagnostics-ui", tags=["autotrender"], response_class=HTMLResponse)
+def autotrender_diagnostics_ui() -> HTMLResponse:
+    """Standalone browser dashboard for persistent AutoTrender entry diagnostics."""
+    html = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AutoTrender Entry Diagnostics</title><style>
+body{margin:0;background:#0b1020;color:#e5edf8;font:14px system-ui;padding:24px}header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}button{padding:9px 14px;background:#164e63;color:white;border:1px solid #0e7490;border-radius:8px;cursor:pointer}table{width:100%;border-collapse:collapse;margin-top:18px}th,td{padding:10px;border-bottom:1px solid #29354c;text-align:left;vertical-align:top}th{position:sticky;top:0;background:#172239}pre{white-space:pre-wrap;word-break:break-word;max-width:500px;margin:0;color:#cbd5e1}.bad{color:#fca5a5}.good{color:#86efac}.muted{color:#94a3b8}#status{margin:12px 0}.wrap{overflow:auto}</style></head><body><header><div><h1>AutoTrender Entry Diagnostics</h1><div class="muted">Persistent signal, entry failure and exception history</div></div><button onclick="load()">Refresh</button></header><div id="status">Loading…</div><div class="wrap"><table><thead><tr><th>Time</th><th>Index</th><th>State</th><th>Direction</th><th>Reason</th><th>Signal</th><th>Details</th></tr></thead><tbody id="rows"></tbody></table></div><script>
+const esc=v=>String(v??'—').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));
+async function load(){try{const r=await fetch('/api/autotrender/diagnostics?limit=100',{cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.detail||'Load failed');document.getElementById('status').textContent='Loaded '+d.records.length+' records · refreshed '+new Date().toLocaleTimeString();document.getElementById('rows').innerHTML=d.records.map(x=>'<tr><td>'+esc(x.occurred_at)+'</td><td>'+esc(x.underlying)+'</td><td class="'+(x.state==='paper_trade_created'||x.state==='kite_order_submitted'?'good':'bad')+'">'+esc(x.state)+'</td><td>'+esc(x.direction)+'</td><td>'+esc(x.reason)+'</td><td><pre>'+esc(JSON.stringify(x.signal_data,null,2))+'</pre></td><td><pre>'+esc(JSON.stringify(x.details,null,2))+'</pre></td></tr>').join('')}catch(e){document.getElementById('status').textContent='Error: '+e.message}}load();setInterval(load,5000);
+</script></body></html>"""
+    return HTMLResponse(html)
