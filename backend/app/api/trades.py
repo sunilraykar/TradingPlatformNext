@@ -281,6 +281,47 @@ def patch_terminal_trade(trade_id: str, payload: TradeUpdate) -> dict[str, Any]:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+@router.patch("/{trade_id}/levels")
+def patch_live_trade_levels(trade_id: str, payload: TradeUpdate) -> dict[str, Any]:
+    changes = payload.model_dump(exclude_unset=True, exclude_none=True)
+    if set(changes) - {"stop_loss", "target"} or not changes:
+        raise HTTPException(status_code=422, detail="Only Stop Loss and Target may be edited on LIVE positions")
+    trade = next((item for item in trade_terminal.list_trades() if item.get("trade_id") == trade_id), None)
+    if not trade or trade.get("execution_mode") != "LIVE" or str(trade.get("status", "OPEN")).upper() in {"CLOSED","CANCELLED","REJECTED","EXPIRED"}:
+        raise HTTPException(status_code=404, detail="Active LIVE position not found")
+    try:
+        updated = trade_terminal.update_trade(trade_id, changes, event_type="BROKER_TRADE_LEVELS_UPDATED")
+        return {"trade": updated, "note": "Levels saved to the terminal record; these are not broker-native stop/target orders."}
+    except (KeyError, ValueError, RuntimeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/{trade_id}/close-live")
+def close_live_trade(trade_id: str) -> dict[str, Any]:
+    trade = next((item for item in trade_terminal.list_trades() if item.get("trade_id") == trade_id), None)
+    if not trade or trade.get("execution_mode") != "LIVE" or str(trade.get("status", "OPEN")).upper() in {"CLOSED","CANCELLED","REJECTED","EXPIRED"}:
+        raise HTTPException(status_code=404, detail="Active LIVE position not found")
+    try:
+        provider = get_kite_provider()
+        tx = "SELL" if str(trade.get("direction", "BUY")).upper() == "BUY" else "BUY"
+        order_id = provider.place_order(
+            exchange=str(trade.get("exchange") or "NFO"),
+            tradingsymbol=str(trade["instrument_symbol"]),
+            transaction_type=tx,
+            quantity=int(trade["quantity"]),
+            product=str(trade.get("product") or "NRML"),
+            order_type="MARKET",
+            validity="DAY",
+        )
+        # Do not locally mark closed; the subsequent broker reconciliation determines fill/state.
+        reconciliation = reconcile_live_terminal_positions()["reconciliation"]
+        return {"broker_order_id": order_id, "reconciliation": reconciliation, "message": "Market exit submitted to Kite; position state remains broker-reconciled."}
+    except KiteOrderRejectedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except KiteProviderError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
 @router.post("/retry-persistence")
 def retry_terminal_persistence() -> dict[str, Any]:
     return trade_terminal.retry_dirty()
