@@ -11,6 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException
 
 load_dotenv()
 
@@ -68,6 +69,7 @@ class AutoTrenderAuth:
 
             options = Options()
             options.add_argument("--headless=new")
+            options.page_load_strategy = "eager"
             options.add_argument("--window-size=1920,1080")
             options.add_argument("--no-first-run")
             options.add_argument("--no-default-browser-check")
@@ -79,9 +81,19 @@ class AutoTrenderAuth:
             try:
                 logger.info("AutoTrender auth diagnostic: starting headless Chrome login")
                 driver = webdriver.Chrome(options=options)
+                driver.set_page_load_timeout(20)
                 logger.info("AutoTrender auth diagnostic: Chrome started successfully")
                 stage = "login_page_navigation"
-                driver.get(LOGIN_URL)
+                try:
+                    driver.get(LOGIN_URL)
+                except TimeoutException:
+                    # The site may continue loading third-party resources after the login form is available.
+                    # Stop the load and inspect the page instead of blocking the worker indefinitely.
+                    logger.warning("AutoTrender login page navigation exceeded 20s; stopping page load and checking readiness")
+                    try:
+                        driver.execute_script("window.stop();")
+                    except Exception:  # noqa: BLE001
+                        pass
                 logger.info(
                     "AutoTrender auth diagnostic: login URL navigation completed; "
                     "final_url=%s page_title=%r",
