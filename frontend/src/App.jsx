@@ -695,7 +695,8 @@ const SETTINGS_TABS = [
   ['cache-viewer', 'Cache Viewer'],
   ['instruments', 'Instruments'],
   ['live-data-cache', 'Live Data & Cache'],
-  ['telegram', 'Telegram'],\n  ['logs', 'Logs'],
+  ['telegram', 'Telegram'],
+  ['logs', 'Logs'],
 ];
 
 const SETTINGS_FIELDS = {
@@ -1395,7 +1396,8 @@ function SettingsPanel() {
       </>}
       {tab === 'cache-viewer' && <CacheViewer />}
       {tab === 'instruments' && <InstrumentsViewer />}
-      {tab === 'live-data-cache' && <LiveDataCacheViewer />}\n      {tab === 'logs' && <SystemLogsViewer />}
+      {tab === 'live-data-cache' && <LiveDataCacheViewer />}
+      {tab === 'logs' && <SystemLogsViewer />}
       {tab === 'telegram' && <TelegramSettings />}
       {tab !== 'telegram' && tab !== 'logs' && <div className="settings-actions"><button className="button primary" onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save settings'}</button></div>}
     </section>}
