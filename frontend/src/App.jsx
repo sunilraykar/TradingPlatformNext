@@ -697,6 +697,7 @@ const SETTINGS_TABS = [
   ['live-data-cache', 'Live Data & Cache'],
   ['telegram', 'Telegram'],
   ['logs', 'Logs'],
+  ['autotrend-diagnostics', 'AutoTrender Diagnostics'],
 ];
 
 const SETTINGS_FIELDS = {
@@ -1270,6 +1271,7 @@ function SettingsPanel() {
     {error && <div className="error-banner"><strong>Settings issue</strong><span>{error}</span></div>}
     {message && <div className="settings-success">{message}</div>}
     {loading ? <section className="panel settings-section">Loading saved settings…</section> : <section className="panel settings-section">
+      {tab === 'autotrend-diagnostics' && <><h2>AutoTrender Diagnostics UI</h2><p className="settings-intro">Live diagnostics served by the backend.</p><div style={{display:'flex',justifyContent:'flex-end',marginBottom:12}}><button type="button" className="button secondary" onClick={()=>{const frame=document.getElementById('autotrender-diagnostics-frame');if(frame)frame.src='/api/v1/autotrender/diagnostics-ui';}}>Reload diagnostics</button></div><iframe id="autotrender-diagnostics-frame" title="AutoTrender diagnostics" src="/api/v1/autotrender/diagnostics-ui" style={{width:'100%',height:'calc(100vh - 240px)',minHeight:700,border:'1px solid var(--border)',borderRadius:10,background:'var(--panel)'}} /></>}
       {tab === 'security' && <>
         <h2>Security &amp; Access</h2>
         <p className="settings-intro">Review signed-in devices, revoke sessions, and manage application user access.</p>
