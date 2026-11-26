@@ -3016,7 +3016,7 @@
 @media(max-width:1450px){.ltp-option-chain .ltp-contract-index-row{gap:3px!important}.ltp-option-chain .ltp-contract-index-row .ltp-atm-contract,.ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button{height:26px!important;min-height:26px!important}}
 
 /* Rebuild header strip correctly: six compact shortcut buttons on row 1, four controls on row 2. */
-.ltp-option-chain .ltp-contract-index-row {display:grid!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto auto!important;gap:5px!important;width:100%!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;box-sizing:border-box!important;padding:0!important;margin:5px 0 7px!important;}
+.ltp-option-chain .ltp-contract-index-row {display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;grid-template-rows:auto auto!important;gap:5px!important;width:100%!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;box-sizing:border-box!important;padding:0!important;margin:5px 0 7px!important;}
 .ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts,.ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts {display:flex!important;grid-row:1!important;min-width:0!important;width:auto!important;max-width:none!important;}
 .ltp-option-chain .ltp-contract-index-row > .ltp-atm-contracts:first-child {grid-column:1!important;}
 .ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts {grid-column:2/6!important;display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:4px!important;}
