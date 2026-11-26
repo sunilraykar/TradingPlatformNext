@@ -3609,3 +3609,13 @@ select,input,textarea{
   color: #60d6a0;
   background: rgba(96, 214, 160, .12);
 }
+
+/* Pro-trader portfolio order panel (Option C). */
+.portfolio-order-modal{width:min(480px,100%);border-color:#5b4b91;background:linear-gradient(160deg,#101a2a,#0b1320);}
+.portfolio-pro-header{border-bottom-color:#392f5b}.portfolio-pro-header h3{letter-spacing:.35px;font-size:18px}
+.portfolio-market-summary{display:grid;grid-template-columns:1.35fr repeat(4,minmax(0,1fr));gap:0;margin:12px 14px 2px;border:1px solid #26364c;border-radius:9px;background:#0b1422;overflow:hidden}
+.portfolio-market-summary>div{padding:8px 9px;min-width:0;border-right:1px solid #26364c}.portfolio-market-summary>div:last-child{border-right:0}
+.portfolio-market-summary span{display:block;font-size:9px;font-weight:800;letter-spacing:.65px;color:#94a3b8;margin-bottom:4px}.portfolio-market-summary strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.portfolio-market-ltp strong{font-size:18px;color:#e8edf7}.portfolio-bid{color:#34d399}.portfolio-ask{color:#fb7185}
+.portfolio-order-form{gap:11px;padding:12px 14px}.portfolio-order-form label{color:#a8b7cc}.portfolio-quantity-stepper{display:grid;grid-template-columns:36px 1fr 36px;align-items:center;gap:0}.portfolio-quantity-stepper button{height:37px;border:1px solid #35445b;background:#1a2639;color:#dce6f5;font-size:18px;font-weight:800}.portfolio-quantity-stepper button:first-child{border-radius:6px 0 0 6px}.portfolio-quantity-stepper button:last-child{border-radius:0 6px 6px 0}.portfolio-quantity-stepper input{border-radius:0!important;text-align:center!important}.portfolio-choice.active:not(.buy):not(.sell){border-color:#8b5cf6;background:#35265b;color:#e9ddff;box-shadow:inset 0 0 0 1px #8b5cf6}.portfolio-order-type-choices .portfolio-choice{min-height:34px}.portfolio-order-confirm-buy,.portfolio-order-confirm-sell{flex:1;padding:10px!important;font-size:13px!important}.portfolio-order-modal-actions{padding:12px 14px 14px}
+@media(max-width:520px){.portfolio-market-summary{grid-template-columns:repeat(4,1fr)}.portfolio-market-ltp{grid-column:1/-1;border-bottom:1px solid #26364c}.portfolio-order-form{grid-template-columns:1fr}}
