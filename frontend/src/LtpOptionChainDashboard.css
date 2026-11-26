@@ -3004,3 +3004,13 @@
 .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {gap:5px!important;}
 .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls label span {font-size:9px!important;margin-bottom:2px!important;}
 .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls select,.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls input {height:28px!important;min-height:28px!important;padding:2px 5px!important;font-size:10px!important;}
+
+/* FINAL compact sizing override: use the actual 10-item grid without forcing a 1120px minimum width. */
+.ltp-option-chain .ltp-contract-index-row {grid-template-columns:repeat(10,minmax(0,1fr))!important;min-width:0!important;width:100%!important;overflow:hidden!important;gap:4px!important;}
+.ltp-option-chain .ltp-contract-index-row .ltp-atm-contract,.ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button {height:30px!important;min-height:30px!important;padding:1px 3px!important;font-size:clamp(8px,0.65vw,10px)!important;overflow:hidden!important;text-overflow:ellipsis!important;}
+.ltp-option-chain .ltp-contract-index-row .ltp-atm-contract strong {font-size:clamp(8px,0.65vw,10px)!important;white-space:nowrap!important;}
+.ltp-option-chain .ltp-contract-index-row .ltp-contract-controls label {min-width:0!important;flex:1 1 0!important;}
+.ltp-option-chain .ltp-contract-index-row .ltp-contract-controls label span {font-size:8px!important;}
+.ltp-option-chain .ltp-contract-index-row .ltp-contract-controls select,.ltp-option-chain .ltp-contract-index-row .ltp-contract-controls input {height:28px!important;min-height:28px!important;width:100%!important;min-width:0!important;padding:2px 3px!important;font-size:9px!important;box-sizing:border-box!important;}
+.ltp-option-chain .ltp-contract-index-row .ltp-lot-size {width:auto!important;min-width:0!important;flex:1 1 0!important;}
+@media(max-width:1450px){.ltp-option-chain .ltp-contract-index-row{gap:3px!important}.ltp-option-chain .ltp-contract-index-row .ltp-atm-contract,.ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button{height:26px!important;min-height:26px!important}}
