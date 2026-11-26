@@ -3015,17 +3015,17 @@
 .ltp-option-chain .ltp-contract-index-row .ltp-lot-size {width:auto!important;min-width:0!important;flex:1 1 0!important;}
 @media(max-width:1450px){.ltp-option-chain .ltp-contract-index-row{gap:3px!important}.ltp-option-chain .ltp-contract-index-row .ltp-atm-contract,.ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button{height:26px!important;min-height:26px!important}}
 
-/* Half-size contract/index shortcut buttons while retaining the same layout. */
+/* Reduce shortcut BUTTON WIDTH by half; preserve the normal button height and legibility. */
 .ltp-option-chain .ltp-contract-index-row .ltp-atm-contract,
 .ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button {
-  height:14px!important;
-  min-height:14px!important;
-  width:100%!important;
+  height:30px!important;
+  min-height:30px!important;
+  width:50%!important;
   min-width:0!important;
-  max-width:none!important;
-  padding:0 1px!important;
-  font-size:5px!important;
-  line-height:1!important;
+  max-width:50%!important;
+  padding:2px 4px!important;
+  font-size:10px!important;
+  line-height:1.1!important;
   box-sizing:border-box!important;
   white-space:nowrap!important;
   overflow:hidden!important;
@@ -3034,5 +3034,5 @@
 .ltp-option-chain .ltp-contract-index-row > .ltp-index-shortcuts {gap:2px!important;}
 @media(max-width:900px){
  .ltp-option-chain .ltp-contract-index-row .ltp-atm-contract,
- .ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button {height:14px!important;min-height:14px!important;}
+ .ltp-option-chain .ltp-contract-index-row .ltp-index-shortcuts button {height:30px!important;min-height:30px!important;}
 }
