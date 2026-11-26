@@ -668,9 +668,9 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                         state = "paper_trade_created"
                         reason = "paper_trade_created"
                     trade_id = trade.get("trade_id")
-                except (ValueError, RuntimeError, KiteProviderError, SQLAlchemyError) as exc:
+                except Exception as exc:
                     state = "entry_blocked"
-                    reason = str(exc) or type(exc).__name__
+                    reason = (str(getattr(exc, "detail", "")) or str(exc) or type(exc).__name__)
                     logger.exception(
                         "AutoTrender entry blocked index=%s execution_mode=%s exception_type=%s exception_message=%s",
                         index, settings.get("executionMode", "PAPER"), type(exc).__name__, reason,
@@ -705,7 +705,7 @@ def run_cycle(now: datetime | None = None) -> dict[str, Any]:
                 "AutoTrender entry failed index=%s execution_mode=%s",
                 index, settings.get("executionMode", "PAPER"),
             )
-            reason = str(exc) or type(exc).__name__
+            reason = (str(getattr(exc, "detail", "")) or str(exc) or type(exc).__name__)
             error_details = {
                 "exception_type": type(exc).__name__,
                 "exception_message": reason,
