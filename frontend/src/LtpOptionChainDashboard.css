@@ -3046,3 +3046,14 @@
 .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls {display:flex!important;gap:2px!important;}
 .ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls label {flex:1 1 0!important;min-width:0!important;}
 @media(max-width:1100px){.ltp-option-chain .ltp-contract-index-row{grid-template-columns:minmax(90px,1fr) minmax(160px,2fr) minmax(90px,1fr)!important}.ltp-option-chain .ltp-contract-index-row > .ltp-contract-controls{grid-column:1/-1!important}}
+
+/* FIX: Restore visible option-chain filters with a stable layout. */
+.ltp-option-chain .ltp-contract-index-row{display:grid!important;grid-template-columns:minmax(140px,1fr) minmax(260px,2fr) minmax(140px,1fr) minmax(400px,3fr)!important;align-items:end!important;gap:2px!important;width:100%!important;min-width:0!important;overflow:visible!important}
+.ltp-option-chain .ltp-contract-index-row>.ltp-atm-contracts,.ltp-option-chain .ltp-contract-index-row>.ltp-index-shortcuts,.ltp-option-chain .ltp-contract-index-row>.ltp-contract-controls{display:flex!important;width:100%!important;min-width:0!important;max-width:none!important;margin:0!important}
+.ltp-option-chain .ltp-contract-index-row>.ltp-index-shortcuts{flex-wrap:nowrap!important;gap:2px!important}
+.ltp-option-chain .ltp-contract-index-row>.ltp-index-shortcuts button{flex:1 1 0!important;width:auto!important;max-width:none!important;min-width:0!important;height:30px!important;padding:2px 4px!important}
+.ltp-option-chain .ltp-contract-index-row>.ltp-atm-contracts .ltp-atm-contract{width:100%!important;min-width:0!important;max-width:none!important;height:30px!important;padding:2px 4px!important}
+.ltp-option-chain .ltp-contract-index-row>.ltp-contract-controls{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:2px!important;align-items:end!important}
+.ltp-option-chain .ltp-contract-index-row>.ltp-contract-controls label{display:flex!important;flex-direction:column!important;flex:initial!important;min-width:0!important;width:100%!important;margin:0!important}
+.ltp-option-chain .ltp-contract-index-row>.ltp-contract-controls label select,.ltp-option-chain .ltp-contract-index-row>.ltp-contract-controls label input{display:block!important;width:100%!important;min-width:0!important;max-width:none!important;height:28px!important;min-height:28px!important;box-sizing:border-box!important}
+@media(max-width:1200px){.ltp-option-chain .ltp-contract-index-row{grid-template-columns:minmax(100px,1fr) minmax(160px,2fr) minmax(100px,1fr)!important}.ltp-option-chain .ltp-contract-index-row>.ltp-contract-controls{grid-column:1/-1!important}}
