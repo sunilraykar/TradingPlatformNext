@@ -2992,3 +2992,9 @@
 .ltp-order-dialog .ltp-order-instrument-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:2px 0 8px}
 .ltp-order-dialog .ltp-order-instrument-modes button{min-height:38px;border:1px solid #52657a;border-radius:5px;background:#293849;color:#dbe6f2;font-weight:800;cursor:pointer}
 .ltp-order-dialog .ltp-order-instrument-modes button.active{border-color:#22d3ee;background:rgba(8,145,178,.3);color:#a5f3fc}
+
+/* Right-aligned per-strike BUY action */
+.ltp-option-table th.ltp-buy-head,.ltp-option-table td.ltp-buy-cell{min-width:72px;text-align:right;white-space:nowrap}
+.ltp-option-table td.ltp-buy-cell{padding-right:10px}
+.ltp-row-buy{min-width:56px;padding:5px 10px;border:1px solid #16a34a;border-radius:5px;background:#15803d;color:#fff;font-weight:800;letter-spacing:.3px;cursor:pointer}
+.ltp-row-buy:hover{background:#166534;box-shadow:0 0 0 2px #22c55e33}
