@@ -613,8 +613,8 @@ def kite_portfolio_order(payload: KitePortfolioOrderRequest) -> dict:
         raise HTTPException(status_code=400, detail="instrument_type must be EQ, CE, PE or FUT")
     if instrument_type == "EQ" and exchange not in {"NSE", "BSE"}:
         raise HTTPException(status_code=400, detail="Cash equity orders must use NSE or BSE")
-    if instrument_type in {"CE", "PE", "FUT"} and exchange != "NFO":
-        raise HTTPException(status_code=400, detail="Derivative orders must use NFO")
+    if instrument_type in {"CE", "PE", "FUT"} and exchange not in {"NFO", "BFO"}:
+        raise HTTPException(status_code=400, detail="Derivative orders must use NFO (NSE) or BFO (BSE)")
 
     if order_type == "GTT":
         if payload.trigger_price is None:
